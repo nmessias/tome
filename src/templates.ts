@@ -163,7 +163,6 @@ body { padding: 0; height: 100vh; overflow: hidden; margin: 0; }
   left: 0;
   right: 0;
   z-index: 10;
-  transition: transform 0.3s ease;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -242,7 +241,6 @@ body { padding: 0; height: 100vh; overflow: hidden; margin: 0; }
 }
 .reader-content p {
   margin: 0 0 1em 0;
-  text-align: justify;
 }
 .reader-content em, .reader-content i {
   font-style: italic;
@@ -288,10 +286,9 @@ body { padding: 0; height: 100vh; overflow: hidden; margin: 0; }
   padding: 4px 12px;
   font-size: 14px;
   z-index: 10;
-  transition: opacity 0.3s ease;
 }
 .page-indicator.hidden {
-  opacity: 0;
+  display: none;
 }
 .nav-fixed {
   position: fixed;
@@ -304,7 +301,6 @@ body { padding: 0; height: 100vh; overflow: hidden; margin: 0; }
   background: #fff;
   border-top: 1px solid #ccc;
   z-index: 10;
-  transition: transform 0.3s ease;
 }
 .nav-fixed.hidden {
   transform: translateY(100%);
@@ -414,6 +410,14 @@ const READER_JS = `
   var footer = document.querySelector('.nav-fixed');
   var wrapper = document.querySelector('.reader-wrapper');
   var titleEl = document.querySelector('.chapter-title');
+  var navPrev = document.querySelector('.nav-prev');
+  var navNext = document.querySelector('.nav-next');
+  
+  // Cache base class names for fast toggling
+  var headerBaseClass = header ? header.className : '';
+  var footerBaseClass = footer ? footer.className : '';
+  var indicatorBaseClass = indicator ? indicator.className : '';
+  
   var currentPage = 0;
   var columnWidth = 0;
   var columnGap = 0;
@@ -421,6 +425,8 @@ const READER_JS = `
   var totalPages = 1;
   var uiVisible = true;
   var hideTimeout = null;
+  var resizeTimeout = null;
+  var urlUpdateTimeout = null;
   
   // Chapter cache for SPA navigation
   var chapterCache = {};
@@ -434,17 +440,17 @@ const READER_JS = `
   
   function hideUI() {
     if (uiVisible) {
-      header.className = header.className + ' hidden';
-      footer.className = footer.className + ' hidden';
-      indicator.className = indicator.className + ' hidden';
+      header.className = headerBaseClass + ' hidden';
+      footer.className = footerBaseClass + ' hidden';
+      indicator.className = indicatorBaseClass + ' hidden';
       uiVisible = false;
     }
   }
   
   function showUI() {
-    header.className = header.className.replace(' hidden', '');
-    footer.className = footer.className.replace(' hidden', '');
-    indicator.className = indicator.className.replace(' hidden', '');
+    header.className = headerBaseClass;
+    footer.className = footerBaseClass;
+    indicator.className = indicatorBaseClass;
     uiVisible = true;
     startHideTimer();
   }
@@ -599,11 +605,16 @@ const READER_JS = `
     var scrollW = content.scrollWidth;
     totalPages = Math.max(1, Math.round(scrollW / stepSize));
     updateIndicator();
-    updateUrl();
   }
   
   function updateIndicator() {
     indicator.textContent = (currentPage + 1) + ' / ' + totalPages;
+  }
+  
+  // Debounced URL update - only update after 500ms of no page changes
+  function scheduleUrlUpdate() {
+    if (urlUpdateTimeout) clearTimeout(urlUpdateTimeout);
+    urlUpdateTimeout = setTimeout(updateUrl, 500);
   }
   
   // Update URL with current chapter and page
@@ -622,20 +633,24 @@ const READER_JS = `
   function goToPage(page) {
     if (page < 0) page = 0;
     if (page >= totalPages) page = totalPages - 1;
+    goToPageFast(page);
+  }
+  
+  // Fast version without bounds checking - use when caller already validated
+  function goToPageFast(page) {
     currentPage = page;
-    content.scrollLeft = currentPage * stepSize;
+    content.scrollLeft = page * stepSize;
     updateIndicator();
-    updateUrl();
+    scheduleUrlUpdate();
   }
   
   function nextPage() {
     if (currentPage < totalPages - 1) {
-      goToPage(currentPage + 1);
+      goToPageFast(currentPage + 1);
     } else {
       // At last page, try to go to next chapter if available
-      var nextBtn = document.querySelector('.nav-next');
-      if (nextBtn && nextBtn.getAttribute('data-chapter-id')) {
-        navigateToChapter(nextBtn.getAttribute('data-chapter-id'));
+      if (navNext && navNext.getAttribute('data-chapter-id')) {
+        navigateToChapter(navNext.getAttribute('data-chapter-id'));
       } else {
         showUI();
       }
@@ -644,12 +659,11 @@ const READER_JS = `
   
   function prevPage() {
     if (currentPage > 0) {
-      goToPage(currentPage - 1);
+      goToPageFast(currentPage - 1);
     } else {
       // At first page, try to go to prev chapter if available
-      var prevBtn = document.querySelector('.nav-prev');
-      if (prevBtn && prevBtn.getAttribute('data-chapter-id')) {
-        var prevId = prevBtn.getAttribute('data-chapter-id');
+      if (navPrev && navPrev.getAttribute('data-chapter-id')) {
+        var prevId = navPrev.getAttribute('data-chapter-id');
         // Navigate to prev chapter and go to last page
         navigateToChapter(prevId, true);
       } else {
@@ -701,25 +715,22 @@ const READER_JS = `
   
   // Pre-load adjacent chapters
   function preloadChapters() {
-    var prevBtn = document.querySelector('.nav-prev');
-    var nextBtn = document.querySelector('.nav-next');
-    
-    if (prevBtn) {
-      var prevId = prevBtn.getAttribute('data-chapter-id');
+    if (navPrev) {
+      var prevId = navPrev.getAttribute('data-chapter-id');
       if (prevId && !chapterCache[prevId]) {
         fetchChapter(prevId, function() {}); // Fire and forget
       }
     }
     
-    if (nextBtn) {
-      var nextId = nextBtn.getAttribute('data-chapter-id');
+    if (navNext) {
+      var nextId = navNext.getAttribute('data-chapter-id');
       if (nextId && !chapterCache[nextId]) {
         fetchChapter(nextId, function() {}); // Fire and forget
       }
     }
   }
   
-  // Update nav button
+  // Update nav button and cached reference
   function updateNavButton(selector, chapterId, text) {
     var container = footer;
     var oldBtn = container.querySelector(selector);
@@ -742,6 +753,13 @@ const READER_JS = `
     }
     
     parent.replaceChild(newEl, oldBtn);
+    
+    // Update cached reference
+    if (selector === '.nav-prev') {
+      navPrev = newEl;
+    } else if (selector === '.nav-next') {
+      navNext = newEl;
+    }
   }
   
   // Navigate to a chapter (SPA style)
@@ -854,19 +872,16 @@ const READER_JS = `
   
   // Attach click handlers to nav buttons
   function attachNavHandlers() {
-    var prevBtn = document.querySelector('.nav-prev');
-    var nextBtn = document.querySelector('.nav-next');
-    
-    if (prevBtn && prevBtn.tagName === 'BUTTON') {
-      prevBtn.onclick = function() {
-        var id = prevBtn.getAttribute('data-chapter-id');
+    if (navPrev && navPrev.tagName === 'BUTTON') {
+      navPrev.onclick = function() {
+        var id = navPrev.getAttribute('data-chapter-id');
         if (id) navigateToChapter(id);
       };
     }
     
-    if (nextBtn && nextBtn.tagName === 'BUTTON') {
-      nextBtn.onclick = function() {
-        var id = nextBtn.getAttribute('data-chapter-id');
+    if (navNext && navNext.tagName === 'BUTTON') {
+      navNext.onclick = function() {
+        var id = navNext.getAttribute('data-chapter-id');
         if (id) navigateToChapter(id);
       };
     }
@@ -907,8 +922,11 @@ const READER_JS = `
   }
   
   window.onresize = function() {
-    updatePages();
-    goToPage(currentPage);
+    if (resizeTimeout) clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(function() {
+      updatePages();
+      goToPage(currentPage);
+    }, 150);
   };
 })();
 </script>
