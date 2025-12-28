@@ -6,9 +6,9 @@ echo "=== Inkwell Startup ==="
 # Ensure data directory exists
 mkdir -p /app/data
 
-# Run Better Auth database migration
-echo "Running database migrations..."
-bunx @better-auth/cli migrate --config ./auth.ts -y
+# Run database migrations using Bun-native script
+# (avoids better-sqlite3 native module compatibility issues)
+bun run src/lib/migrate.ts
 
 echo "Starting Inkwell server..."
 exec bun run src/index.ts
