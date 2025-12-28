@@ -1,7 +1,41 @@
 /**
  * HTTP server utilities and helpers
  */
-import { DEFAULT_READER_SETTINGS, type ReaderSettings } from "./config";
+import { DEFAULT_READER_SETTINGS, AUTH_USERNAME, AUTH_PASSWORD, AUTH_ENABLED, type ReaderSettings } from "./config";
+
+// ============ Authentication ============
+
+/**
+ * Check Basic Auth credentials
+ * Returns true if auth is disabled or credentials are valid
+ */
+export function checkBasicAuth(req: Request): boolean {
+  if (!AUTH_ENABLED) return true;
+
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader?.startsWith("Basic ")) return false;
+
+  try {
+    const base64 = authHeader.slice(6);
+    const decoded = atob(base64);
+    const [username, password] = decoded.split(":");
+    return username === AUTH_USERNAME && password === AUTH_PASSWORD;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Create 401 Unauthorized response with Basic Auth challenge
+ */
+export function unauthorized(): Response {
+  return new Response("Unauthorized", {
+    status: 401,
+    headers: {
+      "WWW-Authenticate": 'Basic realm="Kindle Royal Proxy"',
+    },
+  });
+}
 
 // ============ Response Helpers ============
 

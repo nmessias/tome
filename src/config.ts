@@ -6,6 +6,11 @@
 // Server configuration
 export const PORT = parseInt(process.env.PORT || "3000", 10);
 
+// Authentication (for production deployment)
+export const AUTH_USERNAME = process.env.AUTH_USERNAME || "";
+export const AUTH_PASSWORD = process.env.AUTH_PASSWORD || "";
+export const AUTH_ENABLED = !!(AUTH_USERNAME && AUTH_PASSWORD);
+
 // Cache TTLs (in seconds)
 export const CACHE_TTL = {
   DEFAULT: 5 * 60,               // 5 minutes (generic cache)

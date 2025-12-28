@@ -1,7 +1,7 @@
 /**
  * Routes index - main request router
  */
-import { html, serveStatic, parseReaderSettings } from "../server";
+import { html, serveStatic, parseReaderSettings, checkBasicAuth, unauthorized } from "../server";
 import { handlePageRoute } from "./pages";
 import { handleApiRoute } from "./api";
 import { ErrorPage } from "../templates";
@@ -13,6 +13,17 @@ export async function handleRequest(req: Request): Promise<Response> {
   const url = new URL(req.url);
   const path = url.pathname;
   const method = req.method;
+
+  // Health check endpoint (unauthenticated for Railway)
+  if (path === "/health") {
+    return new Response("OK", { status: 200 });
+  }
+
+  // Check Basic Auth for all other routes
+  if (!checkBasicAuth(req)) {
+    return unauthorized();
+  }
+
   const settings = parseReaderSettings(req.headers.get("cookie"));
 
   console.log(`${method} ${path}`);
