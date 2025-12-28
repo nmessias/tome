@@ -1,0 +1,320 @@
+/**
+ * Reader styles for chapter view
+ * Paginated column-based layout optimized for e-ink
+ */
+
+@font-face {
+  font-family: 'Literata';
+  src: url('/public/fonts/Literata-Variable.ttf') format('truetype');
+  font-weight: 200 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Literata';
+  src: url('/public/fonts/Literata-Italic-Variable.ttf') format('truetype');
+  font-weight: 200 900;
+  font-style: italic;
+  font-display: swap;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  height: 100vh;
+  overflow: hidden;
+  background: #fff;
+  color: #000;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 18px;
+  line-height: 1.5;
+}
+
+a {
+  color: #000;
+  text-decoration: underline;
+}
+
+a:visited {
+  color: #333;
+}
+
+/* Reader header */
+.reader-header {
+  padding: 8px 12px;
+  border-bottom: 2px solid #000;
+  background: #fff;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.reader-header.hidden {
+  display: none;
+}
+
+.header-left {
+  flex: 0 0 65%;
+  min-width: 0;
+}
+
+.header-right {
+  flex: 0 0 35%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.reader-header .header-nav {
+  display: flex;
+  gap: 6px;
+  font-size: 11px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.reader-header .header-nav a {
+  color: #000;
+  text-decoration: none;
+  padding: 2px 6px;
+  border: 1px solid #999;
+}
+
+.reader-header h1 {
+  font-size: 14px;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reader-header .fiction-link {
+  font-size: 12px;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reader-header .settings-btn {
+  background: #fff;
+  border: 1px solid #999;
+  padding: 4px 10px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+/* Reader content area */
+.reader-wrapper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+}
+
+.reader-content {
+  font-family: 'Literata', Georgia, serif;
+  font-weight: 400;
+  column-width: 95vw;
+  column-gap: 5vw;
+  height: 100%;
+  width: 95%;
+  overflow-x: scroll;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.reader-content::-webkit-scrollbar {
+  display: none;
+}
+
+.reader-content p {
+  margin: 0 0 1em 0;
+}
+
+.reader-content em,
+.reader-content i {
+  font-style: italic;
+}
+
+.reader-content strong,
+.reader-content b {
+  font-weight: 700;
+}
+
+/* Click/tap zones for pagination */
+.click-zone {
+  position: absolute;
+  top: 15%;
+  bottom: 15%;
+  width: 40%;
+  z-index: 5;
+}
+
+.click-zone-left {
+  left: 0;
+}
+
+.click-zone-right {
+  right: 0;
+}
+
+.tap-zone-top {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 15%;
+  z-index: 6;
+}
+
+.tap-zone-bottom {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 15%;
+  z-index: 6;
+}
+
+/* Page indicator */
+.page-indicator {
+  position: fixed;
+  bottom: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #000;
+  color: #fff;
+  padding: 4px 12px;
+  font-size: 14px;
+  z-index: 10;
+}
+
+.page-indicator.hidden {
+  display: none;
+}
+
+/* Fixed navigation bar */
+.nav-fixed {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 4px;
+  background: #fff;
+  border-top: 1px solid #ccc;
+  z-index: 10;
+}
+
+.nav-fixed.hidden {
+  display: none;
+}
+
+.nav-fixed .btn {
+  flex: 1;
+  text-align: center;
+  margin: 0 2px;
+  padding: 6px 4px;
+  font-size: 12px;
+  background: #fff;
+  color: #000;
+  border: 1px solid #999;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.nav-fixed button:disabled {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+/* Settings modal */
+.settings-modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 100;
+  justify-content: center;
+  align-items: center;
+}
+
+.settings-modal.open {
+  display: flex;
+}
+
+.settings-panel {
+  background: #fff;
+  border: 2px solid #000;
+  padding: 16px;
+  width: 90%;
+  max-width: 300px;
+}
+
+.settings-panel h2 {
+  margin: 0 0 16px 0;
+  font-size: 18px;
+}
+
+.settings-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.settings-row label {
+  font-size: 14px;
+}
+
+.font-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.font-controls button {
+  width: 36px;
+  height: 36px;
+  font-size: 18px;
+  background: #fff;
+  border: 1px solid #000;
+  cursor: pointer;
+}
+
+.font-controls span {
+  min-width: 40px;
+  text-align: center;
+  font-size: 14px;
+}
+
+.settings-close {
+  width: 100%;
+  padding: 10px;
+  margin-top: 8px;
+  background: #000;
+  color: #fff;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+}
