@@ -4,7 +4,7 @@
 import { Layout } from "../layout";
 import { Nav } from "../components";
 import type { ReaderSettings } from "../../config";
-import { DEFAULT_READER_SETTINGS } from "../../config";
+import { DEFAULT_READER_SETTINGS, AUTH_ENABLED } from "../../config";
 
 export function HomePage({
   settings = DEFAULT_READER_SETTINGS,
@@ -36,6 +36,14 @@ export function HomePage({
           <a href="/setup">Setup</a> - Configure session cookies
         </li>
       </ul>
+      
+      {AUTH_ENABLED && (
+        <form method="POST" action="/logout" style="margin-top: 32px;">
+          <button type="submit" class="btn btn-outline">
+            Logout
+          </button>
+        </form>
+      )}
     </Layout>
   );
 }

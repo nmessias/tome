@@ -31,3 +31,4 @@ export { ReaderPage } from "./pages/reader";
 export { SearchPage } from "./pages/search";
 export { CachePage } from "./pages/cache";
 export { ErrorPage, LoadingPage } from "./pages/error";
+export { LoginPage } from "./pages/login";

@@ -6,10 +6,14 @@ import { PORT } from "./config";
 import { handleRequest } from "./routes";
 import { initBrowser, closeBrowser } from "./services/scraper";
 import { startJobs, stopJobs } from "./services/jobs";
+import { seedAdminUser } from "./lib/auth";
 
-// Initialize browser on startup
+// Initialize browser and auth on startup
 console.log("Starting Inkwell...");
-initBrowser()
+
+// Seed admin user first, then init browser
+seedAdminUser()
+  .then(() => initBrowser())
   .then(() => {
     // Start background cache jobs after browser is ready
     startJobs();
