@@ -294,8 +294,13 @@
     }, 100);
   }
 
-  function navigateToChapter(id, goToLastPage) {
+  function navigateToChapter(id, goToLastPage, buttonEl) {
     var chapter = S.cache[id];
+    
+    // Show loading state on button
+    if (buttonEl) {
+      buttonEl.className = buttonEl.className + ' loading';
+    }
     
     if (!chapter) {
       // Not cached, do full page load
@@ -310,6 +315,11 @@
     
     // Render chapter
     renderChapter(chapter, goToLastPage);
+    
+    // Remove loading state
+    if (buttonEl) {
+      buttonEl.className = buttonEl.className.replace(' loading', '');
+    }
     
     // Update URL with pushState
     if (window.history && window.history.pushState) {
@@ -402,13 +412,17 @@
     if (S.els.footer) {
       S.els.footer.onclick = function(e) {
         var target = e.target;
-        if (target.tagName !== 'BUTTON') return;
+        // Find the button element (might have clicked on inner span)
+        while (target && target.tagName !== 'BUTTON' && target !== S.els.footer) {
+          target = target.parentElement;
+        }
+        if (!target || target.tagName !== 'BUTTON') return;
         
         var id = target.getAttribute('data-chapter-id');
         if (!id) return;
         
         var goToLast = target.className.indexOf('nav-prev') !== -1;
-        navigateToChapter(id, goToLast);
+        navigateToChapter(id, goToLast, target);
       };
     }
     

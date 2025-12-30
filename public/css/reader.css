@@ -245,6 +245,24 @@ a:visited {
   pointer-events: none;
 }
 
+/* Button loading state */
+.nav-fixed .btn .spinner {
+  display: none;
+}
+
+.nav-fixed .btn.loading {
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.nav-fixed .btn.loading .btn-text {
+  display: none;
+}
+
+.nav-fixed .btn.loading .spinner {
+  display: inline;
+}
+
 /* Settings modal */
 .settings-modal {
   display: none;
