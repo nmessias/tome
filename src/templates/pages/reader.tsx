@@ -61,6 +61,8 @@ export function ReaderPage({
         <div class="tap-zone-bottom"></div>
         <div class="click-zone click-zone-left"></div>
         <div class="click-zone click-zone-right"></div>
+        <div class="side-spinner side-spinner-left">Loading...</div>
+        <div class="side-spinner side-spinner-right">Loading...</div>
         <div class="reader-content" style={fontSizeStyle}>
           {/* Content is already HTML, render as-is */}
           {chapter.content as "safe"}
