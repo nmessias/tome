@@ -4,6 +4,7 @@ services:
   app:
     build: .
     restart: unless-stopped
+    shm_size: '256mb'
     volumes:
       - ./data:/app/data
     environment:

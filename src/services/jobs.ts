@@ -144,11 +144,14 @@ export function startJobs(): void {
   jobsRunning = true;
   console.log("[Job] Starting background cache jobs...");
   
-  // Run initial cache warming after a short delay (let browser init first)
+  // Run initial cache warming after a delay (give browser time to init)
+  // Longer delay in production for low-RAM environments
+  const initialDelay = process.env.NODE_ENV === "production" ? 30000 : 10000;
+  
   setTimeout(async () => {
     await warmToplistsCache();
     await warmFollowsCache();
-  }, 10000);
+  }, initialDelay);
   
   // Schedule follows cache warming every 20 minutes
   followsJobInterval = setInterval(warmFollowsCache, CACHE_TTL.FOLLOWS * 1000);

@@ -51,9 +51,12 @@ export function HomePage({
 
       {risingStars.length === 0 && weeklyPopular.length === 0 && (
         <div class="mt-24">
-          <p>Loading popular fictions...</p>
-          <p>
+          <p>Popular fictions are loading in the background.</p>
+          <p class="mt-8">
             <a href="/toplists">Browse Top Lists</a> or <a href="/search">Search</a> for fictions.
+          </p>
+          <p class="mt-8 text-muted">
+            Refresh this page in a minute to see featured content.
           </p>
         </div>
       )}

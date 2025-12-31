@@ -31,6 +31,10 @@ export const DB_PATH = "./data/sessions.db";
 // Royal Road
 export const ROYAL_ROAD_BASE_URL = "https://www.royalroad.com";
 
+// Scraper timeouts (longer in production for low-RAM environments)
+export const SCRAPER_TIMEOUT = process.env.NODE_ENV === "production" ? 60000 : 30000;
+export const SCRAPER_SELECTOR_TIMEOUT = process.env.NODE_ENV === "production" ? 20000 : 10000;
+
 // Toplists configuration
 export interface ToplistType {
   slug: string;

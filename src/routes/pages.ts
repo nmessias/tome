@@ -28,6 +28,7 @@ import {
   getFollows,
   getHistory,
   getToplist,
+  getToplistCached,
   getFiction,
   getChapter,
   validateCookies,
@@ -50,27 +51,21 @@ export async function handlePageRoute(
 ): Promise<Response | null> {
   const method = req.method;
 
-  // Home - fetch rising stars and weekly popular
+  // Home - show cached toplists only (non-blocking)
+  // Toplists are populated by background jobs or by visiting /toplist/* pages
   if (path === "/" && method === "GET") {
-    try {
-      const risingStarsToplist = TOPLISTS.find(t => t.slug === 'rising-stars');
-      const weeklyPopularToplist = TOPLISTS.find(t => t.slug === 'weekly-popular');
-      
-      const [risingStars, weeklyPopular] = await Promise.all([
-        risingStarsToplist ? getToplist(risingStarsToplist) : Promise.resolve([]),
-        weeklyPopularToplist ? getToplist(weeklyPopularToplist) : Promise.resolve([]),
-      ]);
-      
-      return html(HomePage({ 
-        settings, 
-        risingStars: risingStars.slice(0, 10),
-        weeklyPopular: weeklyPopular.slice(0, 10),
-      }));
-    } catch (error) {
-      console.error("Error loading home page data:", error);
-      // Fall back to empty lists if toplists fail
-      return html(HomePage({ settings, risingStars: [], weeklyPopular: [] }));
-    }
+    const risingStarsToplist = TOPLISTS.find(t => t.slug === 'rising-stars');
+    const weeklyPopularToplist = TOPLISTS.find(t => t.slug === 'weekly-popular');
+    
+    // Use cache-only to avoid blocking the homepage on slow scraping
+    const risingStars = risingStarsToplist ? getToplistCached(risingStarsToplist) : null;
+    const weeklyPopular = weeklyPopularToplist ? getToplistCached(weeklyPopularToplist) : null;
+    
+    return html(HomePage({ 
+      settings, 
+      risingStars: risingStars?.slice(0, 10) || [],
+      weeklyPopular: weeklyPopular?.slice(0, 10) || [],
+    }));
   }
 
   // Settings - GET

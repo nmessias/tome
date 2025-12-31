@@ -4,7 +4,7 @@
 import { chromium, Browser, BrowserContext, Page } from "playwright";
 import { parseHTML } from "linkedom";
 import { getCookiesForPlaywright, getCache, setCache, deleteCache } from "./cache";
-import { ROYAL_ROAD_BASE_URL, CACHE_TTL } from "../config";
+import { ROYAL_ROAD_BASE_URL, CACHE_TTL, SCRAPER_TIMEOUT, SCRAPER_SELECTOR_TIMEOUT } from "../config";
 import type { Fiction, FollowedFiction, Chapter, ChapterContent, ToplistType, HistoryEntry } from "../types";
 
 let browser: Browser | null = null;
@@ -24,9 +24,19 @@ export async function initBrowser(): Promise<void> {
     headless: true,
     args: [
       "--disable-blink-features=AutomationControlled",
-      "--disable-features=IsolateOrigins,site-per-process",
       "--no-sandbox",
       "--disable-setuid-sandbox",
+      // Memory optimization for Docker/low-RAM environments
+      "--disable-dev-shm-usage",           // Use /tmp instead of /dev/shm (critical in Docker)
+      "--disable-gpu",                      // No GPU in containers
+      "--single-process",                   // Reduces memory ~50%
+      "--disable-extensions",
+      "--disable-background-networking",
+      "--disable-sync",
+      "--disable-translate",
+      "--no-first-run",
+      "--disable-features=IsolateOrigins,site-per-process,TranslateUI",
+      "--js-flags=--max-old-space-size=128", // Limit V8 heap to 128MB
     ],
   });
 
@@ -125,7 +135,7 @@ async function getPage(
       
       await page.goto(url, { 
         waitUntil: "domcontentloaded",
-        timeout: 30000 
+        timeout: SCRAPER_TIMEOUT 
       });
 
       // Check for Cloudflare challenge
@@ -139,7 +149,7 @@ async function getPage(
       // Wait for specific selector if provided
       if (waitForSelector) {
         try {
-          await page.waitForSelector(waitForSelector, { timeout: 10000 });
+          await page.waitForSelector(waitForSelector, { timeout: SCRAPER_SELECTOR_TIMEOUT });
         } catch {
           console.log(`Selector ${waitForSelector} not found, continuing anyway`);
         }
@@ -173,7 +183,7 @@ async function resolveRedirectUrl(url: string, useAnon: boolean = false): Promis
     // Navigate and wait for the redirect to complete
     await page.goto(url, { 
       waitUntil: "domcontentloaded",
-      timeout: 15000 
+      timeout: SCRAPER_TIMEOUT 
     });
     
     // Get the final URL after redirects
@@ -540,6 +550,18 @@ export async function getToplist(toplist: ToplistType, ttl: number = CACHE_TTL.T
   }
 
   return fictions;
+}
+
+/**
+ * Get toplist from cache only (no fetch) - for non-blocking homepage
+ */
+export function getToplistCached(toplist: ToplistType): Fiction[] | null {
+  const cacheKey = `toplist:${toplist.slug}`;
+  const cached = getCache(cacheKey);
+  if (cached) {
+    return JSON.parse(cached);
+  }
+  return null;
 }
 
 /**
