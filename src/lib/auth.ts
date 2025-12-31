@@ -8,13 +8,19 @@
 import { betterAuth } from "better-auth";
 import { username } from "better-auth/plugins";
 import { Database } from "bun:sqlite";
-import { DB_PATH, AUTH_USERNAME, AUTH_PASSWORD, AUTH_ENABLED } from "../config";
+import { DB_PATH, AUTH_USERNAME, AUTH_PASSWORD, AUTH_ENABLED, BETTER_AUTH_SECRET } from "../config";
 
 // Initialize database (bun:sqlite for runtime performance)
 const db = new Database(DB_PATH);
 
+// Warn if no secret is set in production
+if (process.env.NODE_ENV === "production" && !BETTER_AUTH_SECRET) {
+  console.warn("WARNING: BETTER_AUTH_SECRET not set. Sessions will not persist across restarts.");
+}
+
 export const auth = betterAuth({
   database: db,
+  secret: BETTER_AUTH_SECRET || undefined,
   emailAndPassword: {
     enabled: true,
     // Disable public signup - admin is seeded from env vars
