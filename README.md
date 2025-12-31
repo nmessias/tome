@@ -1,8 +1,8 @@
-# Inkwell
+# Tome
 
 Read web fiction on your e-ink device.
 
-Inkwell is a web fiction proxy that scrapes content from various sources and presents it in a simplified, e-ink-friendly format optimized for devices like Kindle and Kobo.
+Tome is a web fiction proxy that scrapes content from various sources and presents it in a simplified, e-ink-friendly format optimized for devices like Kindle and Kobo.
 
 ## Supported Sources
 
@@ -34,8 +34,8 @@ Inkwell is a web fiction proxy that scrapes content from various sources and pre
 
 ```bash
 # Clone the repository
-git clone https://github.com/nmessias/inkwell.git
-cd inkwell
+git clone https://github.com/nmessias/tome.git
+cd tome
 
 # Install dependencies
 bun install
@@ -67,14 +67,14 @@ bun run start
 bun run dev
 ```
 
-Access Inkwell from your e-ink device's browser:
+Access Tome from your e-ink device's browser:
 ```
 http://<your-server-ip>:3000
 ```
 
 ## Setup
 
-1. Navigate to `/setup` on Inkwell
+1. Navigate to `/setup` on Tome
 2. Copy your session cookies from your browser:
    - For Royal Road: `.AspNetCore.Identity.Application`
    - Optional: `cf_clearance` (for Cloudflare)
@@ -85,7 +85,7 @@ Your reading progress will now sync with the source.
 
 ## Deployment
 
-Inkwell includes Docker support for easy deployment to Railway, Fly.io, or any Docker host.
+Tome includes Docker support for easy deployment to Railway, Fly.io, or any Docker host.
 
 ### Railway
 
@@ -101,7 +101,7 @@ See `railway.toml` for configuration.
 ## Project Structure
 
 ```
-inkwell/
+tome/
 ├── public/              # Static assets (CSS, JS, fonts)
 │   ├── css/
 │   ├── fonts/

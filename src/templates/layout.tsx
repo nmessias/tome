@@ -39,7 +39,7 @@ export function Layout({
         <head>
           <meta charset="UTF-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-          <title safe>{title} - Inkwell</title>
+          <title safe>{title} - Tome</title>
           <link rel="stylesheet" href={cssFile} />
         </head>
         <body class={fullBodyClass || undefined}>
@@ -76,7 +76,7 @@ export function ReaderLayout({
         <head>
           <meta charset="UTF-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-          <title safe>{title} - Inkwell</title>
+          <title safe>{title} - Tome</title>
           <link rel="stylesheet" href="/public/css/reader.css" />
         </head>
         <body class={bodyClass || undefined}>

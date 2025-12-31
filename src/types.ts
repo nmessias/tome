@@ -1,4 +1,4 @@
-// TypeScript interfaces for Inkwell
+// TypeScript interfaces for Tome
 
 export interface Cookie {
   id?: number;

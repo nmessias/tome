@@ -1,12 +1,12 @@
 {
-  "name": "inkwell",
+  "name": "tome",
   "version": "1.0.0",
   "description": "Web fiction proxy optimized for e-ink devices",
   "author": "nmessias",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/nmessias/inkwell"
+    "url": "https://github.com/nmessias/tome"
   },
   "keywords": [
     "e-ink",

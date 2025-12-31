@@ -14,7 +14,7 @@ export function HomePage({
   return (
     <Layout title="Home" settings={settings}>
       <Nav currentPath="/" />
-      <h1>Inkwell</h1>
+      <h1>Tome</h1>
       <p>Read web fiction on your e-ink device.</p>
       <ul>
         <li>

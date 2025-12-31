@@ -16,7 +16,7 @@ export function LoginPage({
     <Layout title="Login" settings={settings}>
       <div style="max-width: 400px; margin: 40px auto; padding: 0 16px;">
         <h1>Login</h1>
-        <p>Sign in to access Inkwell.</p>
+        <p>Sign in to access Tome.</p>
         
         {error && (
           <div class="error" style="margin-bottom: 16px;" safe>

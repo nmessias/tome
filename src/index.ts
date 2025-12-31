@@ -1,5 +1,5 @@
 /**
- * Inkwell - Web Fiction Proxy for E-ink Devices
+ * Tome - Web Fiction Proxy for E-ink Devices
  * Main entry point
  */
 import { PORT } from "./config";
@@ -9,7 +9,7 @@ import { startJobs, stopJobs } from "./services/jobs";
 import { seedAdminUser } from "./lib/auth";
 
 // Initialize browser and auth on startup
-console.log("Starting Inkwell...");
+console.log("Starting Tome...");
 
 // Seed admin user first, then init browser
 seedAdminUser()
@@ -26,7 +26,7 @@ const server = Bun.serve({
   fetch: handleRequest,
 });
 
-console.log(`Inkwell running at http://localhost:${server.port}`);
+console.log(`Tome running at http://localhost:${server.port}`);
 console.log("Press Ctrl+C to stop");
 
 // Handle graceful shutdown

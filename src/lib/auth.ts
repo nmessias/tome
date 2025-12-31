@@ -1,5 +1,5 @@
 /**
- * Better Auth configuration for Inkwell
+ * Better Auth configuration for Tome
  * Uses username/password auth with SQLite storage
  * 
  * Note: This file uses bun:sqlite for runtime. For CLI migrations,
@@ -58,7 +58,7 @@ export async function seedAdminUser(): Promise<void> {
 
     // Create admin user using Better Auth's internal API
     // We need to use the sign-up endpoint since createUser requires admin plugin
-    const email = `${AUTH_USERNAME}@inkwell.local`;
+    const email = `${AUTH_USERNAME}@tome.local`;
     
     const response = await auth.api.signUpEmail({
       body: {
