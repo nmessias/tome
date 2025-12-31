@@ -4,14 +4,13 @@
 import { html, parseFormData, matchPath, URL_PATTERNS } from "../server";
 import {
   HomePage,
-  SetupPage,
+  SettingsPage,
   FollowsPage,
   HistoryPage,
   ToplistsPage,
   ToplistPage,
   FictionPage,
   SearchPage,
-  CachePage,
   ErrorPage,
 } from "../templates";
 import { ReaderPage } from "../templates/pages/reader";
@@ -51,25 +50,45 @@ export async function handlePageRoute(
 ): Promise<Response | null> {
   const method = req.method;
 
-  // Home
+  // Home - fetch rising stars and weekly popular
   if (path === "/" && method === "GET") {
-    return html(HomePage({ settings }));
+    try {
+      const risingStarsToplist = TOPLISTS.find(t => t.slug === 'rising-stars');
+      const weeklyPopularToplist = TOPLISTS.find(t => t.slug === 'weekly-popular');
+      
+      const [risingStars, weeklyPopular] = await Promise.all([
+        risingStarsToplist ? getToplist(risingStarsToplist) : Promise.resolve([]),
+        weeklyPopularToplist ? getToplist(weeklyPopularToplist) : Promise.resolve([]),
+      ]);
+      
+      return html(HomePage({ 
+        settings, 
+        risingStars: risingStars.slice(0, 10),
+        weeklyPopular: weeklyPopular.slice(0, 10),
+      }));
+    } catch (error) {
+      console.error("Error loading home page data:", error);
+      // Fall back to empty lists if toplists fail
+      return html(HomePage({ settings, risingStars: [], weeklyPopular: [] }));
+    }
   }
 
-  // Setup - GET
-  if (path === "/setup" && method === "GET") {
-    return html(SetupPage({ settings }));
+  // Settings - GET
+  if (path === "/settings" && method === "GET") {
+    const stats = getCacheStats();
+    return html(SettingsPage({ settings, stats }));
   }
 
-  // Setup - POST
-  if (path === "/setup" && method === "POST") {
+  // Settings - POST cookies
+  if (path === "/settings/cookies" && method === "POST") {
     const form = await parseFormData(req);
     const identity = form.identity?.trim();
     const cfclearance = form.cfclearance?.trim();
 
     if (!identity) {
+      const stats = getCacheStats();
       return html(
-        SetupPage({ message: "The .AspNetCore.Identity.Application cookie is required.", isError: true, settings })
+        SettingsPage({ message: "The .AspNetCore.Identity.Application cookie is required.", isError: true, settings, stats })
       );
     }
 
@@ -79,41 +98,48 @@ export async function handlePageRoute(
     }
 
     const valid = await validateCookies();
+    const stats = getCacheStats();
 
     if (valid) {
       triggerCacheWarm().catch(console.error);
       return html(
-        SetupPage({
-          message: "Cookies saved and validated successfully! Cache warming started. You can now access your follows.",
+        SettingsPage({
+          message: "Cookies saved and validated! Cache warming started.",
           isError: false,
           settings,
+          stats,
         })
       );
     } else {
       return html(
-        SetupPage({ message: "Cookies saved but validation failed. Please check your cookie values.", isError: true, settings })
+        SettingsPage({ message: "Cookies saved but validation failed. Check your cookie values.", isError: true, settings, stats })
       );
     }
   }
 
-  // Setup - Clear
-  if (path === "/setup/clear" && method === "GET") {
+  // Settings - Clear cookies
+  if (path === "/settings/cookies/clear" && method === "GET") {
     clearCookies();
     clearCache();
     await createContext();
-    return html(SetupPage({ message: "Cookies and cache cleared.", isError: false, settings }));
-  }
-
-  // Cache management
-  if (path === "/cache" && method === "GET") {
     const stats = getCacheStats();
-    return html(CachePage({ stats, settings }));
+    return html(SettingsPage({ message: "Cookies and cache cleared.", isError: false, settings, stats }));
   }
 
-  // Clear cache routes
-  const cacheTypeMatch = matchPath(path, URL_PATTERNS.cacheType);
-  if (cacheTypeMatch && method === "GET") {
-    const type = cacheTypeMatch[0];
+  // Settings - Theme toggle
+  if (path === "/settings/theme" && method === "POST") {
+    // Theme is handled by cookie in the main router
+    // Just redirect back to settings
+    return new Response(null, {
+      status: 303,
+      headers: { Location: "/settings" },
+    });
+  }
+
+  // Settings - Clear cache routes
+  const settingsCacheMatch = path.match(/^\/settings\/cache\/clear\/(.+)$/);
+  if (settingsCacheMatch && method === "GET") {
+    const type = settingsCacheMatch[1];
     let message: string;
 
     if (type === "images") {
@@ -131,14 +157,31 @@ export async function handlePageRoute(
       message = `Cleared ${deleted} ${type} cache entries.`;
     }
 
-    return html(CachePage({ stats: getCacheStats(), message, settings }));
+    const stats = getCacheStats();
+    return html(SettingsPage({ message, settings, stats }));
+  }
+
+  // Legacy /setup redirect to /settings
+  if (path === "/setup" && method === "GET") {
+    return new Response(null, {
+      status: 301,
+      headers: { Location: "/settings" },
+    });
+  }
+
+  // Legacy /cache redirect to /settings
+  if (path === "/cache" && method === "GET") {
+    return new Response(null, {
+      status: 301,
+      headers: { Location: "/settings" },
+    });
   }
 
   // Follows
   if (path === "/follows" && method === "GET") {
     if (!hasSessionCookies()) {
       return html(
-        ErrorPage({ title: "Not Configured", message: "Please configure your session cookies first.", retryUrl: "/setup", settings })
+        ErrorPage({ title: "Not Configured", message: "Please configure your session cookies first.", retryUrl: "/settings", settings })
       );
     }
 
@@ -163,7 +206,7 @@ export async function handlePageRoute(
   if (path === "/history" && method === "GET") {
     if (!hasSessionCookies()) {
       return html(
-        ErrorPage({ title: "Not Configured", message: "Please configure your session cookies first.", retryUrl: "/setup", settings })
+        ErrorPage({ title: "Not Configured", message: "Please configure your session cookies first.", retryUrl: "/settings", settings })
       );
     }
 

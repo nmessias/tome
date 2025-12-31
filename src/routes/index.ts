@@ -59,6 +59,11 @@ export async function handleRequest(req: Request): Promise<Response> {
     return handleLogout(req);
   }
 
+  // Handle theme toggle
+  if (path === "/settings/theme" && method === "POST") {
+    return handleThemeToggle(req);
+  }
+
   // Check session for protected routes
   if (AUTH_ENABLED && !isPublicPath(path)) {
     const session = await getSession(req);
@@ -172,6 +177,24 @@ async function handleLogout(req: Request): Promise<Response> {
   response.headers.set(
     "Set-Cookie",
     "better-auth.session_token=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0"
+  );
+  return response;
+}
+
+/**
+ * Handle theme toggle POST
+ */
+async function handleThemeToggle(req: Request): Promise<Response> {
+  const formData = await req.formData();
+  const dark = formData.get("dark") === "1";
+  
+  const currentSettings = parseReaderSettings(req.headers.get("cookie"));
+  const newSettings = { ...currentSettings, dark };
+  
+  const response = redirect("/settings");
+  response.headers.set(
+    "Set-Cookie",
+    `reader_settings=${encodeURIComponent(JSON.stringify(newSettings))}; Path=/; SameSite=Lax; Max-Age=31536000`
   );
   return response;
 }

@@ -1,6 +1,6 @@
 /**
  * Base styles for E-ink optimized pages
- * High contrast, no animations, simple layout
+ * ReKindle-inspired: Pure black/white, high contrast, bordered elements
  */
 
 * {
@@ -9,11 +9,11 @@
 
 body {
   margin: 0;
-  padding: 12px;
+  padding: 0;
   background: #fff;
   color: #000;
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: 18px;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 16px;
   line-height: 1.5;
 }
 
@@ -23,34 +23,104 @@ a {
 }
 
 a:visited {
-  color: #333;
+  color: #000;
 }
 
+/* Header */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid #000;
+}
+
+.header-title {
+  font-size: 20px;
+  font-weight: bold;
+  text-decoration: none;
+}
+
+.header-title:hover {
+  text-decoration: none;
+}
+
+/* Navigation */
+.nav {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.nav-link {
+  padding: 8px 12px;
+  text-decoration: none;
+  border: 1px solid #000;
+  font-size: 14px;
+}
+
+.nav-link:hover {
+  text-decoration: none;
+}
+
+.nav-link.active {
+  background: #000;
+  color: #fff;
+}
+
+/* Main content */
+.main {
+  padding: 16px;
+  max-width: 800px;
+}
+
+/* Page title */
 h1 {
   font-size: 24px;
+  font-weight: bold;
   margin: 0 0 16px 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #000;
 }
 
 h2 {
-  font-size: 20px;
-  margin: 16px 0 12px 0;
+  font-size: 18px;
+  font-weight: bold;
+  margin: 24px 0 12px 0;
+}
+
+/* Section title */
+.section-title {
+  font-size: 16px;
+  font-weight: bold;
+  margin: 24px 0 12px 0;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #000;
+}
+
+.section-title:first-child {
+  margin-top: 0;
 }
 
 /* Buttons */
 .btn {
   display: inline-block;
-  padding: 14px 20px;
+  padding: 10px 16px;
   background: #000;
   color: #fff;
-  border: 2px solid #000;
-  font-size: 16px;
+  border: 1px solid #000;
+  font-size: 14px;
   text-decoration: none;
-  margin: 4px;
   cursor: pointer;
+  font-family: inherit;
 }
 
 .btn:visited {
   color: #fff;
+}
+
+.btn:hover {
+  text-decoration: none;
 }
 
 .btn-outline {
@@ -62,14 +132,31 @@ h2 {
   color: #000;
 }
 
-/* Navigation */
-.nav {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-bottom: 20px;
-  padding-bottom: 12px;
-  border-bottom: 2px solid #000;
+.btn-small {
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+/* Cards */
+.card {
+  border: 1px solid #000;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.card-title {
+  font-weight: bold;
+  font-size: 16px;
+  margin-bottom: 4px;
+}
+
+.card-meta {
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.card-actions {
+  margin-top: 8px;
 }
 
 /* Lists */
@@ -88,66 +175,113 @@ li:last-child {
   border-bottom: none;
 }
 
-/* Fiction items */
+/* Fiction items (legacy support) */
 .fiction-item {
-  margin-bottom: 16px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid #000;
+  border: 1px solid #000;
+  padding: 12px;
+  margin-bottom: 12px;
 }
 
 .fiction-title {
   font-weight: bold;
-  font-size: 18px;
+  font-size: 16px;
 }
 
 .fiction-meta {
   font-size: 14px;
-  color: #333;
   margin-top: 4px;
 }
 
 .fiction-desc,
 .fiction-description {
-  background: #f5f5f5;
+  margin-top: 8px;
+  padding: 8px;
+  border-left: 2px solid #000;
+  font-size: 14px;
 }
 
 .chapter-list li {
   padding: 10px 0;
 }
 
+/* Cover image */
+.cover-img {
+  border: 1px solid #000;
+  flex-shrink: 0;
+}
+
+.cover-placeholder {
+  border: 1px solid #000;
+  background: #fff;
+  flex-shrink: 0;
+}
+
 /* Alerts */
-.error {
-  background: #000;
-  color: #fff;
-  padding: 16px;
+.alert {
+  border: 1px solid #000;
+  padding: 12px;
   margin: 16px 0;
 }
 
+.alert-error {
+  background: #000;
+  color: #fff;
+}
+
+.error {
+  background: #000;
+  color: #fff;
+  padding: 12px;
+  margin: 16px 0;
+  border: 1px solid #000;
+}
+
 .success {
-  border: 2px solid #000;
-  padding: 16px;
+  border: 1px solid #000;
+  padding: 12px;
   margin: 16px 0;
 }
 
 /* Forms */
 form label {
   display: block;
-  margin: 12px 0 4px 0;
+  margin: 16px 0 4px 0;
   font-weight: bold;
+  font-size: 14px;
 }
 
 form input[type="text"],
+form input[type="password"],
+form input[type="email"],
 form textarea {
   width: 100%;
-  padding: 12px;
-  font-size: 16px;
-  border: 2px solid #000;
-  font-family: monospace;
+  padding: 10px;
+  font-size: 14px;
+  border: 1px solid #000;
+  font-family: inherit;
+  background: #fff;
 }
 
 form textarea {
   min-height: 80px;
   resize: vertical;
+}
+
+form .hint {
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+/* Form groups */
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-actions {
+  margin-top: 20px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 /* Pagination */
@@ -156,7 +290,7 @@ form textarea {
   justify-content: center;
   align-items: center;
   gap: 12px;
-  margin: 20px 0;
+  margin: 24px 0;
   padding-top: 16px;
   border-top: 1px solid #000;
 }
@@ -167,20 +301,6 @@ form textarea {
   text-align: center;
 }
 
-/* Dark mode toggle button */
-.dark-toggle {
-  position: fixed;
-  bottom: 12px;
-  right: 12px;
-  padding: 8px 12px;
-  font-size: 14px;
-  background: #000;
-  color: #fff;
-  border: 2px solid #000;
-  cursor: pointer;
-  z-index: 100;
-}
-
 /* Description toggle button */
 .desc-toggle {
   margin-left: 8px;
@@ -189,6 +309,54 @@ form textarea {
   background: #fff;
   border: 1px solid #000;
   cursor: pointer;
+  font-family: inherit;
+}
+
+/* Tables */
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  text-align: left;
+  padding: 8px;
+  border-bottom: 1px solid #000;
+}
+
+th {
+  font-weight: bold;
+}
+
+/* Grid */
+.grid {
+  display: grid;
+  gap: 16px;
+}
+
+.grid-2 {
+  grid-template-columns: 1fr 1fr;
+}
+
+/* Utility */
+.text-center {
+  text-align: center;
+}
+
+.mt-16 {
+  margin-top: 16px;
+}
+
+.mt-24 {
+  margin-top: 24px;
+}
+
+.mb-16 {
+  margin-bottom: 16px;
+}
+
+.hidden {
+  display: none;
 }
 
 /* ==================== */
@@ -205,7 +373,29 @@ body.dark-mode a {
 }
 
 body.dark-mode a:visited {
-  color: #ccc;
+  color: #fff;
+}
+
+body.dark-mode .header {
+  border-color: #fff;
+}
+
+body.dark-mode .nav-link {
+  border-color: #fff;
+  color: #fff;
+}
+
+body.dark-mode .nav-link.active {
+  background: #fff;
+  color: #000;
+}
+
+body.dark-mode h1 {
+  border-color: #fff;
+}
+
+body.dark-mode .section-title {
+  border-color: #fff;
 }
 
 body.dark-mode .btn {
@@ -228,12 +418,16 @@ body.dark-mode .btn-outline:visited {
   color: #fff;
 }
 
-body.dark-mode .error {
-  background: #fff;
-  color: #000;
+body.dark-mode .card {
+  border-color: #fff;
 }
 
-body.dark-mode .success {
+body.dark-mode .fiction-item {
+  border-color: #fff;
+}
+
+body.dark-mode .fiction-desc,
+body.dark-mode .fiction-description {
   border-color: #fff;
 }
 
@@ -241,11 +435,22 @@ body.dark-mode li {
   border-color: #fff;
 }
 
-body.dark-mode .nav {
+body.dark-mode .alert {
   border-color: #fff;
 }
 
-body.dark-mode .pagination {
+body.dark-mode .alert-error {
+  background: #fff;
+  color: #000;
+}
+
+body.dark-mode .error {
+  background: #fff;
+  color: #000;
+  border-color: #fff;
+}
+
+body.dark-mode .success {
   border-color: #fff;
 }
 
@@ -256,13 +461,7 @@ body.dark-mode form textarea {
   border-color: #fff;
 }
 
-body.dark-mode .fiction-meta {
-  color: #ccc;
-}
-
-body.dark-mode .fiction-desc,
-body.dark-mode .fiction-description {
-  background: #222;
+body.dark-mode .pagination {
   border-color: #fff;
 }
 
@@ -272,8 +471,12 @@ body.dark-mode .desc-toggle {
   border-color: #fff;
 }
 
-body.dark-mode .dark-toggle {
-  background: #fff;
-  color: #000;
+body.dark-mode th,
+body.dark-mode td {
+  border-color: #fff;
+}
+
+body.dark-mode .cover-img,
+body.dark-mode .cover-placeholder {
   border-color: #fff;
 }

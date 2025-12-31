@@ -63,6 +63,5 @@ export const NAV_LINKS = [
   { href: "/history", label: "History" },
   { href: "/toplists", label: "Top Lists" },
   { href: "/search", label: "Search" },
-  { href: "/cache", label: "Cache" },
-  { href: "/setup", label: "Setup" },
+  { href: "/settings", label: "Settings" },
 ] as const;

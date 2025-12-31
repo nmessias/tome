@@ -4,6 +4,7 @@
 import type { PropsWithChildren } from "@kitajs/html";
 import type { ReaderSettings } from "../config";
 import { DEFAULT_READER_SETTINGS } from "../config";
+import { Header } from "./components";
 
 export interface LayoutProps {
   title: string;
@@ -11,6 +12,7 @@ export interface LayoutProps {
   bodyClass?: string;
   scripts?: string[];
   settings?: ReaderSettings;
+  currentPath?: string;
 }
 
 /**
@@ -23,6 +25,7 @@ export function Layout({
   bodyClass = "",
   scripts = [],
   settings = DEFAULT_READER_SETTINGS,
+  currentPath = "",
 }: PropsWithChildren<LayoutProps>): JSX.Element {
   const darkClass = settings.dark ? "dark-mode" : "";
   const fullBodyClass = [bodyClass, darkClass].filter(Boolean).join(" ");
@@ -43,8 +46,10 @@ export function Layout({
           <link rel="stylesheet" href={cssFile} />
         </head>
         <body class={fullBodyClass || undefined}>
-          {children}
-          {css === "base" && <button class="dark-toggle">Dark</button>}
+          <Header currentPath={currentPath} />
+          <main class="main">
+            {children}
+          </main>
           {allScripts.map((src) => (
             <script src={src}></script>
           ))}

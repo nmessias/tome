@@ -2,7 +2,7 @@
  * Toplists index and toplist detail page templates
  */
 import { Layout } from "../layout";
-import { Nav, FictionCard, Pagination, paginate, DescriptionToggleScript } from "../components";
+import { FictionCard, Pagination, paginate, DescriptionToggleScript } from "../components";
 import type { ReaderSettings, ToplistType } from "../../config";
 import { DEFAULT_READER_SETTINGS, TOPLISTS, ITEMS_PER_PAGE } from "../../config";
 import type { Fiction } from "../../types";
@@ -16,18 +16,15 @@ export function ToplistsPage({
   settings?: ReaderSettings;
 }): JSX.Element {
   return (
-    <Layout title="Top Lists" settings={settings}>
-      <Nav currentPath="/toplists" />
+    <Layout title="Top Lists" settings={settings} currentPath="/toplists">
       <h1>Top Lists</h1>
-      <ul>
-        {TOPLISTS.map((t) => (
-          <li>
-            <a href={`/toplist/${t.slug}`} class="fiction-title" safe>
-              {t.name}
-            </a>
-          </li>
-        ))}
-      </ul>
+      {TOPLISTS.map((t) => (
+        <div class="card">
+          <a href={`/toplist/${t.slug}`} style="font-weight: bold; font-size: 16px;" safe>
+            {t.name}
+          </a>
+        </div>
+      ))}
     </Layout>
   );
 }
@@ -48,11 +45,10 @@ export function ToplistPage({
 }): JSX.Element {
   if (fictions.length === 0) {
     return (
-      <Layout title={toplist.name} settings={settings}>
-        <Nav currentPath="/toplists" />
+      <Layout title={toplist.name} settings={settings} currentPath="/toplists">
         <h1 safe>{toplist.name}</h1>
         <p>No fictions found. Try again later.</p>
-        <a href="/toplists" class="btn">
+        <a href="/toplists" class="btn btn-outline">
           Back to Top Lists
         </a>
       </Layout>
@@ -63,21 +59,18 @@ export function ToplistPage({
   const paginatedFictions = paginate(fictions, page);
 
   return (
-    <Layout title={toplist.name} settings={settings}>
-      <Nav currentPath="/toplists" />
+    <Layout title={toplist.name} settings={settings} currentPath="/toplists">
       <h1 safe>{toplist.name}</h1>
-      <ul>
-        {paginatedFictions.map((f, i) => (
-          <FictionCard fiction={f} rank={startIndex + i + 1} showDescription={true} />
-        ))}
-      </ul>
+      {paginatedFictions.map((f, i) => (
+        <FictionCard fiction={f} rank={startIndex + i + 1} showDescription={true} />
+      ))}
       <Pagination
         currentPage={page}
         totalItems={fictions.length}
         basePath={`/toplist/${toplist.slug}`}
       />
-      <div style="margin-top: 16px;">
-        <a href="/toplists" class="btn btn-outline">
+      <div class="mt-24">
+        <a href="/toplists" class="btn btn-outline btn-small">
           Back to Top Lists
         </a>
       </div>

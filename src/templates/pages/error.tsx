@@ -2,7 +2,6 @@
  * Error and loading page templates
  */
 import { Layout } from "../layout";
-import { Nav } from "../components";
 import type { ReaderSettings } from "../../config";
 import { DEFAULT_READER_SETTINGS } from "../../config";
 
@@ -22,12 +21,11 @@ export function ErrorPage({
 }): JSX.Element {
   return (
     <Layout title={title} settings={settings}>
-      <Nav />
       <h1 safe>{title}</h1>
-      <div class="error" safe>
-        {message}
+      <div class="error">
+        <span safe>{message}</span>
       </div>
-      <div style="margin-top: 16px;">
+      <div class="mt-16" style="display: flex; gap: 8px;">
         {retryUrl && (
           <a href={retryUrl} class="btn">
             Retry
