@@ -143,6 +143,21 @@ export function CoverImage({
 }
 
 /**
+ * Truncate text to specified length, adding ellipsis if needed
+ */
+function truncateText(text: string, maxLength: number): string {
+  if (text.length <= maxLength) return text;
+  return text.slice(0, maxLength).trim() + "...";
+}
+
+/**
+ * Format number with commas (e.g., 2857 -> "2,857")
+ */
+function formatNumber(num: number): string {
+  return num.toLocaleString("en-US");
+}
+
+/**
  * Fiction card props
  */
 export interface FictionCardProps {
@@ -169,9 +184,28 @@ export function FictionCard({
 }: FictionCardProps): JSX.Element {
   const f = fiction as FollowedFiction;
 
-  // Build title prefix and rating
+  // Build title prefix
   const titlePrefix = rank !== undefined ? `${rank}. ` : "";
-  const rating = fiction.stats?.rating ? ` · ${fiction.stats.rating.toFixed(1)}★` : "";
+  
+  // Build stats line: rating, pages, followers
+  const statsItems: string[] = [];
+  if (fiction.stats?.rating) {
+    statsItems.push(`${fiction.stats.rating.toFixed(1)}★`);
+  }
+  if (fiction.stats?.pages) {
+    statsItems.push(`${formatNumber(fiction.stats.pages)} pages`);
+  }
+  if (fiction.stats?.followers) {
+    statsItems.push(`${formatNumber(fiction.stats.followers)} followers`);
+  }
+  const statsLine = statsItems.join(" · ");
+
+  // Tags line (first 3 tags)
+  const tagsLine = fiction.tags?.slice(0, 3).join(" · ") || "";
+
+  // Truncated description for preview
+  const truncatedDesc = fiction.description ? truncateText(fiction.description, 150) : "";
+  const hasMoreDesc = fiction.description && fiction.description.length > 150;
 
   return (
     <div class="card" style="display: flex; gap: 12px;">
@@ -183,20 +217,23 @@ export function FictionCard({
             {fiction.title}
           </a>
           {showUnread && f.hasUnread && <strong> [NEW]</strong>}
-          {showDescription && fiction.description && (
-            <button class="desc-toggle" data-target={`desc-${fiction.id}`}>
-              Info
-            </button>
-          )}
         </div>
-        <div class="card-meta">
-          <span safe>{fiction.author || "Unknown"}</span>
-          <span safe>{rating}</span>
-        </div>
+        
+        {tagsLine && (
+          <div class="card-meta" safe>
+            {tagsLine}
+          </div>
+        )}
+        
+        {statsLine && (
+          <div class="card-meta" safe>
+            {statsLine}
+          </div>
+        )}
 
         {showLatestChapter && f.latestChapter && (
           <div class="card-meta">
-            Latest:{" "}
+            <span safe>Latest: </span>
             {f.latestChapterId ? (
               <a href={`/chapter/${f.latestChapterId}`} safe>
                 {f.latestChapter}
@@ -209,7 +246,7 @@ export function FictionCard({
 
         {showLastRead && f.lastRead && (
           <div class="card-meta">
-            Last read:{" "}
+            <span safe>Last read: </span>
             {f.lastReadChapterId ? (
               <a href={`/chapter/${f.lastReadChapterId}`} safe>
                 {f.lastRead}
@@ -238,13 +275,25 @@ export function FictionCard({
           </div>
         )}
 
-        {showDescription && fiction.description && (
-          <div
-            id={`desc-${fiction.id}`}
-            class="fiction-desc hidden"
-            safe
-          >
-            {fiction.description}
+        {showDescription && truncatedDesc && (
+          <div class="fiction-desc-container" style="margin-top: 8px;">
+            <div class="fiction-desc-preview" safe>
+              {truncatedDesc}
+            </div>
+            {hasMoreDesc && (
+              <>
+                <div
+                  id={`desc-${fiction.id}`}
+                  class="fiction-desc-full hidden"
+                  safe
+                >
+                  {fiction.description}
+                </div>
+                <button class="desc-toggle" data-target={`desc-${fiction.id}`}>
+                  Show more
+                </button>
+              </>
+            )}
           </div>
         )}
       </div>
@@ -263,7 +312,16 @@ export function FictionCardCompact({
   rank?: number;
 }): JSX.Element {
   const titlePrefix = rank !== undefined ? `${rank}. ` : "";
-  const rating = fiction.stats?.rating ? ` · ${fiction.stats.rating.toFixed(1)}★` : "";
+  
+  // Build compact stats: rating, pages
+  const statsItems: string[] = [];
+  if (fiction.stats?.rating) {
+    statsItems.push(`${fiction.stats.rating.toFixed(1)}★`);
+  }
+  if (fiction.stats?.pages) {
+    statsItems.push(`${formatNumber(fiction.stats.pages)} pages`);
+  }
+  const statsLine = statsItems.join(" · ");
 
   return (
     <div class="card" style="display: flex; gap: 10px; padding: 10px;">
@@ -275,10 +333,11 @@ export function FictionCardCompact({
             {fiction.title}
           </a>
         </div>
-        <div style="font-size: 12px;">
-          <span safe>{fiction.author || "Unknown"}</span>
-          <span safe>{rating}</span>
-        </div>
+        {statsLine && (
+          <div style="font-size: 12px;" safe>
+            {statsLine}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -297,13 +356,16 @@ export function DescriptionToggleScript(): JSX.Element {
     toggles[i].onclick = function() {
       var targetId = this.getAttribute('data-target');
       var target = document.getElementById(targetId);
+      var preview = this.previousElementSibling && this.previousElementSibling.previousElementSibling;
       if (target) {
         if (target.classList.contains('hidden')) {
           target.classList.remove('hidden');
-          this.textContent = 'Hide';
+          if (preview) preview.style.display = 'none';
+          this.textContent = 'Show less';
         } else {
           target.classList.add('hidden');
-          this.textContent = 'Info';
+          if (preview) preview.style.display = '';
+          this.textContent = 'Show more';
         }
       }
     };

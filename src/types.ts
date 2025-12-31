@@ -20,6 +20,7 @@ export interface Fiction {
   url: string;
   coverUrl?: string;
   description?: string;
+  tags?: string[];  // Genre tags like ["LitRPG", "Fantasy", "Progression"]
   stats?: FictionStats;
   chapters?: Chapter[];
   continueChapterId?: number; // Next chapter to read (from RR progress)

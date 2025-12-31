@@ -234,30 +234,48 @@ function parseFictionList(html: string): Fiction[] {
       const id = parseInt(idMatch[1], 10);
       const title = titleEl.textContent?.trim() || "";
       
-      // Author
-      let author = "";
-      const authorEl = item.querySelector("span.author a[href*='/profile/']");
-      if (authorEl) {
-        author = authorEl.textContent?.trim() || "";
-      } else {
-        const profileLink = item.querySelector("a[href*='/profile/']");
-        if (profileLink) {
-          author = profileLink.textContent?.trim() || "";
+      // Tags (first 3 genre tags)
+      const tagEls = item.querySelectorAll(".fiction-tag");
+      const tags: string[] = [];
+      for (let i = 0; i < Math.min(tagEls.length, 3); i++) {
+        const tagText = tagEls[i].textContent?.trim();
+        if (tagText) tags.push(tagText);
+      }
+
+      // Rating from star span's title attribute (e.g., title="4.75")
+      const starEl = item.querySelector(".star[title]");
+      const rating = starEl ? parseFloat(starEl.getAttribute("title") || "0") : undefined;
+
+      // Stats from the stats row - parse by icon class
+      let followers: number | undefined;
+      let pages: number | undefined;
+      
+      const statsRow = item.querySelector(".row.stats");
+      if (statsRow) {
+        const statDivs = statsRow.querySelectorAll(".col-sm-6");
+        for (const div of statDivs) {
+          const text = div.textContent?.trim() || "";
+          const icon = div.querySelector("i");
+          const iconClass = icon?.getAttribute("class") || "";
+          
+          // Parse number from text (e.g., "2,857 Followers" -> 2857)
+          const numMatch = text.match(/([\d,]+)/);
+          const num = numMatch ? parseInt(numMatch[1].replace(/,/g, ""), 10) : undefined;
+          
+          if (iconClass.includes("fa-users") && num !== undefined) {
+            followers = num;
+          } else if (iconClass.includes("fa-book") && num !== undefined) {
+            pages = num;
+          }
         }
       }
 
-      // Rating
-      const ratingEl = item.querySelector(".star, .rating, [data-original-title]");
-      const ratingText = ratingEl?.getAttribute("data-original-title") || ratingEl?.textContent || "";
-      const ratingMatch = ratingText.match(/([\d.]+)/);
-      const rating = ratingMatch ? parseFloat(ratingMatch[1]) : undefined;
-
-      // Description
-      const descEl = item.querySelector(".hidden-content, .fiction-description, .margin-top-10.col-xs-12");
+      // Description (hidden by default in toplist HTML)
+      const descEl = item.querySelector(".hidden-content, .fiction-description, .margin-top-10.col-xs-12, [id^='description-']");
       const description = descEl?.textContent?.trim() || "";
 
       // Cover
-      const coverEl = item.querySelector("img[src*='covers'], img.thumbnail");
+      const coverEl = item.querySelector("img[src*='covers'], img.thumbnail, img[data-type='cover']");
       let coverUrl = coverEl?.getAttribute("src") || undefined;
       if (coverUrl && !coverUrl.startsWith("http")) {
         coverUrl = `https://www.royalroad.com${coverUrl}`;
@@ -266,11 +284,16 @@ function parseFictionList(html: string): Fiction[] {
       fictions.push({
         id,
         title,
-        author,
+        author: "", // Not available in toplist HTML
         url: `${ROYAL_ROAD_BASE_URL}${href}`,
         coverUrl,
         description,
-        stats: rating ? { rating } : undefined,
+        tags,
+        stats: {
+          rating,
+          followers,
+          pages,
+        },
       });
     } catch (e) {
       console.error("Error parsing fiction item:", e);
