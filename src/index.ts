@@ -24,6 +24,7 @@ seedAdminUser()
 const server = Bun.serve({
   port: PORT,
   fetch: handleRequest,
+  idleTimeout: 120, // 2 minutes - allow time for slow scraping operations
 });
 
 console.log(`Tome running at http://localhost:${server.port}`);

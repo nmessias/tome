@@ -17,6 +17,21 @@ let anonContext: BrowserContext | null = null;
 // ============ Browser Management ============
 
 /**
+ * Check if browser is healthy and reconnect if needed
+ */
+async function ensureBrowser(): Promise<void> {
+  if (!browser || !browser.isConnected()) {
+    if (browser) {
+      console.log("Browser disconnected, reinitializing...");
+    }
+    browser = null;
+    context = null;
+    anonContext = null;
+    await initBrowser();
+  }
+}
+
+/**
  * Initialize browser with stealth settings
  * Requires session cookies to be configured first
  */
@@ -30,6 +45,7 @@ export async function initBrowser(): Promise<void> {
   }
 
   console.log("Initializing browser...");
+  const startTime = Date.now();
   browser = await chromium.launch({
     headless: true,
     args: [
@@ -39,16 +55,16 @@ export async function initBrowser(): Promise<void> {
       // Memory optimization for Docker/low-RAM environments
       "--disable-dev-shm-usage",           // Use /tmp instead of /dev/shm (critical in Docker)
       "--disable-gpu",                      // No GPU in containers
-      "--single-process",                   // Reduces memory ~50%
       "--disable-extensions",
       "--disable-background-networking",
       "--disable-sync",
       "--disable-translate",
       "--no-first-run",
       "--disable-features=IsolateOrigins,site-per-process,TranslateUI",
-      "--js-flags=--max-old-space-size=128", // Limit V8 heap to 128MB
+      "--js-flags=--max-old-space-size=256", // Limit V8 heap to 256MB
     ],
   });
+  console.log(`Browser launched in ${Date.now() - startTime}ms`);
 
   await createContext();
   await createAnonContext();
@@ -69,6 +85,7 @@ export async function createContext(): Promise<void> {
   }
 
   const cookies = getCookiesForPlaywright();
+  console.log(`Creating context with ${cookies.length} cookies: ${cookies.map(c => c.name).join(", ")}`);
   
   context = await browser.newContext({
     userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -86,7 +103,9 @@ export async function createContext(): Promise<void> {
 
   if (cookies.length > 0) {
     await context.addCookies(cookies);
-    console.log(`Loaded ${cookies.length} cookies into context`);
+    console.log(`Loaded ${cookies.length} cookies into auth context`);
+  } else {
+    console.warn("WARNING: No cookies loaded into auth context!");
   }
 }
 
@@ -128,16 +147,21 @@ async function getPage(
   waitForSelector?: string,
   useAnon: boolean = false
 ): Promise<{ page: Page; content: string }> {
+  const startTime = Date.now();
+  
   // Require cookies before any scraping
   if (!hasSessionCookies()) {
     throw new Error("Session cookies not configured. Please set up your Royal Road cookies first.");
   }
 
-  if (!context) {
-    await initBrowser();
+  // Ensure browser is healthy
+  await ensureBrowser();
+  
+  if (!context || !anonContext) {
+    throw new Error("Browser contexts not initialized");
   }
 
-  const ctx = useAnon ? anonContext! : context!;
+  const ctx = useAnon ? anonContext : context;
   const page = await ctx.newPage();
   
   // Block unnecessary resources for faster loads (keep images for covers)
@@ -156,31 +180,41 @@ async function getPage(
     
     while (attempts < maxAttempts) {
       attempts++;
-      console.log(`Fetching ${url} (attempt ${attempts})`);
+      console.log(`[Scraper] Fetching ${url} (attempt ${attempts}, context: ${useAnon ? 'anon' : 'auth'})`);
       
+      const navStart = Date.now();
       await page.goto(url, { 
         waitUntil: "domcontentloaded",
         timeout: SCRAPER_TIMEOUT 
       });
+      console.log(`[Scraper] Navigation completed in ${Date.now() - navStart}ms, final URL: ${page.url()}`);
 
       // Check for Cloudflare challenge
       const pageContent = await page.content();
       if (pageContent.includes("challenge-running") || pageContent.includes("cf-browser-verification")) {
-        console.log("Cloudflare challenge detected, waiting...");
+        console.log("[Scraper] Cloudflare challenge detected, waiting 5s...");
         await page.waitForTimeout(5000);
         continue;
+      }
+      
+      // Check for login redirect (cookies not working)
+      if (page.url().includes("/account/login") || pageContent.includes('action="/account/login"')) {
+        console.warn("[Scraper] WARNING: Redirected to login page - cookies may be invalid or expired!");
       }
 
       // Wait for specific selector if provided
       if (waitForSelector) {
         try {
+          const selectorStart = Date.now();
           await page.waitForSelector(waitForSelector, { timeout: SCRAPER_SELECTOR_TIMEOUT });
+          console.log(`[Scraper] Selector "${waitForSelector}" found in ${Date.now() - selectorStart}ms`);
         } catch {
-          console.log(`Selector ${waitForSelector} not found, continuing anyway`);
+          console.log(`[Scraper] Selector "${waitForSelector}" not found, continuing anyway`);
         }
       }
 
       const content = await page.content();
+      console.log(`[Scraper] Page fetched in ${Date.now() - startTime}ms total`);
       return { page, content };
     }
 
@@ -193,46 +227,29 @@ async function getPage(
 
 /**
  * Resolve a redirect URL to get the final URL (used for /chapter/next/ URLs)
+ * Uses a lightweight HEAD request instead of opening a browser page
  * Returns the final URL after redirects, or null if failed
- * useAnon = true to avoid marking chapters as read (for cache warming)
  */
-async function resolveRedirectUrl(url: string, useAnon: boolean = false): Promise<string | null> {
+async function resolveRedirectUrl(url: string): Promise<string | null> {
   if (!hasSessionCookies()) {
     return null;
   }
 
-  if (!context || !anonContext) {
-    await initBrowser();
-  }
-
-  const ctx = useAnon ? anonContext! : context!;
-  const page = await ctx.newPage();
-  
-  // Block unnecessary resources
-  await page.route('**/*', (route) => {
-    const resourceType = route.request().resourceType();
-    if (BLOCKED_RESOURCE_TYPES.includes(resourceType as any)) {
-      route.abort();
-    } else {
-      route.continue();
-    }
-  });
-  
   try {
-    // Navigate and wait for the redirect to complete
-    await page.goto(url, { 
-      waitUntil: "domcontentloaded",
-      timeout: SCRAPER_TIMEOUT 
+    // Use fetch with redirect: "follow" to get the final URL
+    // HEAD request is lightweight - no body downloaded
+    const response = await fetch(url, {
+      method: "HEAD",
+      redirect: "follow",
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      },
     });
     
-    // Get the final URL after redirects
-    const finalUrl = page.url();
-    await page.close();
-    
-    return finalUrl;
+    // response.url contains the final URL after redirects
+    return response.url;
   } catch (error) {
     console.error(`Failed to resolve redirect for ${url}:`, error);
-    await page.close();
     return null;
   }
 }
@@ -486,8 +503,8 @@ export async function getFollows(ttl: number = CACHE_TTL.FOLLOWS): Promise<Follo
       if (!f._nextChapterUrl) continue;
       
       try {
-        // Use anonymous context to avoid marking chapter as read
-        const finalUrl = await resolveRedirectUrl(f._nextChapterUrl, true);
+        // HEAD request doesn't trigger "mark as read" on Royal Road
+        const finalUrl = await resolveRedirectUrl(f._nextChapterUrl);
         if (finalUrl) {
           const chapterIdMatch = finalUrl.match(/\/chapter\/(\d+)/);
           if (chapterIdMatch) {
