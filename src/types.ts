@@ -24,6 +24,11 @@ export interface Fiction {
   stats?: FictionStats;
   chapters?: Chapter[];
   continueChapterId?: number; // Next chapter to read (from RR progress)
+  // Bookmark state (from Royal Road)
+  isFollowing?: boolean;
+  isFavorite?: boolean;
+  isReadLater?: boolean;
+  csrfToken?: string;  // Required for bookmark actions
 }
 
 export interface FictionStats {

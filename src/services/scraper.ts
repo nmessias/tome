@@ -939,6 +939,18 @@ export async function getFiction(id: number, ttl: number = CACHE_TTL.FICTION, us
     }
   }
 
+  // Parse bookmark state (Follow, Favorite, Read Later buttons)
+  const followButton = document.querySelector("#follow-button");
+  const favoriteButton = document.querySelector("#favorite-button");
+  const rilButton = document.querySelector("#ril-button");
+  const isFollowing = followButton?.classList?.contains("active") || false;
+  const isFavorite = favoriteButton?.classList?.contains("active") || false;
+  const isReadLater = rilButton?.classList?.contains("active") || false;
+  
+  // Get CSRF token (needed for bookmark actions)
+  const csrfInput = document.querySelector('input[name="__RequestVerificationToken"]');
+  const csrfToken = csrfInput?.getAttribute("value") || undefined;
+
   const fiction: Fiction = {
     id,
     title: titleEl?.textContent?.trim() || `Fiction ${id}`,
@@ -961,6 +973,10 @@ export async function getFiction(id: number, ttl: number = CACHE_TTL.FICTION, us
     },
     chapters,
     continueChapterId,
+    isFollowing,
+    isFavorite,
+    isReadLater,
+    csrfToken,
   };
 
   setCache(cacheKey, JSON.stringify(fiction), ttl);
@@ -1216,4 +1232,59 @@ export async function searchFictions(query: string): Promise<Fiction[]> {
   if (page) await page.close();
   
   return parseFictionList(content);
+}
+
+/**
+ * Set a bookmark on Royal Road (follow, favorite, or read-later)
+ * @param fictionId - The fiction ID
+ * @param type - Bookmark type: "follow", "favorite", or "ril" (read later)
+ * @param mark - true to add bookmark, false to remove
+ * @param csrfToken - CSRF token from the fiction page
+ */
+export async function setBookmark(
+  fictionId: number,
+  type: "follow" | "favorite" | "ril",
+  mark: boolean,
+  csrfToken: string
+): Promise<{ success: boolean; error?: string }> {
+  const url = `${ROYAL_ROAD_BASE_URL}/fictions/setbookmark/${fictionId}`;
+  
+  const formData = new URLSearchParams();
+  formData.append("type", type);
+  formData.append("mark", mark ? "True" : "False");
+  formData.append("__RequestVerificationToken", csrfToken);
+  
+  try {
+    console.log(`[Scraper] Setting bookmark: fiction=${fictionId}, type=${type}, mark=${mark}`);
+    
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Cookie": getCookiesForFetch(),
+        "User-Agent": USER_AGENT,
+      },
+      body: formData.toString(),
+      redirect: "manual",  // Don't follow redirects automatically
+    });
+    
+    // Success is typically 200 or 302 redirect
+    if (response.ok || response.status === 302) {
+      console.log(`[Scraper] Bookmark set successfully`);
+      
+      // Invalidate caches so we get fresh state
+      deleteCache(`fiction:${fictionId}`);
+      if (type === "follow") {
+        deleteCache("follows");
+      }
+      
+      return { success: true };
+    }
+    
+    console.error(`[Scraper] Bookmark failed with status: ${response.status}`);
+    return { success: false, error: `Request failed (${response.status})` };
+  } catch (error) {
+    console.error(`[Scraper] Bookmark error:`, error);
+    return { success: false, error: "Network error" };
+  }
 }

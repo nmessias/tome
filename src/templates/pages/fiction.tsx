@@ -27,10 +27,12 @@ export function FictionPage({
   fiction,
   chapterPage = 1,
   settings = DEFAULT_READER_SETTINGS,
+  error,
 }: {
   fiction: Fiction;
   chapterPage?: number;
   settings?: ReaderSettings;
+  error?: string;
 }): JSX.Element {
   const chapters = fiction.chapters || [];
   const totalChapterPages = Math.ceil(chapters.length / CHAPTERS_PER_PAGE);
@@ -79,6 +81,45 @@ export function FictionPage({
             Start Reading
           </a>
         )
+      )}
+
+      {/* Bookmark Actions (Follow, Favorite, Read Later) */}
+      {fiction.csrfToken && (
+        <>
+          {error && (
+            <div class="card" style="background: #fee2e2; color: #991b1b; margin-bottom: 8px; padding: 8px 12px;">
+              {error}
+            </div>
+          )}
+          <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+            <form method="POST" action={`/fiction/${fiction.id}/bookmark`} style="flex: 1;">
+              <input type="hidden" name="type" value="follow" />
+              <input type="hidden" name="mark" value={fiction.isFollowing ? "false" : "true"} />
+              <input type="hidden" name="csrf" value={fiction.csrfToken} />
+              <button type="submit" class={`btn ${fiction.isFollowing ? "" : "btn-outline"}`} style="width: 100%;">
+                {fiction.isFollowing ? "Unfollow" : "Follow"}
+              </button>
+            </form>
+            
+            <form method="POST" action={`/fiction/${fiction.id}/bookmark`} style="flex: 1;">
+              <input type="hidden" name="type" value="favorite" />
+              <input type="hidden" name="mark" value={fiction.isFavorite ? "false" : "true"} />
+              <input type="hidden" name="csrf" value={fiction.csrfToken} />
+              <button type="submit" class={`btn ${fiction.isFavorite ? "" : "btn-outline"}`} style="width: 100%;">
+                {fiction.isFavorite ? "Unfavorite" : "Favorite"}
+              </button>
+            </form>
+            
+            <form method="POST" action={`/fiction/${fiction.id}/bookmark`} style="flex: 1;">
+              <input type="hidden" name="type" value="ril" />
+              <input type="hidden" name="mark" value={fiction.isReadLater ? "false" : "true"} />
+              <input type="hidden" name="csrf" value={fiction.csrfToken} />
+              <button type="submit" class={`btn ${fiction.isReadLater ? "" : "btn-outline"}`} style="width: 100%;">
+                {fiction.isReadLater ? "Remove Later" : "Read Later"}
+              </button>
+            </form>
+          </div>
+        </>
       )}
 
       {/* Stats Section */}

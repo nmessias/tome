@@ -1,7 +1,7 @@
 /**
  * Page routes (HTML responses)
  */
-import { html, parseFormData, matchPath, URL_PATTERNS } from "../server";
+import { html, parseFormData, matchPath, URL_PATTERNS, redirect } from "../server";
 import {
   HomePage,
   SettingsPage,
@@ -34,6 +34,7 @@ import {
   validateCookies,
   createContext,
   searchFictions,
+  setBookmark,
 } from "../services/scraper";
 import { triggerCacheWarm } from "../services/jobs";
 import { TOPLISTS } from "../config";
@@ -296,11 +297,44 @@ export async function handlePageRoute(
     }
   }
 
+  // Fiction bookmark action (Follow, Favorite, Read Later)
+  const bookmarkMatch = path.match(/^\/fiction\/(\d+)\/bookmark$/);
+  if (bookmarkMatch && method === "POST") {
+    const id = parseInt(bookmarkMatch[1], 10);
+    
+    if (!hasSessionCookies()) {
+      return redirect(`/fiction/${id}?error=${encodeURIComponent("Not logged in")}`);
+    }
+    
+    try {
+      const formData = await parseFormData(req);
+      const type = formData.type as "follow" | "favorite" | "ril";
+      const mark = formData.mark === "true";
+      const csrfToken = formData.csrf;
+      
+      if (!type || !csrfToken) {
+        return redirect(`/fiction/${id}?error=${encodeURIComponent("Invalid request")}`);
+      }
+      
+      const result = await setBookmark(id, type, mark, csrfToken);
+      
+      if (result.success) {
+        return redirect(`/fiction/${id}`);
+      } else {
+        return redirect(`/fiction/${id}?error=${encodeURIComponent(result.error || "Action failed")}`);
+      }
+    } catch (error: any) {
+      console.error(`Error setting bookmark for fiction ${id}:`, error);
+      return redirect(`/fiction/${id}?error=${encodeURIComponent("Something went wrong")}`);
+    }
+  }
+
   // Fiction detail
   const fictionMatch = matchPath(path, URL_PATTERNS.fiction);
   if (fictionMatch && method === "GET") {
     const id = parseInt(fictionMatch[0], 10);
     const page = parseInt(url.searchParams.get("page") || "1", 10);
+    const error = url.searchParams.get("error") || undefined;
 
     if (!hasSessionCookies()) {
       return html(
@@ -313,7 +347,7 @@ export async function handlePageRoute(
       if (!fiction) {
         return html(ErrorPage({ title: "Not Found", message: `Fiction ${id} not found.`, settings }), 404);
       }
-      return html(FictionPage({ fiction, chapterPage: page, settings }));
+      return html(FictionPage({ fiction, chapterPage: page, settings, error }));
     } catch (error: any) {
       console.error(`Error fetching fiction ${id}:`, error);
       return html(
