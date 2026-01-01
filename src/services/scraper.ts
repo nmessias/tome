@@ -15,6 +15,31 @@ const BLOCKED_RESOURCE_TYPES = ['stylesheet', 'font', 'media', 'other'] as const
 const USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
 /**
+ * Execute async functions with limited concurrency
+ * Prevents overwhelming the server with too many parallel requests
+ */
+async function parallelLimit<T>(
+  items: T[],
+  limit: number,
+  fn: (item: T) => Promise<void>
+): Promise<void> {
+  const executing: Promise<void>[] = [];
+  
+  for (const item of items) {
+    const p = fn(item).then(() => {
+      executing.splice(executing.indexOf(p), 1);
+    });
+    executing.push(p);
+    
+    if (executing.length >= limit) {
+      await Promise.race(executing);
+    }
+  }
+  
+  await Promise.all(executing);
+}
+
+/**
  * Get cookies formatted as HTTP Cookie header string
  */
 function getCookiesForFetch(): string {
@@ -569,16 +594,18 @@ export async function getFollows(ttl: number = CACHE_TTL.FOLLOWS): Promise<Follo
   }
 
   // Resolve /chapter/next/ redirect URLs to get actual chapter IDs
+  // Use parallel requests with concurrency limit to avoid overwhelming the server
   const fictionsNeedingResolution = fictions.filter(
     (f) => (f as FollowedFiction & { _nextChapterUrl?: string })._nextChapterUrl && !f.nextChapterId
   );
   
   if (fictionsNeedingResolution.length > 0) {
-    console.log(`Resolving ${fictionsNeedingResolution.length} next chapter redirect URLs...`);
+    const startTime = Date.now();
+    console.log(`Resolving ${fictionsNeedingResolution.length} next chapter redirect URLs (parallel, max 10)...`);
     
-    for (const fiction of fictionsNeedingResolution) {
+    await parallelLimit(fictionsNeedingResolution, 10, async (fiction) => {
       const f = fiction as FollowedFiction & { _nextChapterUrl?: string };
-      if (!f._nextChapterUrl) continue;
+      if (!f._nextChapterUrl) return;
       
       try {
         // HEAD request doesn't trigger "mark as read" on Royal Road
@@ -587,16 +614,17 @@ export async function getFollows(ttl: number = CACHE_TTL.FOLLOWS): Promise<Follo
           const chapterIdMatch = finalUrl.match(/\/chapter\/(\d+)/);
           if (chapterIdMatch) {
             f.nextChapterId = parseInt(chapterIdMatch[1], 10);
-            console.log(`Resolved next chapter for "${f.title}": ${f.nextChapterId}`);
           }
         }
       } catch (e) {
-        console.error(`Failed to resolve next chapter URL for "${fiction.title}":`, e);
+        console.error(`Failed to resolve next chapter URL for "${f.title}":`, e);
       }
       
       // Clean up temporary field
       delete f._nextChapterUrl;
-    }
+    });
+    
+    console.log(`Resolved ${fictionsNeedingResolution.length} redirect URLs in ${Date.now() - startTime}ms`);
   }
 
   if (fictions.length > 0) {
