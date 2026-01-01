@@ -1182,11 +1182,17 @@ export async function getChapter(chapterId: number, ttl?: number): Promise<Chapt
   // Cache the chapter
   setCache(cacheKey, JSON.stringify(result), CACHE_TTL.CHAPTER);
 
-  // Invalidate fiction cache when reading live (read status changed on RR)
-  if (!isPreCaching && fictionInfo.fictionId) {
-    const fictionCacheKey = `fiction:${fictionInfo.fictionId}`;
-    if (deleteCache(fictionCacheKey)) {
-      console.log(`Invalidated fiction cache: ${fictionCacheKey}`);
+  // Invalidate caches when reading live (read status changed on RR)
+  if (!isPreCaching) {
+    if (fictionInfo.fictionId) {
+      const fictionCacheKey = `fiction:${fictionInfo.fictionId}`;
+      if (deleteCache(fictionCacheKey)) {
+        console.log(`Invalidated fiction cache: ${fictionCacheKey}`);
+      }
+    }
+    // Follows list shows unread status, so invalidate it too
+    if (deleteCache("follows")) {
+      console.log(`Invalidated follows cache`);
     }
   }
 
