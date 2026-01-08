@@ -54,13 +54,13 @@ a:visited {
   left: 0;
   right: 0;
   z-index: 10;
-  display: flex;
+  display: none;
   justify-content: space-between;
   align-items: flex-start;
 }
 
-.reader-header.hidden {
-  display: none;
+.reader-header.visible {
+  display: flex;
 }
 
 .header-left {
@@ -201,21 +201,14 @@ a:visited {
   z-index: 6;
 }
 
-/* Page indicator */
+/* Page indicator - Kindle-style, always visible */
 .page-indicator {
   position: fixed;
-  bottom: 75px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #000;
-  color: #fff;
-  padding: 4px 12px;
-  font-size: 14px;
-  z-index: 10;
-}
-
-.page-indicator.hidden {
-  display: none;
+  bottom: 8px;
+  right: 12px;
+  color: #888;
+  font-size: 11px;
+  z-index: 4;
 }
 
 /* Fixed navigation bar */
@@ -224,7 +217,7 @@ a:visited {
   bottom: 0;
   left: 0;
   right: 0;
-  display: flex;
+  display: none;
   justify-content: space-between;
   padding: 6px;
   background: #fff;
@@ -232,8 +225,8 @@ a:visited {
   z-index: 10;
 }
 
-.nav-fixed.hidden {
-  display: none;
+.nav-fixed.visible {
+  display: flex;
 }
 
 .nav-fixed .btn {

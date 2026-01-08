@@ -12,16 +12,13 @@
   var S = {
     // DOM elements (cached on init)
     els: {},
-    // Base class names for fast class toggling
-    base: {},
     // Pagination
     page: 0,
     totalPages: 1,
     totalPagesStr: ' / 1',
     stepSize: 0,
     // UI visibility
-    uiVisible: true,
-    hideTimeout: null,
+    uiVisible: false,
     resizeTimeout: null,
     urlTimeout: null,
     // Font settings
@@ -57,28 +54,20 @@
   // UI VISIBILITY
   // ============================================================
 
-  function startHideTimer() {
-    if (S.hideTimeout) clearTimeout(S.hideTimeout);
-    S.hideTimeout = setTimeout(function() { setUI(false); }, 3000);
-  }
-
   function setUI(visible) {
     if (visible === S.uiVisible) return;
-    
-    var hiddenClass = visible ? '' : ' hidden';
-    S.els.header.className = S.base.header + hiddenClass;
-    S.els.footer.className = S.base.footer + hiddenClass;
-    S.els.indicator.className = S.base.indicator + hiddenClass;
     S.uiVisible = visible;
     
     if (visible) {
-      updateIndicator();
-      startHideTimer();
+      S.els.header.classList.add('visible');
+      S.els.footer.classList.add('visible');
+    } else {
+      S.els.header.classList.remove('visible');
+      S.els.footer.classList.remove('visible');
     }
   }
 
   function toggleUI() {
-    if (S.uiVisible && S.hideTimeout) clearTimeout(S.hideTimeout);
     setUI(!S.uiVisible);
   }
 
@@ -128,13 +117,11 @@
 
   function openModal(e) {
     if (e && e.stopPropagation) e.stopPropagation();
-    if (S.hideTimeout) clearTimeout(S.hideTimeout);
-    S.els.modal.className = S.base.modal + ' open';
+    S.els.modal.classList.add('open');
   }
 
   function closeModal() {
-    S.els.modal.className = S.base.modal;
-    startHideTimer();
+    S.els.modal.classList.remove('open');
   }
 
   // ============================================================
@@ -181,7 +168,7 @@
   function goToPageFast(page) {
     S.page = page;
     S.els.content.scrollLeft = page * S.stepSize;
-    if (S.uiVisible) updateIndicator();
+    updateIndicator();
     scheduleUrlUpdate();
   }
 
@@ -387,12 +374,6 @@
     els.navNext = document.querySelector('.nav-next');
     els.modal = document.querySelector('.settings-modal');
     
-    // Cache base class names for fast toggling
-    S.base.header = els.header ? els.header.className : '';
-    S.base.footer = els.footer ? els.footer.className : '';
-    S.base.indicator = els.indicator ? els.indicator.className : '';
-    S.base.modal = els.modal ? els.modal.className : '';
-    
     // Get current chapter ID
     S.chapterId = els.wrapper ? els.wrapper.getAttribute('data-chapter-id') : null;
   }
@@ -470,7 +451,6 @@
       updatePages();
       var initialPage = getInitialPage();
       if (initialPage > 0) goToPage(initialPage);
-      startHideTimer();
       preloadChapters();
     }, 200);
   }
