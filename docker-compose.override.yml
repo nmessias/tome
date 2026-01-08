@@ -1,9 +1,0 @@
-# Local development - automatically loaded by docker compose
-# Runs app directly without Caddy (no SSL needed locally)
-
-services:
-  app:
-    ports:
-      - "3000:3000"
-    environment:
-      - NODE_ENV=development
