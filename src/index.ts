@@ -2,20 +2,17 @@
  * Tome - Web Fiction Proxy for E-ink Devices
  * Main entry point
  */
-import { PORT } from "./config";
+import { PORT, ENABLE_BROWSER } from "./config";
 import { handleRequest } from "./routes";
 import { initBrowser, closeBrowser } from "./services/scraper";
 import { startJobs, stopJobs } from "./services/jobs";
 import { seedAdminUser } from "./lib/auth";
 
-// Initialize browser and auth on startup
 console.log("Starting Tome...");
 
-// Seed admin user first, then init browser
 seedAdminUser()
-  .then(() => initBrowser())
+  .then(() => ENABLE_BROWSER ? initBrowser() : Promise.resolve())
   .then(() => {
-    // Start background cache jobs after browser is ready
     startJobs();
   })
   .catch(console.error);
@@ -34,6 +31,6 @@ console.log("Press Ctrl+C to stop");
 process.on("SIGINT", async () => {
   console.log("\nShutting down...");
   stopJobs();
-  await closeBrowser();
+  if (ENABLE_BROWSER) await closeBrowser();
   process.exit(0);
 });

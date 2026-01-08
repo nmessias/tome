@@ -1,11 +1,16 @@
 /**
  * Hybrid HTTP + Playwright scraper for Royal Road
  * Tries fast HTTP fetch first, falls back to Firefox for Cloudflare challenges
+ * Browser fallback can be disabled via ENABLE_BROWSER=false to save resources
  */
-import { firefox, Browser, BrowserContext, Page } from "playwright";
 import { parseHTML } from "linkedom";
 import { getCookiesForPlaywright, getCache, setCache, deleteCache, hasSessionCookies } from "./cache";
-import { ROYAL_ROAD_BASE_URL, CACHE_TTL, SCRAPER_TIMEOUT, SCRAPER_SELECTOR_TIMEOUT } from "../config";
+import { ROYAL_ROAD_BASE_URL, CACHE_TTL, SCRAPER_TIMEOUT, SCRAPER_SELECTOR_TIMEOUT, ENABLE_BROWSER } from "../config";
+
+// Playwright types (imported dynamically when ENABLE_BROWSER=true)
+type Browser = import("playwright").Browser;
+type BrowserContext = import("playwright").BrowserContext;
+type Page = import("playwright").Page;
 import type { Fiction, FollowedFiction, Chapter, ChapterContent, ToplistType, HistoryEntry } from "../types";
 
 // Resource types to block for faster page loads (keep images for covers)
@@ -279,12 +284,9 @@ let browser: Browser | null = null;
 let context: BrowserContext | null = null;
 let anonContext: BrowserContext | null = null;
 
-// ============ Browser Management ============
-
-/**
- * Check if browser is healthy and reconnect if needed
- */
 async function ensureBrowser(): Promise<void> {
+  if (!ENABLE_BROWSER) return;
+  
   if (!browser || !browser.isConnected()) {
     if (browser) {
       console.log("Browser disconnected, reinitializing...");
@@ -296,14 +298,14 @@ async function ensureBrowser(): Promise<void> {
   }
 }
 
-/**
- * Initialize browser with stealth settings
- * Requires session cookies to be configured first
- */
 export async function initBrowser(): Promise<void> {
+  if (!ENABLE_BROWSER) {
+    console.log("Browser disabled (ENABLE_BROWSER=false)");
+    return;
+  }
+  
   if (browser) return;
 
-  // Don't start browser without cookies - saves resources
   if (!hasSessionCookies()) {
     console.log("Skipping browser init - no session cookies configured");
     return;
@@ -311,16 +313,16 @@ export async function initBrowser(): Promise<void> {
 
   console.log("Initializing Firefox browser...");
   const startTime = Date.now();
+  
+  const { firefox } = await import("playwright");
   browser = await firefox.launch({
     headless: true,
     firefoxUserPrefs: {
-      // Memory optimizations for low-RAM environments
       "browser.cache.disk.enable": false,
       "browser.cache.memory.enable": true,
-      "browser.cache.memory.capacity": 32768, // 32MB cache
+      "browser.cache.memory.capacity": 32768,
       "browser.sessionhistory.max_entries": 2,
       "browser.sessionstore.max_tabs_undo": 0,
-      // Disable unnecessary features
       "media.autoplay.enabled": false,
       "media.peerconnection.enabled": false,
       "dom.webnotifications.enabled": false,
@@ -334,12 +336,9 @@ export async function initBrowser(): Promise<void> {
   console.log("Browser initialized");
 }
 
-/**
- * Create or refresh browser context with cookies (for authenticated requests)
- */
 export async function createContext(): Promise<void> {
-  if (!browser) {
-    await initBrowser();
+  if (!ENABLE_BROWSER || !browser) {
+    if (ENABLE_BROWSER) await initBrowser();
     return;
   }
 
@@ -357,7 +356,6 @@ export async function createContext(): Promise<void> {
     timezoneId: "America/New_York",
   });
 
-  // Add stealth scripts
   await context.addInitScript(() => {
     Object.defineProperty(navigator, "webdriver", { get: () => false });
     Object.defineProperty(navigator, "plugins", { get: () => [1, 2, 3, 4, 5] });
@@ -372,12 +370,9 @@ export async function createContext(): Promise<void> {
   }
 }
 
-/**
- * Create anonymous context for caching (no cookies = no "mark as read" tracking)
- */
 async function createAnonContext(): Promise<void> {
-  if (!browser) {
-    await initBrowser();
+  if (!ENABLE_BROWSER || !browser) {
+    if (ENABLE_BROWSER) await initBrowser();
     return;
   }
 
@@ -401,14 +396,6 @@ async function createAnonContext(): Promise<void> {
   console.log("Anonymous context created (for caching without auth)");
 }
 
-/**
- * Get a page using hybrid HTTP + Playwright approach
- * 1. Try fast HTTP fetch first (~100ms)
- * 2. Fall back to Firefox if Cloudflare blocks
- * 
- * useAnon = true for caching requests (won't trigger "mark as read")
- * Returns page: null when HTTP fetch succeeds (no browser page to close)
- */
 async function getPage(
   url: string,
   waitForSelector?: string,
@@ -416,12 +403,10 @@ async function getPage(
 ): Promise<{ page: Page | null; content: string }> {
   const startTime = Date.now();
   
-  // Require cookies before any scraping (except for anon which might work without)
   if (!useAnon && !hasSessionCookies()) {
     throw new Error("Session cookies not configured. Please set up your Royal Road cookies first.");
   }
 
-  // Fast path: try HTTP fetch first
   console.log(`[Scraper] Trying HTTP fetch for ${url} (${useAnon ? 'anon' : 'auth'})`);
   const httpResult = await tryHttpFetch(url, !useAnon ? true : false);
   if (httpResult) {
@@ -429,10 +414,12 @@ async function getPage(
     return { page: null, content: httpResult.content };
   }
 
-  // Slow path: use Playwright Firefox
+  if (!ENABLE_BROWSER) {
+    throw new Error("HTTP fetch failed and browser fallback is disabled (ENABLE_BROWSER=false). Cloudflare may be blocking requests.");
+  }
+
   console.log(`[Scraper] Falling back to Firefox for ${url}`);
   
-  // Ensure browser is healthy
   await ensureBrowser();
   
   if (!context || !anonContext) {
@@ -442,7 +429,6 @@ async function getPage(
   const ctx = useAnon ? anonContext : context;
   const page = await ctx.newPage();
   
-  // Block unnecessary resources for faster loads (keep images for covers)
   await page.route('**/*', (route) => {
     const resourceType = route.request().resourceType();
     if (BLOCKED_RESOURCE_TYPES.includes(resourceType as any)) {
@@ -467,7 +453,6 @@ async function getPage(
       });
       console.log(`[Scraper] Firefox navigation completed in ${Date.now() - navStart}ms`);
 
-      // Check for Cloudflare challenge
       const pageContent = await page.content();
       if (pageContent.includes("challenge-running") || pageContent.includes("cf-browser-verification") || pageContent.includes("cf-turnstile")) {
         console.log("[Scraper] Cloudflare challenge detected, waiting 5s...");
@@ -475,12 +460,10 @@ async function getPage(
         continue;
       }
       
-      // Check for login redirect (cookies not working)
       if (page.url().includes("/account/login") || pageContent.includes('action="/account/login"')) {
         console.warn("[Scraper] WARNING: Redirected to login page - cookies may be invalid or expired!");
       }
 
-      // Wait for specific selector if provided (Firefox can do JS rendering)
       if (waitForSelector) {
         try {
           const selectorStart = Date.now();
@@ -532,10 +515,9 @@ async function resolveRedirectUrl(url: string): Promise<string | null> {
   }
 }
 
-/**
- * Cleanup browser resources
- */
 export async function closeBrowser(): Promise<void> {
+  if (!ENABLE_BROWSER) return;
+  
   if (anonContext) {
     await anonContext.close();
     anonContext = null;
@@ -550,10 +532,11 @@ export async function closeBrowser(): Promise<void> {
   }
 }
 
-// Handle process exit
-process.on("exit", () => {
-  closeBrowser();
-});
+if (ENABLE_BROWSER) {
+  process.on("exit", () => {
+    closeBrowser();
+  });
+}
 
 // ============ Parsing Helpers ============
 

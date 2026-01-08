@@ -30,8 +30,10 @@
     "better-auth": "^1.4.9",
     "better-sqlite3": "^12.5.0",
     "linkedom": "^0.16.0",
-    "playwright": "^1.40.0",
     "puppeteer-extra-plugin-stealth": "^2.11.2"
+  },
+  "optionalDependencies": {
+    "playwright": "^1.40.0"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",

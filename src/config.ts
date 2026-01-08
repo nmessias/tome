@@ -6,6 +6,9 @@
 // Server configuration
 export const PORT = parseInt(process.env.PORT || "3000", 10);
 
+// Browser/Playwright (disabled by default for smaller image, set ENABLE_BROWSER=true to enable)
+export const ENABLE_BROWSER = process.env.ENABLE_BROWSER === "true";
+
 // Authentication (for production deployment)
 export const AUTH_USERNAME = process.env.AUTH_USERNAME || "";
 export const AUTH_PASSWORD = process.env.AUTH_PASSWORD || "";
