@@ -12,6 +12,15 @@ import {
   revokeInvitation,
   getInvitationExpiryDays,
 } from "../services/invitations";
+import {
+  getBook,
+  getEpubFilePath,
+  getCoverPath,
+  updateProgress,
+  getEpubFileContent,
+} from "../services/epub";
+import { isSourceEnabled } from "../services/sources";
+import * as fs from "fs";
 
 export async function handleApiRoute(
   req: Request,
@@ -273,6 +282,84 @@ export async function handleApiRoute(
       console.error("[INVITE] QR generation failed:", e.message);
       return new Response("QR generation failed", { status: 500 });
     }
+  }
+
+  const epubFileMatch = path.match(/^\/api\/epub\/([a-f0-9-]+)\/file$/);
+  if (epubFileMatch && method === "GET") {
+    const bookId = epubFileMatch[1];
+    
+    if (!isSourceEnabled(userId, "epub")) {
+      return json({ error: "EPUB source not enabled" }, 403);
+    }
+    
+    const book = getBook(bookId, userId);
+    if (!book) {
+      return json({ error: "Book not found" }, 404);
+    }
+    
+    const filePath = getEpubFilePath(book.fileHash);
+    if (!filePath) {
+      return json({ error: "EPUB file not found" }, 404);
+    }
+    
+    const fileData = fs.readFileSync(filePath);
+    return new Response(new Uint8Array(fileData), {
+      headers: {
+        "Content-Type": "application/epub+zip",
+        "Content-Disposition": `inline; filename="${encodeURIComponent(book.title)}.epub"`,
+        "Cache-Control": "private, max-age=3600",
+      },
+    });
+  }
+
+  const epubProgressMatch = path.match(/^\/api\/epub\/([a-f0-9-]+)\/progress$/);
+  if (epubProgressMatch && method === "POST") {
+    const bookId = epubProgressMatch[1];
+    
+    if (!isSourceEnabled(userId, "epub")) {
+      return json({ error: "EPUB source not enabled" }, 403);
+    }
+    
+    try {
+      const body = await req.json();
+      const cfi = body.cfi;
+      const progress = typeof body.progress === "number" ? body.progress : 0;
+      
+      if (!cfi) {
+        return json({ error: "CFI is required" }, 400);
+      }
+      
+      updateProgress(bookId, userId, cfi, progress);
+      return json({ success: true });
+    } catch (error: any) {
+      console.error("Error saving EPUB progress:", error);
+      return json({ error: "Failed to save progress" }, 500);
+    }
+  }
+
+  const coverMatch2 = path.match(/^\/covers\/([a-f0-9-]+)$/);
+  if (coverMatch2 && method === "GET") {
+    const bookId = coverMatch2[1];
+    
+    const book = getBook(bookId, userId);
+    if (!book || !book.coverPath) {
+      return new Response("Cover not found", { status: 404 });
+    }
+    
+    const coverFullPath = getCoverPath(book.coverPath);
+    if (!coverFullPath) {
+      return new Response("Cover file not found", { status: 404 });
+    }
+    
+    const coverData = fs.readFileSync(coverFullPath);
+    const contentType = book.coverPath.endsWith(".png") ? "image/png" : "image/jpeg";
+    
+    return new Response(new Uint8Array(coverData), {
+      headers: {
+        "Content-Type": contentType,
+        "Cache-Control": "public, max-age=86400",
+      },
+    });
   }
 
   return null;

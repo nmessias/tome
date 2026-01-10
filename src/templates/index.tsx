@@ -37,3 +37,6 @@ export { LoginPage } from "./pages/login";
 export { InvitePage, InviteExpiredPage } from "./pages/invite";
 export { WsTestPage } from "./pages/ws-test";
 export { RemotePage } from "./pages/remote";
+export { LibraryPage } from "./pages/library";
+export { LibraryUploadPage } from "./pages/library-upload";
+export { EpubReaderPage } from "./pages/epub-reader";

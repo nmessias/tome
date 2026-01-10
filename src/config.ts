@@ -64,15 +64,18 @@ export const DEFAULT_READER_SETTINGS: ReaderSettings = {
   font: 18,
 };
 
-// Navigation links
-export const NAV_LINKS = [
-  { href: "/", label: "Home" },
-  { href: "/follows", label: "Follows" },
-  { href: "/history", label: "History" },
-  { href: "/toplists", label: "Top Lists" },
-  { href: "/search", label: "Search" },
-  { href: "/settings", label: "Settings" },
+// source: null = always shown, "royalroad"/"epub" = only if that source is enabled
+export const ALL_NAV_LINKS = [
+  { href: "/", label: "Home", source: null },
+  { href: "/library", label: "Library", source: "epub" as const },
+  { href: "/follows", label: "Follows", source: "royalroad" as const },
+  { href: "/history", label: "History", source: "royalroad" as const },
+  { href: "/toplists", label: "Top Lists", source: "royalroad" as const },
+  { href: "/search", label: "Search", source: "royalroad" as const },
+  { href: "/settings", label: "Settings", source: null },
 ] as const;
 
+export const NAV_LINKS = ALL_NAV_LINKS;
+
 // App version for cache busting
-export const APP_VERSION = "1.2.0";
+export const APP_VERSION = "1.3.1";

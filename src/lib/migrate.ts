@@ -140,8 +140,56 @@ export function runMigrations(): void {
     ON "user_source_credentials" ("userId", "source")
   `);
   
+  // Create user_sources table for tracking enabled sources per user
+  db.run(`
+    CREATE TABLE IF NOT EXISTS "user_sources" (
+      "userId" TEXT NOT NULL,
+      "source" TEXT NOT NULL,
+      "enabled" INTEGER DEFAULT 0,
+      PRIMARY KEY ("userId", "source"),
+      FOREIGN KEY ("userId") REFERENCES "user" ("id") ON DELETE CASCADE
+    )
+  `);
+  
+  // Create epub_files table for deduplicated EPUB storage
+  db.run(`
+    CREATE TABLE IF NOT EXISTS "epub_files" (
+      "hash" TEXT PRIMARY KEY,
+      "size" INTEGER NOT NULL,
+      "uploadedAt" INTEGER NOT NULL,
+      "refCount" INTEGER DEFAULT 1
+    )
+  `);
+  
+  // Create epub_books table for user's EPUB library
+  db.run(`
+    CREATE TABLE IF NOT EXISTS "epub_books" (
+      "id" TEXT PRIMARY KEY,
+      "userId" TEXT NOT NULL,
+      "fileHash" TEXT NOT NULL,
+      "title" TEXT NOT NULL,
+      "author" TEXT,
+      "coverPath" TEXT,
+      "cfi" TEXT,
+      "progress" INTEGER DEFAULT 0,
+      "addedAt" INTEGER NOT NULL,
+      "lastReadAt" INTEGER,
+      FOREIGN KEY ("userId") REFERENCES "user" ("id") ON DELETE CASCADE,
+      FOREIGN KEY ("fileHash") REFERENCES "epub_files" ("hash")
+    )
+  `);
+  
+  // Create index for efficient library queries (sorted by last read)
+  db.run(`
+    CREATE INDEX IF NOT EXISTS "idx_epub_books_user" 
+    ON "epub_books" ("userId", "lastReadAt" DESC)
+  `);
+  
   // Migrate global cookies to admin user if they exist
   migrateGlobalCookiesToAdmin(db);
+  
+  // Auto-enable Royal Road for users who have credentials
+  autoEnableRoyalRoadForExistingUsers(db);
   
   db.close();
   
@@ -208,7 +256,25 @@ function migrateGlobalCookiesToAdmin(db: Database): void {
   console.log(`Successfully migrated cookies to admin user (${adminUser.id})`);
 }
 
-// Run migrations if this script is executed directly
+function autoEnableRoyalRoadForExistingUsers(db: Database): void {
+  const usersWithCredentials = db.query(`
+    SELECT DISTINCT userId FROM "user_source_credentials" WHERE source = 'royalroad'
+  `).all() as { userId: string }[];
+  
+  if (usersWithCredentials.length === 0) {
+    return;
+  }
+  
+  const insertStmt = db.prepare(`
+    INSERT OR IGNORE INTO "user_sources" ("userId", "source", "enabled")
+    VALUES (?, 'royalroad', 1)
+  `);
+  
+  for (const { userId } of usersWithCredentials) {
+    insertStmt.run(userId);
+  }
+}
+
 if (import.meta.main) {
   runMigrations();
 }

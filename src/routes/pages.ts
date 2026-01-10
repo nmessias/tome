@@ -50,6 +50,22 @@ import {
   getPendingInvitations,
   revokeInvitation,
 } from "../services/invitations";
+import {
+  getUserSources,
+  setSourceEnabled,
+  getEnabledSources,
+  isSourceEnabled,
+  type SourceType,
+} from "../services/sources";
+import {
+  uploadEpub,
+  getUserLibrary,
+  getBook,
+  deleteBook,
+} from "../services/epub";
+import { LibraryPage } from "../templates/pages/library";
+import { LibraryUploadPage } from "../templates/pages/library-upload";
+import { EpubReaderPage } from "../templates/pages/epub-reader";
 
 /**
  * Handle page routes
@@ -64,6 +80,7 @@ export async function handlePageRoute(
   isAdmin: boolean
 ): Promise<Response | null> {
   const method = req.method;
+  const enabledSources = getEnabledSources(userId);
 
   // WebSocket diagnostic test page
   if (path === "/ws-test" && method === "GET") {
@@ -118,12 +135,18 @@ export async function handlePageRoute(
       risingStars,
       weeklyPopular,
       hasCookies,
+      enabledSources,
     }));
   }
 
   // Settings - GET
   if (path === "/settings" && method === "GET") {
     const stats = getCacheStats();
+    const userSources = getUserSources(userId);
+    const sources = {
+      royalroad: userSources.find(s => s.source === "royalroad")?.enabled ?? false,
+      epub: userSources.find(s => s.source === "epub")?.enabled ?? false,
+    };
     const invitations = isAdmin ? getPendingInvitations().map(inv => ({
       id: inv.id,
       email: inv.email,
@@ -131,7 +154,7 @@ export async function handlePageRoute(
       expiresAt: inv.expiresAt,
       inviteUrl: `${req.headers.get("x-forwarded-proto") || "http"}://${req.headers.get("host") || "localhost:3000"}/invite/${inv.token}`,
     })) : [];
-    return html(SettingsPage({ settings, stats, isAdmin, invitations }));
+    return html(SettingsPage({ settings, stats, isAdmin, invitations, sources, enabledSources }));
   }
 
   // Settings - POST cookies
@@ -140,10 +163,18 @@ export async function handlePageRoute(
     const identity = form.identity?.trim();
     const cfclearance = form.cfclearance?.trim();
 
+    const getSourcesState = () => {
+      const userSources = getUserSources(userId);
+      return {
+        royalroad: userSources.find(s => s.source === "royalroad")?.enabled ?? false,
+        epub: userSources.find(s => s.source === "epub")?.enabled ?? false,
+      };
+    };
+
     if (!identity) {
       const stats = getCacheStats();
       return html(
-        SettingsPage({ message: "The .AspNetCore.Identity.Application cookie is required.", isError: true, settings, stats })
+        SettingsPage({ message: "The .AspNetCore.Identity.Application cookie is required.", isError: true, settings, stats, sources: getSourcesState(), enabledSources })
       );
     }
 
@@ -163,11 +194,13 @@ export async function handlePageRoute(
           isError: false,
           settings,
           stats,
+          sources: getSourcesState(),
+          enabledSources,
         })
       );
     } else {
       return html(
-        SettingsPage({ message: "Cookies saved but validation failed. Check your cookie values.", isError: true, settings, stats })
+        SettingsPage({ message: "Cookies saved but validation failed. Check your cookie values.", isError: true, settings, stats, sources: getSourcesState(), enabledSources })
       );
     }
   }
@@ -177,7 +210,12 @@ export async function handlePageRoute(
     clearCache();
     await createContext(userId);
     const stats = getCacheStats();
-    return html(SettingsPage({ message: "Cookies and cache cleared.", isError: false, settings, stats, isAdmin }));
+    const userSources = getUserSources(userId);
+    const sources = {
+      royalroad: userSources.find(s => s.source === "royalroad")?.enabled ?? false,
+      epub: userSources.find(s => s.source === "epub")?.enabled ?? false,
+    };
+    return html(SettingsPage({ message: "Cookies and cache cleared.", isError: false, settings, stats, isAdmin, sources, enabledSources }));
   }
 
   if (path === "/settings/invitations" && method === "POST") {
@@ -222,7 +260,16 @@ export async function handlePageRoute(
     });
   }
 
-  // Settings - Clear cache routes
+  const sourceToggleMatch = path.match(/^\/settings\/sources\/(royalroad|epub)$/);
+  if (sourceToggleMatch && method === "POST") {
+    const source = sourceToggleMatch[1] as SourceType;
+    const form = await parseFormData(req);
+    const enabled = form.enabled === "1";
+    
+    setSourceEnabled(userId, source, enabled);
+    return redirect("/settings");
+  }
+
   const settingsCacheMatch = path.match(/^\/settings\/cache\/clear\/(.+)$/);
   if (settingsCacheMatch && method === "GET") {
     const type = settingsCacheMatch[1];
@@ -244,7 +291,12 @@ export async function handlePageRoute(
     }
 
     const stats = getCacheStats();
-    return html(SettingsPage({ message, settings, stats }));
+    const userSources = getUserSources(userId);
+    const sources = {
+      royalroad: userSources.find(s => s.source === "royalroad")?.enabled ?? false,
+      epub: userSources.find(s => s.source === "epub")?.enabled ?? false,
+    };
+    return html(SettingsPage({ message, settings, stats, sources, enabledSources }));
   }
 
   // Legacy /setup redirect to /settings
@@ -467,6 +519,88 @@ export async function handlePageRoute(
         })
       );
     }
+  }
+
+  if (path === "/library" && method === "GET") {
+    if (!isSourceEnabled(userId, "epub")) {
+      return html(
+        ErrorPage({ title: "EPUB Not Enabled", message: "Enable EPUB source in settings to use the library.", retryUrl: "/settings", settings })
+      );
+    }
+    
+    const books = getUserLibrary(userId);
+    return html(LibraryPage({ books, settings, enabledSources }));
+  }
+
+  if (path === "/library/upload" && method === "GET") {
+    if (!isSourceEnabled(userId, "epub")) {
+      return html(
+        ErrorPage({ title: "EPUB Not Enabled", message: "Enable EPUB source in settings to upload books.", retryUrl: "/settings", settings })
+      );
+    }
+    
+    return html(LibraryUploadPage({ settings, enabledSources }));
+  }
+
+  if (path === "/library/upload" && method === "POST") {
+    if (!isSourceEnabled(userId, "epub")) {
+      return redirect("/settings");
+    }
+    
+    try {
+      const formData = await req.formData();
+      const file = formData.get("epub") as File | null;
+      
+      if (!file || file.size === 0) {
+        return html(LibraryUploadPage({ settings, enabledSources, message: "Please select an EPUB file.", isError: true }));
+      }
+      
+      if (!file.name.toLowerCase().endsWith(".epub")) {
+        return html(LibraryUploadPage({ settings, enabledSources, message: "Only EPUB files are supported.", isError: true }));
+      }
+      
+      const buffer = Buffer.from(await file.arrayBuffer());
+      const result = await uploadEpub(userId, buffer, file.name);
+      
+      if (!result.success) {
+        return html(LibraryUploadPage({ settings, enabledSources, message: result.error, isError: true }));
+      }
+      
+      return redirect("/library");
+    } catch (error: any) {
+      console.error("Error uploading EPUB:", error);
+      return html(LibraryUploadPage({ settings, enabledSources, message: "Failed to upload file. Please try again.", isError: true }));
+    }
+  }
+
+  const epubReaderMatch = path.match(/^\/epub\/([a-f0-9-]+)$/);
+  if (epubReaderMatch && method === "GET") {
+    const bookId = epubReaderMatch[1];
+    
+    if (!isSourceEnabled(userId, "epub")) {
+      return html(
+        ErrorPage({ title: "EPUB Not Enabled", message: "Enable EPUB source in settings to read books.", retryUrl: "/settings", settings })
+      );
+    }
+    
+    const book = getBook(bookId, userId);
+    if (!book) {
+      return html(ErrorPage({ title: "Not Found", message: "Book not found in your library.", retryUrl: "/library", settings }), 404);
+    }
+    
+    return html(EpubReaderPage({ book, settings }));
+  }
+
+  const epubDeleteMatch = path.match(/^\/epub\/([a-f0-9-]+)\/delete$/);
+  if (epubDeleteMatch && method === "POST") {
+    const bookId = epubDeleteMatch[1];
+    
+    if (!isSourceEnabled(userId, "epub")) {
+      return redirect("/settings");
+    }
+    
+    deleteBook(bookId, userId);
+    return redirect("/library");
   }
 
   return null;

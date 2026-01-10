@@ -6,6 +6,7 @@ import { Layout } from "../layout";
 import { Alert, SectionTitle, formatBytes } from "../components";
 import type { CacheStats } from "../../services/cache";
 import type { ReaderSettings } from "../../config";
+import type { SourceType, UserSource } from "../../services/sources";
 import { DEFAULT_READER_SETTINGS, AUTH_ENABLED } from "../../config";
 
 export interface Invitation {
@@ -16,6 +17,11 @@ export interface Invitation {
   inviteUrl: string;
 }
 
+export interface SourcesState {
+  royalroad: boolean;
+  epub: boolean;
+}
+
 export function SettingsPage({
   message,
   isError,
@@ -23,6 +29,8 @@ export function SettingsPage({
   stats,
   isAdmin = false,
   invitations = [],
+  sources = { royalroad: false, epub: false },
+  enabledSources = [],
 }: {
   message?: string;
   isError?: boolean;
@@ -30,15 +38,48 @@ export function SettingsPage({
   stats?: CacheStats;
   isAdmin?: boolean;
   invitations?: Invitation[];
+  sources?: SourcesState;
+  enabledSources?: SourceType[];
 }): JSX.Element {
   const totalSize = stats ? stats.totalSize + stats.imageSize : 0;
 
   return (
-    <Layout title="Settings" settings={settings} currentPath="/settings">
+    <Layout title="Settings" settings={settings} currentPath="/settings" enabledSources={enabledSources}>
       <h1>Settings</h1>
       {message && <Alert message={message} isError={isError} />}
 
-      {/* Dark Mode Toggle */}
+      <SectionTitle>Reading Sources</SectionTitle>
+      <div class="card">
+        <div style="margin-bottom: 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <strong>Royal Road</strong>
+              <div style="font-size: 12px;">Web fiction from royalroad.com</div>
+            </div>
+            <form method="POST" action="/settings/sources/royalroad" style="margin: 0;">
+              <input type="hidden" name="enabled" value={sources.royalroad ? "0" : "1"} />
+              <button type="submit" class="btn btn-small">
+                {sources.royalroad ? "Disable" : "Enable"}
+              </button>
+            </form>
+          </div>
+        </div>
+        <div style="border-top: 1px solid #ccc; padding-top: 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <strong>EPUB Library</strong>
+              <div style="font-size: 12px;">Upload and read your own EPUB files</div>
+            </div>
+            <form method="POST" action="/settings/sources/epub" style="margin: 0;">
+              <input type="hidden" name="enabled" value={sources.epub ? "0" : "1"} />
+              <button type="submit" class="btn btn-small">
+                {sources.epub ? "Disable" : "Enable"}
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+
       <SectionTitle>Display</SectionTitle>
       <div class="card">
         <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -52,39 +93,40 @@ export function SettingsPage({
         </div>
       </div>
 
-      {/* Session Cookies */}
-      <SectionTitle>Royal Road Session</SectionTitle>
-      <p style="font-size: 14px;">
-        Enter your Royal Road session cookies to access your follows and reading history.
-        Find these in your browser's developer tools (F12 → Application → Cookies).
-      </p>
-      <form method="POST" action="/settings/cookies">
-        <div class="form-group">
-          <label for="identity">.AspNetCore.Identity.Application</label>
-          <textarea
-            name="identity"
-            id="identity"
-            placeholder="Paste your auth cookie value here"
-          ></textarea>
-        </div>
+      {sources.royalroad && (
+        <>
+          <SectionTitle>Royal Road Session</SectionTitle>
+          <p style="font-size: 14px;">
+            Enter your Royal Road session cookies to access your follows and reading history.
+            Find these in your browser's developer tools (F12 → Application → Cookies).
+          </p>
+          <form method="POST" action="/settings/cookies">
+            <div class="form-group">
+              <label for="identity">.AspNetCore.Identity.Application</label>
+              <textarea
+                name="identity"
+                id="identity"
+                placeholder="Paste your auth cookie value here"
+              ></textarea>
+            </div>
 
-        <div class="form-group">
-          <label for="cfclearance">cf_clearance (optional)</label>
-          <textarea
-            name="cfclearance"
-            id="cfclearance"
-            placeholder="Paste if you get Cloudflare errors"
-          ></textarea>
-          <div class="hint">Only needed if you encounter Cloudflare blocking issues.</div>
-        </div>
+            <div class="form-group">
+              <label for="cfclearance">cf_clearance (optional)</label>
+              <textarea
+                name="cfclearance"
+                id="cfclearance"
+                placeholder="Paste if you get Cloudflare errors"
+              ></textarea>
+              <div class="hint">Only needed if you encounter Cloudflare blocking issues.</div>
+            </div>
 
-        <div class="form-actions">
-          <button type="submit" class="btn">Save Cookies</button>
-          <a href="/settings/cookies/clear" class="btn btn-outline">Clear Cookies</a>
-        </div>
-      </form>
-
-      {/* Cache Management */}
+            <div class="form-actions">
+              <button type="submit" class="btn">Save Cookies</button>
+              <a href="/settings/cookies/clear" class="btn btn-outline">Clear Cookies</a>
+            </div>
+          </form>
+        </>
+      )}
       {stats && (
         <>
           <SectionTitle>Cache</SectionTitle>

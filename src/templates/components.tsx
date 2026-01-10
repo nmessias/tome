@@ -1,18 +1,27 @@
 /**
  * Reusable UI components using JSX
  */
-import { NAV_LINKS, ITEMS_PER_PAGE } from "../config";
+import { NAV_LINKS, ALL_NAV_LINKS, ITEMS_PER_PAGE } from "../config";
 import type { Fiction, FollowedFiction } from "../types";
+import type { SourceType } from "../services/sources";
 
-/**
- * Header with navigation
- */
-export function Header({ currentPath = "" }: { currentPath?: string }): JSX.Element {
+export function Header({ 
+  currentPath = "",
+  enabledSources = [],
+}: { 
+  currentPath?: string;
+  enabledSources?: SourceType[];
+}): JSX.Element {
+  const visibleLinks = ALL_NAV_LINKS.filter(link => {
+    if (link.source === null) return true;
+    return enabledSources.includes(link.source as SourceType);
+  });
+  
   return (
     <header class="header">
       <a href="/" class="header-title">Tome</a>
       <nav class="nav">
-        {NAV_LINKS.map((l) => (
+        {visibleLinks.map((l) => (
           <a
             href={l.href}
             class={`nav-link${currentPath === l.href ? " active" : ""}`}

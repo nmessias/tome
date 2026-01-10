@@ -3,6 +3,7 @@
  */
 import type { PropsWithChildren } from "@kitajs/html";
 import type { ReaderSettings } from "../config";
+import type { SourceType } from "../services/sources";
 import { DEFAULT_READER_SETTINGS, APP_VERSION } from "../config";
 import { Header } from "./components";
 
@@ -13,6 +14,7 @@ export interface LayoutProps {
   scripts?: string[];
   settings?: ReaderSettings;
   currentPath?: string;
+  enabledSources?: SourceType[];
 }
 
 /**
@@ -26,6 +28,7 @@ export function Layout({
   scripts = [],
   settings = DEFAULT_READER_SETTINGS,
   currentPath = "",
+  enabledSources = [],
 }: PropsWithChildren<LayoutProps>): JSX.Element {
   const darkClass = settings.dark ? "dark-mode" : "";
   const fullBodyClass = [bodyClass, darkClass].filter(Boolean).join(" ");
@@ -33,7 +36,6 @@ export function Layout({
     ? `/public/css/reader.css?v=${APP_VERSION}` 
     : `/public/css/base.css?v=${APP_VERSION}`;
   
-  // Default scripts for base pages
   const defaultScripts = css === "base" ? [`/public/js/toggle.js?v=${APP_VERSION}`] : [];
   const allScripts = [...defaultScripts, ...scripts];
 
@@ -48,7 +50,7 @@ export function Layout({
           <link rel="stylesheet" href={cssFile} />
         </head>
         <body class={fullBodyClass || undefined}>
-          <Header currentPath={currentPath} />
+          <Header currentPath={currentPath} enabledSources={enabledSources} />
           <main class="main">
             {children}
           </main>

@@ -1,0 +1,454 @@
+@font-face {
+  font-family: 'Literata';
+  src: url('/public/fonts/Literata-Variable.ttf') format('truetype');
+  font-weight: 200 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Literata';
+  src: url('/public/fonts/Literata-Italic-Variable.ttf') format('truetype');
+  font-weight: 200 900;
+  font-style: italic;
+  font-display: swap;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  height: 100vh;
+  overflow: hidden;
+  background: #fff;
+  color: #000;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 18px;
+  line-height: 1.5;
+}
+
+a {
+  color: #000;
+  text-decoration: underline;
+}
+
+a:visited {
+  color: #333;
+}
+
+.epub-header {
+  padding: 8px 12px;
+  border-bottom: 2px solid #000;
+  background: #fff;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  display: none;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.epub-header.visible {
+  display: flex;
+}
+
+.header-left {
+  flex: 0 0 65%;
+  min-width: 0;
+}
+
+.header-right {
+  flex: 0 0 35%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.back-btn {
+  font-size: 12px;
+  text-decoration: none;
+  padding: 2px 6px;
+  border: 1px solid #999;
+  display: inline-block;
+  margin-bottom: 4px;
+}
+
+.epub-header .book-title {
+  font-size: 14px;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.epub-header .book-author {
+  font-size: 12px;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #666;
+}
+
+.progress-display {
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.settings-btn {
+  background: #fff;
+  border: 1px solid #999;
+  padding: 4px 10px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.epub-wrapper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+}
+
+.epub-container {
+  width: 100%;
+  height: 100%;
+  font-family: 'Literata', Georgia, serif;
+}
+
+.epub-loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 18px;
+  color: #666;
+  text-align: center;
+  padding: 20px;
+}
+
+.epub-loading.hidden {
+  display: none;
+}
+
+.epub-loading.error {
+  color: #c00;
+  background: #fff;
+  border: 2px solid #c00;
+  padding: 20px 30px;
+}
+
+body.dark-mode .epub-loading.error {
+  color: #f66;
+  background: #000;
+  border-color: #f66;
+}
+
+.click-zone {
+  position: absolute;
+  top: 15%;
+  bottom: 15%;
+  width: 40%;
+  z-index: 5;
+}
+
+.click-zone-left {
+  left: 0;
+}
+
+.click-zone-right {
+  right: 0;
+}
+
+.tap-zone-top {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 15%;
+  z-index: 6;
+}
+
+.tap-zone-bottom {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 15%;
+  z-index: 6;
+}
+
+.page-indicator {
+  position: fixed;
+  bottom: 8px;
+  right: 12px;
+  color: #888;
+  font-size: 11px;
+  z-index: 4;
+}
+
+.nav-fixed {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: none;
+  justify-content: space-between;
+  padding: 6px;
+  background: #fff;
+  border-top: 1px solid #ccc;
+  z-index: 10;
+}
+
+.nav-fixed.visible {
+  display: flex;
+}
+
+.nav-fixed .btn {
+  flex: 1;
+  text-align: center;
+  margin: 0 4px;
+  padding: 16px 8px;
+  font-size: 14px;
+  background: #fff;
+  color: #000;
+  border: 1px solid #999;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.nav-fixed button:disabled {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+.settings-modal,
+.delete-modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 100;
+  justify-content: center;
+  align-items: center;
+}
+
+.settings-modal.open,
+.delete-modal.open {
+  display: flex;
+}
+
+.settings-panel,
+.delete-panel {
+  background: #fff;
+  border: 2px solid #000;
+  padding: 16px;
+  width: 90%;
+  max-width: 300px;
+}
+
+.settings-panel h2,
+.delete-panel h2 {
+  margin: 0 0 16px 0;
+  font-size: 18px;
+}
+
+.delete-panel p {
+  margin: 0 0 16px 0;
+  font-size: 14px;
+}
+
+.settings-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.settings-row label {
+  font-size: 14px;
+}
+
+.font-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.font-controls button {
+  width: 36px;
+  height: 36px;
+  font-size: 18px;
+  background: #fff;
+  border: 1px solid #000;
+  cursor: pointer;
+}
+
+.font-controls span {
+  min-width: 40px;
+  text-align: center;
+  font-size: 14px;
+}
+
+.theme-controls {
+  display: flex;
+  gap: 8px;
+}
+
+.theme-btn {
+  padding: 6px 12px;
+  font-size: 12px;
+  background: #fff;
+  border: 1px solid #000;
+  cursor: pointer;
+}
+
+.theme-btn.active {
+  background: #000;
+  color: #fff;
+}
+
+.settings-close {
+  width: 100%;
+  padding: 10px;
+  margin-top: 8px;
+  background: #000;
+  color: #fff;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.delete-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.delete-actions .btn {
+  padding: 10px 16px;
+  font-size: 14px;
+  cursor: pointer;
+  border: 1px solid #000;
+}
+
+.delete-actions .btn-outline {
+  background: #fff;
+  color: #000;
+}
+
+.delete-confirm {
+  background: #000;
+  color: #fff;
+}
+
+.delete-cancel {
+  background: #fff;
+  color: #000;
+}
+
+body.dark-mode {
+  background: #000;
+  color: #fff;
+}
+
+body.dark-mode a {
+  color: #fff;
+}
+
+body.dark-mode a:visited {
+  color: #ccc;
+}
+
+body.dark-mode .epub-header {
+  background: #000;
+  border-color: #fff;
+}
+
+body.dark-mode .back-btn {
+  color: #fff;
+  border-color: #666;
+}
+
+body.dark-mode .epub-header .book-author {
+  color: #aaa;
+}
+
+body.dark-mode .settings-btn {
+  background: #000;
+  color: #fff;
+  border-color: #666;
+}
+
+body.dark-mode .epub-loading {
+  color: #aaa;
+}
+
+body.dark-mode .page-indicator {
+  color: #666;
+}
+
+body.dark-mode .nav-fixed {
+  background: #000;
+  border-color: #333;
+}
+
+body.dark-mode .nav-fixed .btn {
+  background: #000;
+  color: #fff;
+  border-color: #666;
+}
+
+body.dark-mode .settings-panel,
+body.dark-mode .delete-panel {
+  background: #000;
+  border-color: #fff;
+  color: #fff;
+}
+
+body.dark-mode .font-controls button {
+  background: #000;
+  color: #fff;
+  border-color: #fff;
+}
+
+body.dark-mode .theme-btn {
+  background: #000;
+  color: #fff;
+  border-color: #fff;
+}
+
+body.dark-mode .theme-btn.active {
+  background: #fff;
+  color: #000;
+}
+
+body.dark-mode .settings-close {
+  background: #fff;
+  color: #000;
+}
+
+body.dark-mode .delete-actions .btn {
+  border-color: #fff;
+}
+
+body.dark-mode .delete-actions .btn-outline {
+  background: #000;
+  color: #fff;
+}
+
+body.dark-mode .delete-confirm {
+  background: #fff;
+  color: #000;
+}
