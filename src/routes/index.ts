@@ -47,6 +47,11 @@ export async function handleRequest(req: Request): Promise<Response> {
     return new Response("OK", { status: 200 });
   }
 
+  // Block direct signup - only allow via invite tokens
+  if (path === "/api/auth/sign-up/email") {
+    return new Response("Signup disabled. Use an invitation link.", { status: 403 });
+  }
+
   // Handle Better Auth routes
   if (path.startsWith("/api/auth")) {
     return auth.handler(req);
