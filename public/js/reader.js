@@ -455,7 +455,12 @@
     document.body.style.backgroundColor = '#000';
     setTimeout(function() {
       document.body.style.backgroundColor = '#fff';
-      if (callback) callback();
+      
+      // Stabilization delay: give e-ink time to complete refresh cycle 
+      // before rendering new content to prevent light font weights
+      setTimeout(function() {
+        if (callback) callback();
+      }, 100);
     }, 100);
   }
 
