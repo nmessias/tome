@@ -724,10 +724,7 @@
     updatePages();
     var initialPage = window.__INITIAL_PAGE__ ? window.__INITIAL_PAGE__ - 1 : getInitialPage();
     if (initialPage > 0) {
-      // Direct scroll without animation/delay to prevent flash
-      var pageWidth = S.els.content.offsetWidth;
-      S.els.content.scrollLeft = initialPage * pageWidth;
-      S.page = initialPage;
+      goToPage(initialPage);
     }
     
     // Use requestAnimationFrame to ensure the scroll has been applied before showing
@@ -735,13 +732,11 @@
       requestAnimationFrame(function() {
         requestAnimationFrame(function() {
           S.els.content.classList.add('ready');
-          updatePageIndicator();
         });
       });
     } else {
       setTimeout(function() {
         S.els.content.classList.add('ready');
-        updatePageIndicator();
       }, 50);
     }
     
