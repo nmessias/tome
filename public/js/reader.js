@@ -28,9 +28,6 @@
     cache: {},
     chapterId: null,
     // E-ink refresh (prevents ghosting)
-    refreshCount: 0,
-    REFRESH_INTERVAL: 10,
-    // Remote control
     remoteWs: null,
     remoteToken: null,
     remoteConnected: false
@@ -464,27 +461,16 @@
     }, 100);
   }
 
-  function maybeRefresh(callback) {
-    S.refreshCount++;
-    if (S.refreshCount >= S.REFRESH_INTERVAL) {
-      S.refreshCount = 0;
-      triggerEinkRefresh(callback);
-    } else if (callback) {
-      callback();
-    }
-  }
-
   function nextPage() {
     if (S.page < S.totalPages - 1) {
-      maybeRefresh(function() {
-        goToPageFast(S.page + 1);
-      });
+      goToPageFast(S.page + 1);
     } else {
       // At last page, go to next chapter if available
       var nextId = S.els.navNext && S.els.navNext.getAttribute('data-chapter-id');
       if (nextId) {
-        S.refreshCount = 0; // Reset on chapter change
-        navigateToChapter(nextId, false);
+        triggerEinkRefresh(function() {
+          navigateToChapter(nextId, false);
+        });
       } else {
         setUI(true);
       }
@@ -493,15 +479,14 @@
 
   function prevPage() {
     if (S.page > 0) {
-      maybeRefresh(function() {
-        goToPageFast(S.page - 1);
-      });
+      goToPageFast(S.page - 1);
     } else {
       // At first page, go to prev chapter (last page) if available
       var prevId = S.els.navPrev && S.els.navPrev.getAttribute('data-chapter-id');
       if (prevId) {
-        S.refreshCount = 0; // Reset on chapter change
-        navigateToChapter(prevId, true);
+        triggerEinkRefresh(function() {
+          navigateToChapter(prevId, true);
+        });
       } else {
         setUI(true);
       }
