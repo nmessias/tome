@@ -66,6 +66,23 @@ import {
 import { LibraryPage } from "../templates/pages/library";
 import { LibraryUploadPage } from "../templates/pages/library-upload";
 import { EpubReaderPage } from "../templates/pages/epub-reader";
+import { FwnSearchPage } from "../templates/pages/fwn-search";
+import { FwnFictionPage } from "../templates/pages/fwn-fiction";
+import { FwnReaderPage } from "../templates/pages/fwn-reader";
+import { FwnLibraryPage } from "../templates/pages/fwn-library";
+import {
+  searchFictions as fwnSearchFictions,
+  getFiction as fwnGetFiction,
+  getChapter as fwnGetChapter,
+} from "../services/fwn-scraper";
+import {
+  getLibrary as fwnGetLibrary,
+  getLibraryEntry as fwnGetLibraryEntry,
+  isInLibrary as fwnIsInLibrary,
+  addToLibrary as fwnAddToLibrary,
+  removeFromLibrary as fwnRemoveFromLibrary,
+  updateTotalChapters as fwnUpdateTotalChapters,
+} from "../services/fwn-library";
 
 /**
  * Handle page routes
@@ -146,6 +163,7 @@ export async function handlePageRoute(
     const sources = {
       royalroad: userSources.find(s => s.source === "royalroad")?.enabled ?? false,
       epub: userSources.find(s => s.source === "epub")?.enabled ?? false,
+      freewebnovel: userSources.find(s => s.source === "freewebnovel")?.enabled ?? false,
     };
     const invitations = isAdmin ? getPendingInvitations().map(inv => ({
       id: inv.id,
@@ -168,6 +186,7 @@ export async function handlePageRoute(
       return {
         royalroad: userSources.find(s => s.source === "royalroad")?.enabled ?? false,
         epub: userSources.find(s => s.source === "epub")?.enabled ?? false,
+        freewebnovel: userSources.find(s => s.source === "freewebnovel")?.enabled ?? false,
       };
     };
 
@@ -214,6 +233,7 @@ export async function handlePageRoute(
     const sources = {
       royalroad: userSources.find(s => s.source === "royalroad")?.enabled ?? false,
       epub: userSources.find(s => s.source === "epub")?.enabled ?? false,
+      freewebnovel: userSources.find(s => s.source === "freewebnovel")?.enabled ?? false,
     };
     return html(SettingsPage({ message: "Cookies and cache cleared.", isError: false, settings, stats, isAdmin, sources, enabledSources }));
   }
@@ -260,7 +280,7 @@ export async function handlePageRoute(
     });
   }
 
-  const sourceToggleMatch = path.match(/^\/settings\/sources\/(royalroad|epub)$/);
+  const sourceToggleMatch = path.match(/^\/settings\/sources\/(royalroad|epub|freewebnovel)$/);
   if (sourceToggleMatch && method === "POST") {
     const source = sourceToggleMatch[1] as SourceType;
     const form = await parseFormData(req);
@@ -295,6 +315,7 @@ export async function handlePageRoute(
     const sources = {
       royalroad: userSources.find(s => s.source === "royalroad")?.enabled ?? false,
       epub: userSources.find(s => s.source === "epub")?.enabled ?? false,
+      freewebnovel: userSources.find(s => s.source === "freewebnovel")?.enabled ?? false,
     };
     return html(SettingsPage({ message, settings, stats, sources, enabledSources }));
   }
@@ -602,6 +623,157 @@ export async function handlePageRoute(
     
     deleteBook(bookId, userId);
     return redirect("/library");
+  }
+
+  // ============ FreeWebNovel Routes ============
+
+  // FWN Library
+  if (path === "/fwn/library" && method === "GET") {
+    if (!isSourceEnabled(userId, "freewebnovel")) {
+      return html(
+        ErrorPage({ title: "FreeWebNovel Not Enabled", message: "Enable FreeWebNovel source in settings to use the library.", retryUrl: "/settings", settings })
+      );
+    }
+
+    const entries = fwnGetLibrary(userId);
+    return html(FwnLibraryPage({ entries, settings, enabledSources }));
+  }
+
+  // FWN Search
+  if (path === "/fwn/search" && method === "GET") {
+    if (!isSourceEnabled(userId, "freewebnovel")) {
+      return html(
+        ErrorPage({ title: "FreeWebNovel Not Enabled", message: "Enable FreeWebNovel source in settings.", retryUrl: "/settings", settings })
+      );
+    }
+
+    const query = url.searchParams.get("q")?.trim() || "";
+    const page = parseInt(url.searchParams.get("page") || "1", 10);
+
+    if (!query) {
+      return html(FwnSearchPage({ settings, enabledSources }));
+    }
+
+    try {
+      const results = await fwnSearchFictions(query);
+      return html(FwnSearchPage({ query, results, page, settings, enabledSources }));
+    } catch (error: any) {
+      console.error(`Error searching FWN for "${query}":`, error);
+      return html(
+        ErrorPage({ title: "Search Error", message: error.message || "Failed to search FreeWebNovel. Try again.", retryUrl: "/fwn/search", settings })
+      );
+    }
+  }
+
+  // FWN Fiction detail
+  const fwnFictionMatch = matchPath(path, URL_PATTERNS.fwnFiction);
+  if (fwnFictionMatch && method === "GET") {
+    const slug = fwnFictionMatch[0];
+
+    if (!isSourceEnabled(userId, "freewebnovel")) {
+      return html(
+        ErrorPage({ title: "FreeWebNovel Not Enabled", message: "Enable FreeWebNovel source in settings.", retryUrl: "/settings", settings })
+      );
+    }
+
+    try {
+      const fiction = await fwnGetFiction(slug);
+      if (!fiction) {
+        return html(ErrorPage({ title: "Not Found", message: `Novel "${slug}" not found on FreeWebNovel.`, settings }), 404);
+      }
+
+      const inLibrary = fwnIsInLibrary(userId, slug);
+      const libraryEntry = inLibrary ? fwnGetLibraryEntry(userId, slug) : null;
+      const lastChapterRead = libraryEntry?.lastChapterRead || 0;
+
+      // Update total chapters in library if the user has it
+      if (inLibrary && fiction.chapters && fiction.chapters.length > 0) {
+        fwnUpdateTotalChapters(userId, slug, fiction.chapters.length);
+      }
+
+      const page = parseInt(url.searchParams.get("page") || "1", 10);
+      return html(FwnFictionPage({ fiction, chapterPage: page, settings, enabledSources, isInLibrary: inLibrary, lastChapterRead }));
+    } catch (error: any) {
+      console.error(`Error fetching FWN fiction ${slug}:`, error);
+      return html(
+        ErrorPage({
+          title: "Error Loading Novel",
+          message: error.message || "Failed to load novel. Try again.",
+          retryUrl: `/fwn/fiction/${slug}`,
+          settings,
+        })
+      );
+    }
+  }
+
+  // FWN Fiction library action (add/remove)
+  const fwnLibraryActionMatch = matchPath(path, URL_PATTERNS.fwnFictionLibrary);
+  if (fwnLibraryActionMatch && method === "POST") {
+    const slug = fwnLibraryActionMatch[0];
+
+    if (!isSourceEnabled(userId, "freewebnovel")) {
+      return redirect("/settings");
+    }
+
+    const form = await parseFormData(req);
+    const action = form.action;
+
+    if (action === "add") {
+      // Fetch fiction metadata to store in library
+      try {
+        const fiction = await fwnGetFiction(slug);
+        if (fiction) {
+          fwnAddToLibrary(
+            userId,
+            slug,
+            fiction.title,
+            fiction.author,
+            fiction.coverUrl,
+            fiction.description,
+            fiction.chapters?.length
+          );
+        }
+      } catch {
+        // Even if fetch fails, add with minimal info
+        fwnAddToLibrary(userId, slug, slug);
+      }
+    } else if (action === "remove") {
+      fwnRemoveFromLibrary(userId, slug);
+    }
+
+    return redirect(`/fwn/fiction/${slug}`);
+  }
+
+  // FWN Chapter reader
+  const fwnReadMatch = matchPath(path, URL_PATTERNS.fwnRead);
+  if (fwnReadMatch && method === "GET") {
+    const slug = fwnReadMatch[0];
+    const chapterNum = parseInt(fwnReadMatch[1], 10);
+    const initialPage = Math.max(1, parseInt(url.searchParams.get("p") || "1", 10));
+
+    if (!isSourceEnabled(userId, "freewebnovel")) {
+      return html(
+        ErrorPage({ title: "FreeWebNovel Not Enabled", message: "Enable FreeWebNovel source in settings.", retryUrl: "/settings", settings })
+      );
+    }
+
+    try {
+      const chapter = await fwnGetChapter(slug, chapterNum);
+      if (!chapter) {
+        return html(ErrorPage({ title: "Not Found", message: `Chapter ${chapterNum} not found.`, settings }), 404);
+      }
+      return html(FwnReaderPage({ chapter, settings, initialPage }));
+    } catch (error: any) {
+      console.error(`Error fetching FWN chapter ${slug}/chapter-${chapterNum}:`, error);
+      return html(
+        ErrorPage({
+          title: "Error Loading Chapter",
+          message: error.message || "Failed to load chapter. Try again.",
+          retryUrl: `/fwn/read/${slug}/${chapterNum}`,
+          settings,
+        })
+      );
+    }
   }
 
   return null;

@@ -135,6 +135,13 @@ export const URL_PATTERNS = {
   toplist: /^\/toplist\/([\w-]+)$/,
   coverImage: /^\/img\/cover\/(\d+)$/,
   cacheType: /^\/cache\/clear\/(.+)$/,
+  // FreeWebNovel patterns (slug-based)
+  fwnFiction: /^\/fwn\/fiction\/([\w-]+)$/,
+  fwnFictionLibrary: /^\/fwn\/fiction\/([\w-]+)\/library$/,
+  fwnRead: /^\/fwn\/read\/([\w-]+)\/(\d+)$/,
+  fwnChapterApi: /^\/api\/fwn\/chapter\/([\w-]+)\/(\d+)$/,
+  fwnProgressApi: /^\/api\/fwn\/progress\/([\w-]+)$/,
+  fwnCoverImage: /^\/img\/fwn-cover\/([\w-]+)$/,
 } as const;
 
 /**

@@ -20,6 +20,13 @@ import {
   getEpubFileContent,
 } from "../services/epub";
 import { isSourceEnabled } from "../services/sources";
+import {
+  getChapter as fwnGetChapter,
+} from "../services/fwn-scraper";
+import {
+  updateProgress as fwnUpdateProgress,
+  isInLibrary as fwnIsInLibrary,
+} from "../services/fwn-library";
 import * as fs from "fs";
 
 export async function handleApiRoute(
@@ -360,6 +367,124 @@ export async function handleApiRoute(
         "Cache-Control": "public, max-age=86400",
       },
     });
+  }
+
+  // ============ FreeWebNovel API Routes ============
+
+  // FWN Chapter API (JSON) for SPA navigation
+  const fwnChapterApiMatch = matchPath(path, URL_PATTERNS.fwnChapterApi);
+  if (fwnChapterApiMatch && method === "GET") {
+    const slug = fwnChapterApiMatch[0];
+    const chapterNum = parseInt(fwnChapterApiMatch[1], 10);
+
+    if (!isSourceEnabled(userId, "freewebnovel")) {
+      return json({ error: "FreeWebNovel source not enabled" }, 403);
+    }
+
+    try {
+      const chapter = await fwnGetChapter(slug, chapterNum);
+      if (!chapter) {
+        return json({ error: "Chapter not found" }, 404);
+      }
+
+      // Extract prev/next chapter numbers from URLs
+      const prevMatch = chapter.prevChapterUrl?.match(/\/fwn\/read\/[\w-]+\/(\d+)/);
+      const nextMatch = chapter.nextChapterUrl?.match(/\/fwn\/read\/[\w-]+\/(\d+)/);
+
+      return json({
+        id: chapter.id,
+        title: chapter.title,
+        content: chapter.content,
+        fictionSlug: chapter.fictionSlug,
+        fictionTitle: chapter.fictionTitle,
+        prevChapterNum: prevMatch ? parseInt(prevMatch[1], 10) : null,
+        nextChapterNum: nextMatch ? parseInt(nextMatch[1], 10) : null,
+      });
+    } catch (error: any) {
+      console.error(`Error fetching FWN chapter API ${slug}/${chapterNum}:`, error);
+      return json({ error: error.message || "Failed to load chapter" }, 500);
+    }
+  }
+
+  // FWN Reading progress update
+  const fwnProgressMatch = matchPath(path, URL_PATTERNS.fwnProgressApi);
+  if (fwnProgressMatch && method === "POST") {
+    const slug = fwnProgressMatch[0];
+
+    if (!isSourceEnabled(userId, "freewebnovel")) {
+      return json({ error: "FreeWebNovel source not enabled" }, 403);
+    }
+
+    try {
+      const body = await req.json();
+      const chapterNum = typeof body.chapter === "number" ? body.chapter : 0;
+
+      if (chapterNum <= 0) {
+        return json({ error: "Invalid chapter number" }, 400);
+      }
+
+      // Only update progress if the fiction is in the user's library
+      if (fwnIsInLibrary(userId, slug)) {
+        fwnUpdateProgress(userId, slug, chapterNum, `chapter-${chapterNum}`);
+      }
+
+      return json({ success: true, chapter: chapterNum });
+    } catch (error: any) {
+      console.error(`Error updating FWN progress for ${slug}:`, error);
+      return json({ error: "Failed to update progress" }, 500);
+    }
+  }
+
+  // FWN Cover image proxy
+  const fwnCoverMatch = matchPath(path, URL_PATTERNS.fwnCoverImage);
+  if (fwnCoverMatch && method === "GET") {
+    const slug = fwnCoverMatch[0];
+    const cacheKey = `fwn-cover:${slug}`;
+
+    // Check cache
+    const cached = getImageCache(cacheKey);
+    if (cached) {
+      return new Response(new Uint8Array(cached.data), {
+        headers: {
+          "Content-Type": cached.contentType,
+          "Cache-Control": "public, max-age=86400",
+        },
+      });
+    }
+
+    // Need to look up the cover URL from the fiction metadata
+    try {
+      const { getFiction: fwnGetFiction } = await import("../services/fwn-scraper");
+      const fiction = await fwnGetFiction(slug);
+      if (!fiction?.coverUrl) {
+        return new Response("Cover not found", { status: 404 });
+      }
+
+      const imageResponse = await fetch(fiction.coverUrl, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        },
+      });
+
+      if (!imageResponse.ok) {
+        return new Response("Failed to fetch cover", { status: 502 });
+      }
+
+      const contentType = imageResponse.headers.get("content-type") || "image/jpeg";
+      const imageData = Buffer.from(await imageResponse.arrayBuffer());
+
+      setImageCache(cacheKey, imageData, contentType);
+
+      return new Response(new Uint8Array(imageData), {
+        headers: {
+          "Content-Type": contentType,
+          "Cache-Control": "public, max-age=86400",
+        },
+      });
+    } catch (error: any) {
+      console.error(`Error fetching FWN cover for ${slug}:`, error);
+      return new Response("Error fetching cover", { status: 500 });
+    }
   }
 
   return null;

@@ -185,6 +185,32 @@ export function runMigrations(): void {
     ON "epub_books" ("userId", "lastReadAt" DESC)
   `);
   
+  // Create fwn_library table for tracking FreeWebNovel reading progress
+  db.run(`
+    CREATE TABLE IF NOT EXISTS "fwn_library" (
+      "id" INTEGER PRIMARY KEY AUTOINCREMENT,
+      "userId" TEXT NOT NULL,
+      "slug" TEXT NOT NULL,
+      "title" TEXT NOT NULL,
+      "author" TEXT,
+      "coverUrl" TEXT,
+      "description" TEXT,
+      "totalChapters" INTEGER DEFAULT 0,
+      "lastChapterRead" INTEGER DEFAULT 0,
+      "lastChapterSlug" TEXT,
+      "addedAt" INTEGER NOT NULL,
+      "lastReadAt" INTEGER,
+      UNIQUE("userId", "slug"),
+      FOREIGN KEY ("userId") REFERENCES "user" ("id") ON DELETE CASCADE
+    )
+  `);
+  
+  // Create index for efficient FWN library queries
+  db.run(`
+    CREATE INDEX IF NOT EXISTS "idx_fwn_library_user"
+    ON "fwn_library" ("userId", "lastReadAt" DESC)
+  `);
+  
   // Migrate global cookies to admin user if they exist
   migrateGlobalCookiesToAdmin(db);
   

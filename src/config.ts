@@ -35,6 +35,9 @@ export const DB_PATH = "./data/sessions.db";
 // Royal Road
 export const ROYAL_ROAD_BASE_URL = "https://www.royalroad.com";
 
+// FreeWebNovel
+export const FREEWEBNOVEL_BASE_URL = "https://freewebnovel.com";
+
 // Scraper timeouts (hardcoded for reliability - NODE_ENV might not be set)
 export const SCRAPER_TIMEOUT = 60000;  // 60 seconds for navigation
 export const SCRAPER_SELECTOR_TIMEOUT = 20000;  // 20 seconds for selectors
@@ -66,7 +69,7 @@ export const DEFAULT_READER_SETTINGS: ReaderSettings = {
   lineHeight: 1.6,
 };
 
-// source: null = always shown, "royalroad"/"epub" = only if that source is enabled
+// source: null = always shown, "royalroad"/"epub"/"freewebnovel" = only if that source is enabled
 export const ALL_NAV_LINKS = [
   { href: "/", label: "Home", source: null },
   { href: "/library", label: "Library", source: "epub" as const },
@@ -74,6 +77,8 @@ export const ALL_NAV_LINKS = [
   { href: "/history", label: "History", source: "royalroad" as const },
   { href: "/toplists", label: "Top Lists", source: "royalroad" as const },
   { href: "/search", label: "Search", source: "royalroad" as const },
+  { href: "/fwn/library", label: "FWN Library", source: "freewebnovel" as const },
+  { href: "/fwn/search", label: "FWN Search", source: "freewebnovel" as const },
   { href: "/settings", label: "Settings", source: null },
 ] as const;
 

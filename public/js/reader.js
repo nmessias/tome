@@ -27,6 +27,10 @@
     // SPA navigation
     cache: {},
     chapterId: null,
+    // Source detection (fwn or royalroad)
+    source: null,       // 'fwn' or null (royalroad)
+    fictionSlug: null,  // FWN fiction slug
+    chapterNum: null,   // FWN chapter number
     // E-ink refresh (prevents ghosting)
     remoteWs: null,
     remoteToken: null,
@@ -421,12 +425,21 @@
   }
 
   function updateUrl() {
-    if (window.history && window.history.replaceState && S.chapterId) {
-      var newUrl = '/chapter/' + S.chapterId;
-      if (S.page > 0) newUrl += '?p=' + (S.page + 1);
-      try {
-        window.history.replaceState({ chapterId: S.chapterId, page: S.page }, '', newUrl);
-      } catch (e) {}
+    if (window.history && window.history.replaceState) {
+      var newUrl;
+      if (S.source === 'fwn' && S.fictionSlug && S.chapterNum) {
+        newUrl = '/fwn/read/' + S.fictionSlug + '/' + S.chapterNum;
+        if (S.page > 0) newUrl += '?p=' + (S.page + 1);
+        try {
+          window.history.replaceState({ source: 'fwn', slug: S.fictionSlug, chapterNum: S.chapterNum, page: S.page }, '', newUrl);
+        } catch (e) {}
+      } else if (S.chapterId) {
+        newUrl = '/chapter/' + S.chapterId;
+        if (S.page > 0) newUrl += '?p=' + (S.page + 1);
+        try {
+          window.history.replaceState({ chapterId: S.chapterId, page: S.page }, '', newUrl);
+        } catch (e) {}
+      }
     }
   }
 
@@ -509,13 +522,27 @@
       return;
     }
 
+    var apiUrl;
+    if (S.source === 'fwn' && S.fictionSlug) {
+      // id is the chapter number for FWN
+      apiUrl = '/api/fwn/chapter/' + encodeURIComponent(S.fictionSlug) + '/' + id;
+    } else {
+      apiUrl = '/api/chapter/' + id;
+    }
+
     var xhr = new XMLHttpRequest();
-    xhr.open('GET', '/api/chapter/' + id, true);
+    xhr.open('GET', apiUrl, true);
     xhr.onreadystatechange = function() {
       if (xhr.readyState === 4 && xhr.status === 200) {
         try {
-          S.cache[id] = JSON.parse(xhr.responseText);
-          callback(S.cache[id]);
+          var data = JSON.parse(xhr.responseText);
+          // Normalize FWN response to match expected format
+          if (S.source === 'fwn') {
+            data.prevChapterId = data.prevChapterNum || null;
+            data.nextChapterId = data.nextChapterNum || null;
+          }
+          S.cache[id] = data;
+          callback(data);
         } catch (e) {
           callback(null);
         }
@@ -582,14 +609,29 @@
     
     if (!chapter) {
       // Not cached, do full page load
-      window.location.href = '/chapter/' + id;
+      if (S.source === 'fwn' && S.fictionSlug) {
+        window.location.href = '/fwn/read/' + S.fictionSlug + '/' + id;
+      } else {
+        window.location.href = '/chapter/' + id;
+      }
       return;
     }
     
-    // Mark as read (fire and forget)
-    var xhr = new XMLHttpRequest();
-    xhr.open('POST', '/api/chapter/' + id, true);
-    xhr.send();
+    if (S.source === 'fwn') {
+      // Update progress (fire and forget)
+      var pxhr = new XMLHttpRequest();
+      pxhr.open('POST', '/api/fwn/progress/' + encodeURIComponent(S.fictionSlug), true);
+      pxhr.setRequestHeader('Content-Type', 'application/json');
+      pxhr.send(JSON.stringify({ chapter: parseInt(id, 10) }));
+
+      // Update FWN state
+      S.chapterNum = parseInt(id, 10);
+    } else {
+      // Mark as read (fire and forget) for Royal Road
+      var xhr = new XMLHttpRequest();
+      xhr.open('POST', '/api/chapter/' + id, true);
+      xhr.send();
+    }
     
     // Render chapter
     renderChapter(chapter, goToLastPage);
@@ -597,27 +639,47 @@
     // Update URL with pushState
     if (window.history && window.history.pushState) {
       try {
-        window.history.pushState({ chapterId: id, page: 0 }, '', '/chapter/' + id);
+        if (S.source === 'fwn' && S.fictionSlug) {
+          window.history.pushState({ source: 'fwn', slug: S.fictionSlug, chapterNum: id, page: 0 }, '', '/fwn/read/' + S.fictionSlug + '/' + id);
+        } else {
+          window.history.pushState({ chapterId: id, page: 0 }, '', '/chapter/' + id);
+        }
       } catch (e) {}
     }
   }
 
   function onPopState(e) {
-    if (!e.state || !e.state.chapterId) return;
-    
-    var chapter = S.cache[e.state.chapterId];
-    var page = e.state.page || 0;
-    
-    if (chapter) {
-      renderChapter(chapter, false);
-      if (page > 0) {
-        setTimeout(function() { goToPage(page); }, 150);
+    if (!e.state) return;
+
+    var chapter, page;
+
+    if (e.state.source === 'fwn' && e.state.chapterNum) {
+      chapter = S.cache[e.state.chapterNum];
+      page = e.state.page || 0;
+      S.chapterNum = e.state.chapterNum;
+
+      if (chapter) {
+        renderChapter(chapter, false);
+        if (page > 0) {
+          setTimeout(function() { goToPage(page); }, 150);
+        }
+      } else {
+        window.location.href = '/fwn/read/' + e.state.slug + '/' + e.state.chapterNum + (page > 0 ? '?p=' + (page + 1) : '');
       }
-    } else {
-      // Not cached, do full page load
-      var url = '/chapter/' + e.state.chapterId;
-      if (page > 0) url += '?p=' + (page + 1);
-      window.location.href = url;
+    } else if (e.state.chapterId) {
+      chapter = S.cache[e.state.chapterId];
+      page = e.state.page || 0;
+
+      if (chapter) {
+        renderChapter(chapter, false);
+        if (page > 0) {
+          setTimeout(function() { goToPage(page); }, 150);
+        }
+      } else {
+        var url = '/chapter/' + e.state.chapterId;
+        if (page > 0) url += '?p=' + (page + 1);
+        window.location.href = url;
+      }
     }
   }
 
@@ -638,8 +700,16 @@
     els.navNext = document.querySelector('.nav-next');
     els.modal = document.querySelector('.settings-modal');
     
-    // Get current chapter ID
-    S.chapterId = els.wrapper ? els.wrapper.getAttribute('data-chapter-id') : null;
+    // Get current chapter ID and detect source
+    if (els.wrapper) {
+      S.source = els.wrapper.getAttribute('data-source') || null;
+      S.chapterId = els.wrapper.getAttribute('data-chapter-id');
+      
+      if (S.source === 'fwn') {
+        S.fictionSlug = els.wrapper.getAttribute('data-fiction-slug') || null;
+        S.chapterNum = parseInt(els.wrapper.getAttribute('data-chapter-num') || '0', 10) || null;
+      }
+    }
   }
 
   function attachHandlers() {

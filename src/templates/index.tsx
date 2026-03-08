@@ -40,3 +40,7 @@ export { RemotePage } from "./pages/remote";
 export { LibraryPage } from "./pages/library";
 export { LibraryUploadPage } from "./pages/library-upload";
 export { EpubReaderPage } from "./pages/epub-reader";
+export { FwnSearchPage } from "./pages/fwn-search";
+export { FwnFictionPage } from "./pages/fwn-fiction";
+export { FwnReaderPage } from "./pages/fwn-reader";
+export { FwnLibraryPage } from "./pages/fwn-library";

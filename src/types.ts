@@ -15,6 +15,7 @@ export interface CacheEntry {
 
 export interface Fiction {
   id: number;
+  slug?: string;       // String-based ID for sources like FreeWebNovel
   title: string;
   author: string;
   url: string;
@@ -24,10 +25,12 @@ export interface Fiction {
   stats?: FictionStats;
   chapters?: Chapter[];
   continueChapterId?: number; // Next chapter to read (from RR progress)
+  continueChapterSlug?: string; // Next chapter slug (for FWN progress)
   // Bookmark state (from Royal Road)
   isFollowing?: boolean;
   isFavorite?: boolean;
   isReadLater?: boolean;
+  isInLibrary?: boolean; // Whether fiction is in local library (FWN)
   csrfToken?: string;  // Required for bookmark actions
 }
 
@@ -49,6 +52,7 @@ export interface FictionStats {
 
 export interface Chapter {
   id: number;
+  slug?: string;     // String-based chapter identifier (e.g., "chapter-1")
   title: string;
   url: string;
   date?: string;
@@ -59,6 +63,8 @@ export interface Chapter {
 export interface ChapterContent {
   id: number;
   fictionId: number;
+  fictionSlug?: string;    // Fiction slug for FWN navigation
+  chapterSlug?: string;    // Chapter slug (e.g., "chapter-1") for FWN
   title: string;
   content: string;
   prevChapterUrl?: string;

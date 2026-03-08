@@ -1,9 +1,9 @@
 import { Database } from "bun:sqlite";
 import { DB_PATH } from "../config";
 
-export type SourceType = "royalroad" | "epub";
+export type SourceType = "royalroad" | "epub" | "freewebnovel";
 
-export const ALL_SOURCES: SourceType[] = ["royalroad", "epub"];
+export const ALL_SOURCES: SourceType[] = ["royalroad", "epub", "freewebnovel"];
 
 export interface UserSource {
   source: SourceType;

@@ -20,6 +20,7 @@ export interface Invitation {
 export interface SourcesState {
   royalroad: boolean;
   epub: boolean;
+  freewebnovel: boolean;
 }
 
 export function SettingsPage({
@@ -29,7 +30,7 @@ export function SettingsPage({
   stats,
   isAdmin = false,
   invitations = [],
-  sources = { royalroad: false, epub: false },
+  sources = { royalroad: false, epub: false, freewebnovel: false },
   enabledSources = [],
 }: {
   message?: string;
@@ -74,6 +75,20 @@ export function SettingsPage({
               <input type="hidden" name="enabled" value={sources.epub ? "0" : "1"} />
               <button type="submit" class="btn btn-small">
                 {sources.epub ? "Disable" : "Enable"}
+              </button>
+            </form>
+          </div>
+        </div>
+        <div style="border-top: 1px solid #ccc; padding-top: 16px; margin-top: 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <strong>FreeWebNovel</strong>
+              <div style="font-size: 12px;">Read novels from freewebnovel.com (no account needed)</div>
+            </div>
+            <form method="POST" action="/settings/sources/freewebnovel" style="margin: 0;">
+              <input type="hidden" name="enabled" value={sources.freewebnovel ? "0" : "1"} />
+              <button type="submit" class="btn btn-small">
+                {sources.freewebnovel ? "Disable" : "Enable"}
               </button>
             </form>
           </div>
