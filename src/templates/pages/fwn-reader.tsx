@@ -6,6 +6,13 @@ import { ReaderLayout } from "../layout";
 import type { ChapterContent } from "../../types";
 import type { ReaderSettings } from "../../config";
 import { DEFAULT_READER_SETTINGS } from "../../config";
+import {
+  ReaderHeader,
+  TapZones,
+  PageIndicator,
+  ReaderNav,
+  SettingsModal,
+} from "../reader-components";
 
 export function FwnReaderPage({
   chapter,
@@ -26,30 +33,24 @@ export function FwnReaderPage({
   const nextChapterNum = nextMatch ? nextMatch[1] : "";
 
   const fontSizeStyle = `font-size: ${settings.font}px;`;
-  const fontSizeDisplay = settings.font + "px";
 
   return (
     <ReaderLayout title={chapter.title} settings={settings} initialPage={initialPage}>
-      <header class="reader-header">
-        <div class="header-left">
-          <h1 class="chapter-title" safe>
-            {chapter.title}
-          </h1>
-          {chapter.fictionTitle && (
+      <ReaderHeader
+        title={chapter.title}
+        subtitle={
+          chapter.fictionTitle ? (
             <a href={`/fwn/fiction/${slug}`} class="fiction-link" safe>
               {chapter.fictionTitle}
             </a>
-          )}
-        </div>
-        <div class="header-right">
-          <div class="header-nav">
-            <a href="/">Home</a>
-            <a href="/fwn/library">Library</a>
-            <a href="/fwn/search">Search</a>
-          </div>
-          <button class="settings-btn">Aa</button>
-        </div>
-      </header>
+          ) : undefined
+        }
+        navLinks={[
+          { href: "/", label: "Home" },
+          { href: "/fwn/library", label: "Library" },
+          { href: "/fwn/search", label: "Search" },
+        ]}
+      />
 
       <div
         class="reader-wrapper"
@@ -59,53 +60,30 @@ export function FwnReaderPage({
         data-fiction-slug={slug}
         data-chapter-num={chapterNum}
       >
-        <div class="tap-zone-top"></div>
-        <div class="tap-zone-bottom"></div>
-        <div class="click-zone click-zone-left"></div>
-        <div class="click-zone click-zone-right"></div>
+        <TapZones />
         <div class="reader-content" style={fontSizeStyle}>
           {chapter.content as "safe"}
         </div>
       </div>
 
-      <div class="page-indicator">1 / 1</div>
+      <PageIndicator />
 
-      <nav class="nav-fixed">
-        <button
-          class="btn nav-prev"
-          data-chapter-id={prevChapterNum || ""}
-          data-fwn-url={chapter.prevChapterUrl || ""}
-          disabled={!prevChapterNum}
-        >
-          ← Prev Ch
-        </button>
-        <a href={`/fwn/fiction/${slug}`} class="btn btn-outline">
-          Index
-        </a>
-        <button
-          class="btn nav-next"
-          data-chapter-id={nextChapterNum || ""}
-          data-fwn-url={chapter.nextChapterUrl || ""}
-          disabled={!nextChapterNum}
-        >
-          Next Ch →
-        </button>
-      </nav>
+      <ReaderNav
+        indexLabel="Index"
+        indexHref={`/fwn/fiction/${slug}`}
+        prevAttrs={{
+          "data-chapter-id": prevChapterNum || "",
+          "data-fwn-url": chapter.prevChapterUrl || "",
+          disabled: !prevChapterNum,
+        }}
+        nextAttrs={{
+          "data-chapter-id": nextChapterNum || "",
+          "data-fwn-url": chapter.nextChapterUrl || "",
+          disabled: !nextChapterNum,
+        }}
+      />
 
-      <div class="settings-modal">
-        <div class="settings-panel">
-          <h2>Settings</h2>
-          <div class="settings-row">
-            <label>Font Size</label>
-            <div class="font-controls">
-              <button class="font-decrease">-</button>
-              <span class="font-size-display">{fontSizeDisplay}</span>
-              <button class="font-increase">+</button>
-            </div>
-          </div>
-          <button class="settings-close">Close</button>
-        </div>
-      </div>
+      <SettingsModal fontSizeDisplay={settings.font + "px"} />
 
       {/* Auto-update reading progress */}
       <script>
