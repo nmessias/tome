@@ -427,7 +427,7 @@
   function updateUrl() {
     if (window.history && window.history.replaceState) {
       var newUrl;
-      if (S.source === 'fwn' && S.fictionSlug && S.chapterNum) {
+      if (isFwn() && S.chapterNum) {
         newUrl = '/fwn/read/' + S.fictionSlug + '/' + S.chapterNum;
         if (S.page > 0) newUrl += '?p=' + (S.page + 1);
         try {
@@ -516,6 +516,18 @@
   // SPA NAVIGATION
   // ============================================================
 
+   function isFwn() {
+    if (S.source === 'fwn' && S.fictionSlug) return true;
+    // Fallback: detect from current URL path
+    var m = window.location.pathname.match(/^\/fwn\/read\/([\w-]+)\//);
+    if (m) {
+      S.source = 'fwn';
+      S.fictionSlug = m[1];
+      return true;
+    }
+    return false;
+  }
+
   function fetchChapter(id, callback) {
     if (S.cache[id]) {
       callback(S.cache[id]);
@@ -523,7 +535,7 @@
     }
 
     var apiUrl;
-    if (S.source === 'fwn' && S.fictionSlug) {
+    if (isFwn()) {
       // id is the chapter number for FWN
       apiUrl = '/api/fwn/chapter/' + encodeURIComponent(S.fictionSlug) + '/' + id;
     } else {
@@ -537,9 +549,11 @@
         try {
           var data = JSON.parse(xhr.responseText);
           // Normalize FWN response to match expected format
-          if (S.source === 'fwn') {
+          if (isFwn()) {
             data.prevChapterId = data.prevChapterNum || null;
             data.nextChapterId = data.nextChapterNum || null;
+            data.prevChapterUrl = data.prevChapterUrl || null;
+            data.nextChapterUrl = data.nextChapterUrl || null;
           }
           S.cache[id] = data;
           callback(data);
@@ -559,14 +573,20 @@
     if (nextId && !S.cache[nextId]) fetchChapter(nextId, function() {});
   }
 
-  function updateNavButtons(prevId, nextId) {
+  function updateNavButtons(prevId, nextId, prevUrl, nextUrl) {
     if (S.els.navPrev) {
       S.els.navPrev.disabled = !prevId;
       S.els.navPrev.setAttribute('data-chapter-id', prevId || '');
+      if (prevUrl) S.els.navPrev.setAttribute('data-fwn-url', prevUrl);
+      else if (isFwn() && prevId) S.els.navPrev.setAttribute('data-fwn-url', '/fwn/read/' + S.fictionSlug + '/' + prevId);
+      else S.els.navPrev.setAttribute('data-fwn-url', '');
     }
     if (S.els.navNext) {
       S.els.navNext.disabled = !nextId;
       S.els.navNext.setAttribute('data-chapter-id', nextId || '');
+      if (nextUrl) S.els.navNext.setAttribute('data-fwn-url', nextUrl);
+      else if (isFwn() && nextId) S.els.navNext.setAttribute('data-fwn-url', '/fwn/read/' + S.fictionSlug + '/' + nextId);
+      else S.els.navNext.setAttribute('data-fwn-url', '');
     }
   }
 
@@ -588,7 +608,7 @@
     S.chapterId = chapter.id;
     
     // Update nav buttons
-    updateNavButtons(chapter.prevChapterId, chapter.nextChapterId);
+    updateNavButtons(chapter.prevChapterId, chapter.nextChapterId, chapter.prevChapterUrl, chapter.nextChapterUrl);
     
     // Reset pagination
     S.page = 0;
@@ -609,7 +629,7 @@
     
     if (!chapter) {
       // Not cached, do full page load
-      if (S.source === 'fwn' && S.fictionSlug) {
+      if (isFwn()) {
         window.location.href = '/fwn/read/' + S.fictionSlug + '/' + id;
       } else {
         window.location.href = '/chapter/' + id;
@@ -617,7 +637,7 @@
       return;
     }
     
-    if (S.source === 'fwn') {
+    if (isFwn()) {
       // Update progress (fire and forget)
       var pxhr = new XMLHttpRequest();
       pxhr.open('POST', '/api/fwn/progress/' + encodeURIComponent(S.fictionSlug), true);
@@ -639,7 +659,7 @@
     // Update URL with pushState
     if (window.history && window.history.pushState) {
       try {
-        if (S.source === 'fwn' && S.fictionSlug) {
+        if (isFwn()) {
           window.history.pushState({ source: 'fwn', slug: S.fictionSlug, chapterNum: id, page: 0 }, '', '/fwn/read/' + S.fictionSlug + '/' + id);
         } else {
           window.history.pushState({ chapterId: id, page: 0 }, '', '/chapter/' + id);
@@ -709,6 +729,16 @@
         S.fictionSlug = els.wrapper.getAttribute('data-fiction-slug') || null;
         S.chapterNum = parseInt(els.wrapper.getAttribute('data-chapter-num') || '0', 10) || null;
       }
+      
+      // Fallback: detect FWN from URL if data attributes weren't set
+      if (!S.source) {
+        var urlMatch = window.location.pathname.match(/^\/fwn\/read\/([\w-]+)\/(\d+)/);
+        if (urlMatch) {
+          S.source = 'fwn';
+          S.fictionSlug = urlMatch[1];
+          S.chapterNum = parseInt(urlMatch[2], 10) || null;
+        }
+      }
     }
   }
 
@@ -752,7 +782,11 @@
     if (S.els.footer) {
       S.els.footer.onclick = function(e) {
         var target = e.target;
-        if (target.tagName !== 'BUTTON') return;
+        // Walk up to find the button element (some browsers may target inner text nodes)
+        while (target && target.tagName !== 'BUTTON' && target !== S.els.footer) {
+          target = target.parentNode;
+        }
+        if (!target || target.tagName !== 'BUTTON') return;
         
         var id = target.getAttribute('data-chapter-id');
         if (!id) return;

@@ -399,6 +399,8 @@ export async function handleApiRoute(
         fictionTitle: chapter.fictionTitle,
         prevChapterNum: prevMatch ? parseInt(prevMatch[1], 10) : null,
         nextChapterNum: nextMatch ? parseInt(nextMatch[1], 10) : null,
+        prevChapterUrl: chapter.prevChapterUrl || null,
+        nextChapterUrl: chapter.nextChapterUrl || null,
       });
     } catch (error: any) {
       console.error(`Error fetching FWN chapter API ${slug}/${chapterNum}:`, error);
