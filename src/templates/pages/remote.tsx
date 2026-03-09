@@ -141,6 +141,94 @@ export function RemotePage({
             0%, 100% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.4); }
             50% { box-shadow: 0 0 0 10px rgba(76, 175, 80, 0); }
           }
+          .settings-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 2px solid #555;
+            background: #2d2d2d;
+            color: #aaa;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            -webkit-tap-highlight-color: transparent;
+            flex-shrink: 0;
+          }
+          .settings-btn:active {
+            transform: scale(0.95);
+          }
+          .voice-settings-panel {
+            display: none;
+            flex-direction: column;
+            gap: 12px;
+            padding: 16px;
+            background: #1a1a1a;
+            border-top: 1px solid #333;
+          }
+          .voice-settings-panel.open {
+            display: flex;
+          }
+          .voice-settings-panel h3 {
+            font-size: 14px;
+            color: #ccc;
+            font-weight: 600;
+            margin-bottom: 4px;
+          }
+          .settings-row {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+          }
+          .settings-row label {
+            font-size: 12px;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+          }
+          .settings-row input,
+          .settings-row select {
+            background: #2d2d2d;
+            border: 1px solid #444;
+            border-radius: 6px;
+            color: #fff;
+            font-size: 14px;
+            padding: 8px 10px;
+            width: 100%;
+            appearance: none;
+            -webkit-appearance: none;
+          }
+          .settings-row input:focus,
+          .settings-row select:focus {
+            outline: none;
+            border-color: #4caf50;
+          }
+          .settings-actions {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+          }
+          .settings-save-btn {
+            padding: 8px 18px;
+            background: #4caf50;
+            border: none;
+            border-radius: 6px;
+            color: #fff;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+          }
+          .settings-save-btn:active {
+            opacity: 0.8;
+          }
+          .settings-hint {
+            font-size: 11px;
+            color: #555;
+            line-height: 1.4;
+          }
         `}</style>
       </head>
       <body>
@@ -151,6 +239,44 @@ export function RemotePage({
             </div>
             <div class="tap-zone tap-right disabled" id="next">
               <span>→</span>
+            </div>
+          </div>
+          <div class="voice-settings-panel" id="voice-settings-panel">
+            <h3>Voice Control Settings</h3>
+            <div class="settings-row">
+              <label for="voice-lang">Language</label>
+              <select id="voice-lang">
+                <option value="en-US">English (US)</option>
+                <option value="en-GB">English (UK)</option>
+                <option value="en-AU">English (Australia)</option>
+                <option value="fr-FR">French</option>
+                <option value="de-DE">German</option>
+                <option value="es-ES">Spanish (Spain)</option>
+                <option value="es-MX">Spanish (Mexico)</option>
+                <option value="it-IT">Italian</option>
+                <option value="pt-BR">Portuguese (Brazil)</option>
+                <option value="pt-PT">Portuguese (Portugal)</option>
+                <option value="nl-NL">Dutch</option>
+                <option value="pl-PL">Polish</option>
+                <option value="ru-RU">Russian</option>
+                <option value="ja-JP">Japanese</option>
+                <option value="ko-KR">Korean</option>
+                <option value="zh-CN">Chinese (Simplified)</option>
+                <option value="zh-TW">Chinese (Traditional)</option>
+              </select>
+            </div>
+            <div class="settings-row">
+              <label for="voice-next-words">Next words</label>
+              <input type="text" id="voice-next-words" placeholder="next, forward" />
+              <span class="settings-hint">Comma-separated words that trigger "next"</span>
+            </div>
+            <div class="settings-row">
+              <label for="voice-prev-words">Previous words</label>
+              <input type="text" id="voice-prev-words" placeholder="prev, previous, back" />
+              <span class="settings-hint">Comma-separated words that trigger "previous"</span>
+            </div>
+            <div class="settings-actions">
+              <button class="settings-save-btn" id="voice-settings-save">Save</button>
             </div>
           </div>
           <div class="voice-bar" id="voice-bar">
@@ -164,6 +290,12 @@ export function RemotePage({
               </svg>
             </button>
             <span class="voice-heard" id="voice-heard"></span>
+            <button class="settings-btn" id="voice-settings-btn" title="Voice settings">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+              </svg>
+            </button>
           </div>
           <div class="status-bar">
             <span class="status-indicator connecting" id="indicator"></span>
@@ -185,6 +317,12 @@ export function RemotePage({
   var micBtn = document.getElementById('mic-btn');
   var voiceLabel = document.getElementById('voice-label');
   var voiceHeard = document.getElementById('voice-heard');
+  var voiceSettingsBtn = document.getElementById('voice-settings-btn');
+  var voiceSettingsPanel = document.getElementById('voice-settings-panel');
+  var voiceLangSelect = document.getElementById('voice-lang');
+  var voiceNextWordsInput = document.getElementById('voice-next-words');
+  var voicePrevWordsInput = document.getElementById('voice-prev-words');
+  var voiceSettingsSave = document.getElementById('voice-settings-save');
 
   // Voice control state
   var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -193,6 +331,99 @@ export function RemotePage({
   var lastActionTime = 0;
   var DEBOUNCE_MS = 800;
   var restartTimeout = null;
+
+  // Voice settings (defaults)
+  var voiceSettings = {
+    lang: 'en-US',
+    nextWords: ['next', 'forward'],
+    prevWords: ['prev', 'previous', 'back']
+  };
+
+  // ============================================================
+  // COOKIE HELPERS
+  // ============================================================
+
+  function readVoiceSettingsCookie() {
+    var match = document.cookie.match(/(?:^|;\\s*)remote_voice_settings=([^;]+)/);
+    if (!match) return;
+    try {
+      var parsed = JSON.parse(decodeURIComponent(match[1]));
+      if (typeof parsed.lang === 'string' && parsed.lang) {
+        voiceSettings.lang = parsed.lang;
+      }
+      if (Array.isArray(parsed.nextWords) && parsed.nextWords.length > 0) {
+        voiceSettings.nextWords = parsed.nextWords;
+      }
+      if (Array.isArray(parsed.prevWords) && parsed.prevWords.length > 0) {
+        voiceSettings.prevWords = parsed.prevWords;
+      }
+    } catch (e) {}
+  }
+
+  function saveVoiceSettingsCookie() {
+    var value = encodeURIComponent(JSON.stringify(voiceSettings));
+    document.cookie = 'remote_voice_settings=' + value + '; Path=/; SameSite=Lax; Max-Age=31536000';
+  }
+
+  function parseWords(str) {
+    return str.split(',')
+      .map(function(w) { return w.trim().toLowerCase(); })
+      .filter(function(w) { return w.length > 0; });
+  }
+
+  // ============================================================
+  // SETTINGS PANEL
+  // ============================================================
+
+  function populateSettingsPanel() {
+    // Set language dropdown
+    var options = voiceLangSelect.options;
+    for (var i = 0; i < options.length; i++) {
+      if (options[i].value === voiceSettings.lang) {
+        voiceLangSelect.selectedIndex = i;
+        break;
+      }
+    }
+    voiceNextWordsInput.value = voiceSettings.nextWords.join(', ');
+    voicePrevWordsInput.value = voiceSettings.prevWords.join(', ');
+  }
+
+  function toggleSettingsPanel() {
+    var isOpen = voiceSettingsPanel.classList.contains('open');
+    if (isOpen) {
+      voiceSettingsPanel.classList.remove('open');
+    } else {
+      populateSettingsPanel();
+      voiceSettingsPanel.classList.add('open');
+    }
+  }
+
+  voiceSettingsBtn.onclick = toggleSettingsPanel;
+
+  voiceSettingsSave.onclick = function() {
+    var newLang = voiceLangSelect.value;
+    var newNext = parseWords(voiceNextWordsInput.value);
+    var newPrev = parseWords(voicePrevWordsInput.value);
+
+    if (newNext.length === 0) newNext = ['next', 'forward'];
+    if (newPrev.length === 0) newPrev = ['prev', 'previous', 'back'];
+
+    var langChanged = newLang !== voiceSettings.lang;
+    voiceSettings.lang = newLang;
+    voiceSettings.nextWords = newNext;
+    voiceSettings.prevWords = newPrev;
+    saveVoiceSettingsCookie();
+    voiceSettingsPanel.classList.remove('open');
+
+    // Restart recognition if active and language changed
+    if (voiceActive && langChanged) {
+      stopRecognition();
+      startRecognition();
+    }
+  };
+
+  // Load settings from cookie on startup
+  readVoiceSettingsCookie();
 
   function setStatus(state, text) {
     indicator.className = 'status-indicator ' + state;
@@ -286,8 +517,8 @@ export function RemotePage({
     var words = text.split(/\\s+/);
     for (var i = 0; i < words.length; i++) {
       var w = words[i];
-      if (w === 'next' || w === 'forward') return 'next';
-      if (w === 'prev' || w === 'previous' || w === 'back') return 'prev';
+      if (voiceSettings.nextWords.indexOf(w) !== -1) return 'next';
+      if (voiceSettings.prevWords.indexOf(w) !== -1) return 'prev';
     }
     return null;
   }
@@ -318,7 +549,7 @@ export function RemotePage({
     recognition = new SpeechRecognition();
     recognition.continuous = true;
     recognition.interimResults = true;
-    recognition.lang = 'en-US';
+    recognition.lang = voiceSettings.lang;
     // Limit to improve speed on supported browsers
     recognition.maxAlternatives = 1;
 
