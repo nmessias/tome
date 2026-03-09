@@ -632,7 +632,21 @@
       if (isFwn()) {
         window.location.href = '/fwn/read/' + S.fictionSlug + '/' + id;
       } else {
-        window.location.href = '/chapter/' + id;
+        // Fallback for FWN on devices where isFwn() detection may fail (e.g. Kindle):
+        // if the current URL is a FWN reader page, navigate there instead of /chapter/
+        var currentPath = window.location.pathname;
+        var fwnFallback = currentPath.match(/^\/fwn\/read\/([\w-]+)\/(\d+)/);
+        if (fwnFallback) {
+          var targetNum = parseInt(id, 10);
+          if (isNaN(targetNum)) {
+            // id was not a valid chapter number; derive from current chapter ±1
+            var currentChapterNum = parseInt(fwnFallback[2], 10);
+            targetNum = goToLastPage ? currentChapterNum - 1 : currentChapterNum + 1;
+          }
+          window.location.href = '/fwn/read/' + fwnFallback[1] + '/' + targetNum;
+        } else {
+          window.location.href = '/chapter/' + id;
+        }
       }
       return;
     }
