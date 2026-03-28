@@ -70,9 +70,6 @@ export function ReaderNav({
   );
 }
 
-/**
- * Font size control row for the settings modal
- */
 export function FontSizeRow({ display }: { display: string }): JSX.Element {
   return (
     <div class="settings-row">
@@ -84,6 +81,48 @@ export function FontSizeRow({ display }: { display: string }): JSX.Element {
       </div>
     </div>
   );
+}
+
+export function LineHeightRow({ display }: { display: string }): JSX.Element {
+  return (
+    <div class="settings-row">
+      <label>Line Spacing</label>
+      <div class="line-controls">
+        <button class="line-decrease">-</button>
+        <span class="line-height-display" safe>{display}</span>
+        <button class="line-increase">+</button>
+      </div>
+    </div>
+  );
+}
+
+export function ThemeToggle({ dark }: { dark: boolean }): JSX.Element {
+  return (
+    <div class="settings-row">
+      <label>Theme</label>
+      <div class="theme-controls">
+        <button class={"theme-btn theme-light" + (!dark ? " active" : "")} data-theme="light">Light</button>
+        <button class={"theme-btn theme-dark" + (dark ? " active" : "")} data-theme="dark">Dark</button>
+      </div>
+    </div>
+  );
+}
+
+export function WidthSelector({ display = "650px" }: { display?: string }): JSX.Element {
+  return (
+    <div class="settings-row">
+      <label>Width</label>
+      <div class="width-controls">
+        <button class="width-decrease">-</button>
+        <span class="width-display" safe>{display}</span>
+        <button class="width-increase">+</button>
+      </div>
+    </div>
+  );
+}
+
+export function ProgressBar(): JSX.Element {
+  return <div class="progress-bar"></div>;
 }
 
 /**
@@ -122,15 +161,24 @@ export function RemoteControlSection(): JSX.Element {
  */
 export function SettingsModal({
   fontSizeDisplay,
+  lineHeightDisplay = "1.6",
+  dark = false,
+  readingWidth = 650,
   children,
 }: PropsWithChildren<{
   fontSizeDisplay: string;
+  lineHeightDisplay?: string;
+  dark?: boolean;
+  readingWidth?: number;
 }>): JSX.Element {
   return (
     <div class="settings-modal">
       <div class="settings-panel">
         <h2>Settings</h2>
         <FontSizeRow display={fontSizeDisplay} />
+        <LineHeightRow display={lineHeightDisplay} />
+        <ThemeToggle dark={dark} />
+        <WidthSelector display={(readingWidth || 650) + "px"} />
         {children}
         <RemoteControlSection />
         <button class="settings-close">Close</button>

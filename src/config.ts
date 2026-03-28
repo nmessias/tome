@@ -61,12 +61,14 @@ export interface ReaderSettings {
   dark: boolean;
   font: number;
   lineHeight?: number;
+  readingWidth?: number;
 }
 
 export const DEFAULT_READER_SETTINGS: ReaderSettings = {
   dark: false,
   font: 18,
   lineHeight: 1.6,
+  readingWidth: 650,
 };
 
 // source: null = always shown, "royalroad"/"epub"/"freewebnovel" = only if that source is enabled
@@ -85,4 +87,4 @@ export const ALL_NAV_LINKS = [
 export const NAV_LINKS = ALL_NAV_LINKS;
 
 // App version for cache busting
-export const APP_VERSION = "1.3.7";
+export const APP_VERSION = "1.3.8";

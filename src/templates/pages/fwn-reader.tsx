@@ -12,6 +12,7 @@ import {
   PageIndicator,
   ReaderNav,
   SettingsModal,
+  ProgressBar,
 } from "../reader-components";
 
 export function FwnReaderPage({
@@ -32,10 +33,12 @@ export function FwnReaderPage({
   const prevChapterNum = prevMatch ? prevMatch[1] : "";
   const nextChapterNum = nextMatch ? nextMatch[1] : "";
 
-  const fontSizeStyle = `font-size: ${settings.font}px;`;
+  const readingWidth = settings.readingWidth || 650;
+  const fontSizeStyle = `font-size: ${settings.font}px; line-height: ${settings.lineHeight || 1.6}; max-width: ${readingWidth}px;`;
 
   return (
     <ReaderLayout title={chapter.title} settings={settings} initialPage={initialPage}>
+      <ProgressBar />
       <ReaderHeader
         title={chapter.title}
         subtitle={
@@ -83,7 +86,12 @@ export function FwnReaderPage({
         }}
       />
 
-      <SettingsModal fontSizeDisplay={settings.font + "px"} />
+      <SettingsModal
+        fontSizeDisplay={settings.font + "px"}
+        lineHeightDisplay={(settings.lineHeight || 1.6).toFixed(1)}
+        dark={settings.dark}
+        readingWidth={settings.readingWidth || 650}
+      />
 
       {/* Auto-update reading progress */}
       <script>

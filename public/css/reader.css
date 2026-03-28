@@ -407,3 +407,313 @@ a:visited {
   color: #666;
   margin: 0;
 }
+
+/* Progress bar */
+.progress-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 3px;
+  background: #000;
+  z-index: 20;
+  width: 0%;
+  transition: width 0.1s linear;
+  pointer-events: none;
+}
+
+/* Line height controls */
+.line-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.line-controls button {
+  width: 36px;
+  height: 36px;
+  font-size: 18px;
+  background: #fff;
+  border: 1px solid #000;
+  cursor: pointer;
+}
+
+.line-controls span {
+  min-width: 40px;
+  text-align: center;
+  font-size: 14px;
+}
+
+/* Theme controls */
+.theme-controls {
+  display: flex;
+  gap: 8px;
+}
+
+/* Width controls */
+.width-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.width-controls button {
+  width: 36px;
+  height: 36px;
+  font-size: 18px;
+  background: #fff;
+  border: 1px solid #000;
+  cursor: pointer;
+}
+
+.width-controls span {
+  min-width: 52px;
+  text-align: center;
+  font-size: 14px;
+}
+
+.theme-btn {
+  padding: 6px 12px;
+  font-size: 12px;
+  background: #fff;
+  border: 1px solid #000;
+  cursor: pointer;
+}
+
+.theme-btn.active {
+  background: #000;
+  color: #fff;
+}
+
+/* ==================== */
+/* Desktop Reading Mode */
+/* ==================== */
+
+@media (min-width: 768px) {
+  body {
+    overflow-y: auto;
+    height: auto;
+  }
+
+  .reader-header {
+    display: flex !important;
+    position: relative !important;
+    border-bottom: 1px solid #ddd;
+    padding: 12px 24px;
+    max-width: 900px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  .reader-wrapper {
+    position: relative !important;
+    overflow: visible !important;
+    width: 100%;
+  }
+
+  .reader-content {
+    column-width: auto !important;
+    column-gap: 0 !important;
+    overflow: visible !important;
+    max-width: 650px;
+    margin: 0 auto;
+    padding: 32px 24px 60px;
+    height: auto !important;
+    visibility: visible !important;
+    width: 100%;
+  }
+
+  .reader-content p {
+    margin: 0 0 1.1em 0;
+  }
+
+  .click-zone,
+  .tap-zone-top,
+  .tap-zone-bottom {
+    display: none !important;
+  }
+
+  .page-indicator {
+    display: none !important;
+  }
+
+  .nav-fixed {
+    display: flex !important;
+    position: relative !important;
+    border-top: 1px solid #ddd;
+    padding: 12px;
+    max-width: 650px;
+    margin: 0 auto 40px;
+  }
+
+  .nav-fixed .btn {
+    padding: 10px 16px;
+    font-size: 13px;
+  }
+
+  .settings-panel {
+    max-width: 420px;
+    padding: 20px 24px;
+  }
+
+  .settings-row {
+    margin-bottom: 16px;
+  }
+
+  .settings-row label {
+    font-size: 15px;
+  }
+
+  .reader-header h1 {
+    font-size: 16px;
+  }
+
+  .reader-header .fiction-link {
+    font-size: 13px;
+  }
+
+  .reader-header .header-nav {
+    font-size: 12px;
+  }
+}
+
+/* ==================== */
+/* Dark Mode            */
+/* ==================== */
+
+body.dark-mode {
+  background: #1a1a1a;
+  color: #e0e0e0;
+}
+
+body.dark-mode a {
+  color: #b0b0b0;
+}
+
+body.dark-mode a:visited {
+  color: #888;
+}
+
+body.dark-mode .reader-header {
+  background: #1a1a1a;
+  border-color: #333;
+}
+
+body.dark-mode .header-nav a {
+  color: #e0e0e0;
+  border-color: #555;
+}
+
+body.dark-mode .settings-btn {
+  background: #1a1a1a;
+  color: #e0e0e0;
+  border-color: #555;
+}
+
+body.dark-mode .page-indicator {
+  color: #555;
+}
+
+body.dark-mode .nav-fixed {
+  background: #1a1a1a;
+  border-color: #333;
+}
+
+body.dark-mode .nav-fixed .btn {
+  background: #1a1a1a;
+  color: #e0e0e0;
+  border-color: #555;
+}
+
+body.dark-mode .progress-bar {
+  background: #e0e0e0;
+}
+
+body.dark-mode .settings-panel {
+  background: #222;
+  border-color: #555;
+  color: #e0e0e0;
+}
+
+body.dark-mode .settings-panel h2 {
+  color: #e0e0e0;
+}
+
+body.dark-mode .font-controls button {
+  background: #222;
+  color: #e0e0e0;
+  border-color: #666;
+}
+
+body.dark-mode .settings-close {
+  background: #e0e0e0;
+  color: #222;
+}
+
+body.dark-mode .line-controls button {
+  background: #222;
+  color: #e0e0e0;
+  border-color: #666;
+}
+
+body.dark-mode .theme-btn {
+  background: #222;
+  color: #e0e0e0;
+  border-color: #666;
+}
+
+body.dark-mode .theme-btn.active {
+  background: #e0e0e0;
+  color: #222;
+}
+
+body.dark-mode .width-controls button {
+  background: #222;
+  color: #e0e0e0;
+  border-color: #666;
+}
+
+body.dark-mode .remote-icon {
+  background: #333;
+  border-color: #666;
+  color: #e0e0e0;
+}
+
+body.dark-mode .remote-btn {
+  background: #222;
+  color: #e0e0e0;
+  border-color: #666;
+}
+
+body.dark-mode .remote-btn.remote-disable {
+  background: #333;
+  color: #999;
+}
+
+body.dark-mode .remote-reconnect {
+  border-color: #2e7d32;
+  background: #1a3a1a;
+}
+
+body.dark-mode .remote-reconnect p {
+  color: #81c784;
+}
+
+body.dark-mode .remote-qr {
+  border-color: #444;
+  background: #111;
+}
+
+body.dark-mode .remote-status {
+  color: #999;
+}
+
+/* Dark mode - desktop specific */
+@media (min-width: 768px) {
+  body.dark-mode .reader-header {
+    border-color: #333;
+  }
+
+  body.dark-mode .nav-fixed {
+    border-color: #333;
+  }
+}

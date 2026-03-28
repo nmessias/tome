@@ -24,6 +24,11 @@
     // Font settings
     fontSizes: [14, 16, 18, 20, 22, 24, 28, 32],
     fontIndex: 2,
+    // Line height settings
+    lineHeights: [1.2, 1.4, 1.6, 1.8, 2.0, 2.4],
+    lineHeightIndex: 2,
+    // Desktop mode
+    isDesktop: false,
     // SPA navigation
     cache: {},
     chapterId: null,
@@ -48,7 +53,12 @@
   }
 
   function saveSettings() {
-    var settings = JSON.stringify({ font: S.fontSizes[S.fontIndex] });
+    var settings = JSON.stringify({
+      font: S.fontSizes[S.fontIndex],
+      lineHeight: S.lineHeights[S.lineHeightIndex],
+      dark: document.body.classList.contains('dark-mode'),
+      readingWidth: S.widths[S.widthIndex]
+    });
     setCookie('reader_settings', settings);
     try {
       localStorage.setItem('readerFontSize', S.fontSizes[S.fontIndex]);
@@ -81,7 +91,6 @@
   // ============================================================
 
   function detectFontSize() {
-    // Read from server-rendered inline style
     var style = S.els.content.style.fontSize;
     if (style) {
       var size = parseInt(style, 10);
@@ -89,6 +98,16 @@
         if (S.fontSizes[i] === size) {
           S.fontIndex = i;
           return;
+        }
+      }
+    }
+    var lh = S.els.content.style.lineHeight;
+    if (lh) {
+      var lhVal = parseFloat(lh);
+      for (var i = 0; i < S.lineHeights.length; i++) {
+        if (S.lineHeights[i] === lhVal) {
+          S.lineHeightIndex = i;
+          break;
         }
       }
     }
@@ -400,10 +419,182 @@
   }
 
   // ============================================================
+  // DESKTOP MODE
+  // ============================================================
+
+  function checkDesktop() {
+    return window.innerWidth >= 768;
+  }
+
+  function updateDesktopProgress() {
+    var scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+    var scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
+    var progress = scrollHeight > 0 ? (scrollTop / scrollHeight) * 100 : 0;
+    var bar = document.querySelector('.progress-bar');
+    if (bar) bar.style.width = Math.min(progress, 100) + '%';
+  }
+
+  function updateProgressBar() {
+    if (S.isDesktop) {
+      updateDesktopProgress();
+      return;
+    }
+    var bar = document.querySelector('.progress-bar');
+    if (bar && S.totalPages > 0) {
+      bar.style.width = ((S.page + 1) / S.totalPages * 100) + '%';
+    }
+  }
+
+  // ============================================================
+  // LINE HEIGHT
+  // ============================================================
+
+  function applyLineHeight() {
+    var height = S.lineHeights[S.lineHeightIndex];
+    S.els.content.style.lineHeight = '' + height;
+    var display = document.querySelector('.line-height-display');
+    if (display) display.textContent = height.toFixed(1);
+    saveSettings();
+    if (!S.isDesktop) {
+      setTimeout(function() {
+        updatePages();
+        goToPage(0);
+      }, 100);
+    }
+  }
+
+  function changeLineHeight(delta) {
+    var newIndex = S.lineHeightIndex + delta;
+    if (newIndex >= 0 && newIndex < S.lineHeights.length) {
+      S.lineHeightIndex = newIndex;
+      applyLineHeight();
+    }
+  }
+
+  // ============================================================
+  // THEME
+  // ============================================================
+
+  function setTheme(dark) {
+    if (dark) {
+      document.body.classList.add('dark-mode');
+    } else {
+      document.body.classList.remove('dark-mode');
+    }
+    var btns = document.querySelectorAll('.theme-btn');
+    for (var i = 0; i < btns.length; i++) {
+      var t = btns[i].getAttribute('data-theme');
+      if (t === 'light') btns[i].classList.toggle('active', !dark);
+      if (t === 'dark') btns[i].classList.toggle('active', dark);
+    }
+    saveSettings();
+  }
+
+  // ============================================================
+  // READING WIDTH
+  // ============================================================
+
+  S.widths = [480, 520, 560, 600, 650, 700, 750, 800, 900, 1000, 1200];
+  S.widthIndex = 4; // default 650px
+
+  function applyReadingWidth() {
+    var width = S.widths[S.widthIndex];
+    S.els.content.style.maxWidth = width + 'px';
+    var display = document.querySelector('.width-display');
+    if (display) display.textContent = width + 'px';
+    saveSettings();
+  }
+
+  function changeReadingWidth(delta) {
+    var newIndex = S.widthIndex + delta;
+    if (newIndex >= 0 && newIndex < S.widths.length) {
+      S.widthIndex = newIndex;
+      applyReadingWidth();
+    }
+  }
+
+  function detectReadingWidth() {
+    var maxWidth = parseInt(S.els.content.style.maxWidth, 10);
+    if (maxWidth) {
+      for (var i = 0; i < S.widths.length; i++) {
+        if (S.widths[i] === maxWidth) {
+          S.widthIndex = i;
+          return;
+        }
+      }
+      // Find closest match
+      var closest = 0;
+      var minDiff = Math.abs(S.widths[0] - maxWidth);
+      for (var i = 1; i < S.widths.length; i++) {
+        var diff = Math.abs(S.widths[i] - maxWidth);
+        if (diff < minDiff) { minDiff = diff; closest = i; }
+      }
+      S.widthIndex = closest;
+    }
+  }
+
+  // ============================================================
+  // KEYBOARD NAVIGATION
+  // ============================================================
+
+  function handleKeyboard(e) {
+    if (S.els.modal && S.els.modal.classList.contains('open')) return;
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+    if (S.isDesktop) {
+      switch (e.key) {
+        case 'ArrowDown':
+          e.preventDefault();
+          window.scrollBy({ top: 60, behavior: 'instant' });
+          break;
+        case 'ArrowUp':
+          e.preventDefault();
+          window.scrollBy({ top: -60, behavior: 'instant' });
+          break;
+        case ' ':
+        case 'PageDown':
+          e.preventDefault();
+          window.scrollBy({ top: window.innerHeight * 0.85, behavior: 'instant' });
+          break;
+        case 'PageUp':
+          e.preventDefault();
+          window.scrollBy({ top: -window.innerHeight * 0.85, behavior: 'instant' });
+          break;
+        case 'Home':
+          e.preventDefault();
+          window.scrollTo(0, 0);
+          break;
+        case 'End':
+          e.preventDefault();
+          window.scrollTo(0, document.documentElement.scrollHeight);
+          break;
+      }
+    } else {
+      switch (e.key) {
+        case 'ArrowLeft':
+        case 'ArrowUp':
+          e.preventDefault();
+          prevPage();
+          break;
+        case 'ArrowRight':
+        case 'ArrowDown':
+        case ' ':
+          e.preventDefault();
+          nextPage();
+          break;
+      }
+    }
+  }
+
+  // ============================================================
   // PAGINATION
   // ============================================================
 
   function updatePages() {
+    if (S.isDesktop) {
+      updateDesktopProgress();
+      return;
+    }
     var columnWidth = S.els.content.offsetWidth;
     var columnGap = window.innerWidth * 0.05;
     S.stepSize = columnWidth + columnGap;
@@ -413,10 +604,12 @@
     S.totalPagesStr = ' / ' + S.totalPages;
     
     updateIndicator();
+    updateProgressBar();
   }
 
   function updateIndicator() {
     S.els.indicator.textContent = (S.page + 1) + S.totalPagesStr;
+    updateProgressBar();
   }
 
   function scheduleUrlUpdate() {
@@ -591,33 +784,30 @@
   }
 
   function renderChapter(chapter, goToLastPage) {
-    // Update content
     S.els.content.innerHTML = chapter.content;
     
-    // Update title
     if (S.els.titleEl) S.els.titleEl.textContent = chapter.title;
-    document.title = chapter.title + ' - E-ink Royal';
+    document.title = chapter.title + ' - Tome';
     
-    // Update wrapper data attributes
     if (S.els.wrapper) {
       S.els.wrapper.setAttribute('data-chapter-id', chapter.id);
       S.els.wrapper.setAttribute('data-fiction-id', chapter.fictionId);
     }
     
-    // Update state
     S.chapterId = chapter.id;
     
-    // Update nav buttons
     updateNavButtons(chapter.prevChapterId, chapter.nextChapterId, chapter.prevChapterUrl, chapter.nextChapterUrl);
     
-    // Reset pagination
     S.page = 0;
-    S.els.content.scrollLeft = 0;
+    if (S.isDesktop) {
+      window.scrollTo(0, 0);
+    } else {
+      S.els.content.scrollLeft = 0;
+    }
     
-    // Recalculate pages after content update
     setTimeout(function() {
       updatePages();
-      if (goToLastPage && S.totalPages > 1) {
+      if (!S.isDesktop && goToLastPage && S.totalPages > 1) {
         goToPage(S.totalPages - 1);
       }
       preloadChapters();
@@ -784,6 +974,25 @@
     if (fontDecrease) fontDecrease.onclick = function() { changeFontSize(-1); };
     if (fontIncrease) fontIncrease.onclick = function() { changeFontSize(1); };
     
+    var lineDecrease = document.querySelector('.line-decrease');
+    var lineIncrease = document.querySelector('.line-increase');
+    if (lineDecrease) lineDecrease.onclick = function() { changeLineHeight(-1); };
+    if (lineIncrease) lineIncrease.onclick = function() { changeLineHeight(1); };
+    
+    var themeBtns = document.querySelectorAll('.theme-btn');
+    for (var i = 0; i < themeBtns.length; i++) {
+      (function(btn) {
+        btn.onclick = function() {
+          setTheme(btn.getAttribute('data-theme') === 'dark');
+        };
+      })(themeBtns[i]);
+    }
+    
+    var widthDecrease = document.querySelector('.width-decrease');
+    var widthIncrease = document.querySelector('.width-increase');
+    if (widthDecrease) widthDecrease.onclick = function() { changeReadingWidth(-1); };
+    if (widthIncrease) widthIncrease.onclick = function() { changeReadingWidth(1); };
+    
     var remoteBtn = document.getElementById('remote-btn');
     if (remoteBtn) remoteBtn.onclick = enableRemote;
 
@@ -793,10 +1002,11 @@
     var remoteReconnectBtn = document.getElementById('remote-reconnect-btn');
     if (remoteReconnectBtn) remoteReconnectBtn.onclick = reconnectRemote;
     
+    document.onkeydown = handleKeyboard;
+    
     if (S.els.footer) {
       S.els.footer.onclick = function(e) {
         var target = e.target;
-        // Walk up to find the button element (some browsers may target inner text nodes)
         while (target && target.tagName !== 'BUTTON' && target !== S.els.footer) {
           target = target.parentNode;
         }
@@ -815,19 +1025,54 @@
     window.onresize = function() {
       if (S.resizeTimeout) clearTimeout(S.resizeTimeout);
       S.resizeTimeout = setTimeout(function() {
-        updatePages();
-        goToPage(S.page);
+        var wasDesktop = S.isDesktop;
+        S.isDesktop = checkDesktop();
+        if (S.isDesktop !== wasDesktop) {
+          if (S.isDesktop) {
+            setUI(false);
+          } else {
+            updatePages();
+            goToPage(0);
+          }
+        } else if (!S.isDesktop) {
+          updatePages();
+          goToPage(S.page);
+        }
+        if (S.isDesktop) updateDesktopProgress();
       }, 150);
     };
+    
+    if (S.isDesktop) {
+      window.addEventListener('scroll', function() {
+        updateDesktopProgress();
+      }, { passive: true });
+    }
   }
 
   function init() {
     cacheElements();
     detectFontSize();
+    detectReadingWidth();
+    
+    S.isDesktop = checkDesktop();
+    
     attachHandlers();
     
     var display = document.querySelector('.font-size-display');
     if (display) display.textContent = S.fontSizes[S.fontIndex] + 'px';
+    
+    var lhDisplay = document.querySelector('.line-height-display');
+    if (lhDisplay) lhDisplay.textContent = S.lineHeights[S.lineHeightIndex].toFixed(1);
+    
+    var widthDisplay = document.querySelector('.width-display');
+    if (widthDisplay) widthDisplay.textContent = S.widths[S.widthIndex] + 'px';
+    
+    if (S.isDesktop) {
+      S.els.content.classList.add('ready');
+      updateDesktopProgress();
+      preloadChapters();
+      return;
+    }
     
     updatePages();
     var initialPage = window.__INITIAL_PAGE__ ? window.__INITIAL_PAGE__ - 1 : getInitialPage();
@@ -835,7 +1080,6 @@
       goToPage(initialPage);
     }
     
-    // Use requestAnimationFrame to ensure the scroll has been applied before showing
     if (window.requestAnimationFrame) {
       requestAnimationFrame(function() {
         requestAnimationFrame(function() {
