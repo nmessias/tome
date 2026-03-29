@@ -93,4 +93,4 @@ export const ALL_NAV_LINKS = [
 export const NAV_LINKS = ALL_NAV_LINKS;
 
 // App version for cache busting
-export const APP_VERSION = "1.3.8";
+export const APP_VERSION = "1.4.0";
