@@ -26,7 +26,7 @@ export const CACHE_TTL = {
 } as const;
 
 // Pagination
-export const ITEMS_PER_PAGE = 10;
+export const ITEMS_PER_PAGE = 100;
 export const CHAPTERS_PER_PAGE = 20;
 
 // Database
