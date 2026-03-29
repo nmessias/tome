@@ -28,7 +28,7 @@ export function InvitePage({
           <meta name="viewport" content="width=device-width, initial-scale=1.0" />
           <title>Join Tome</title>
           <link rel="stylesheet" href="/public/css/base.css" />
-          <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+          <link rel="icon" type="image/x-icon" href="/public/favicon.ico" />
         </head>
         <body class={darkClass || undefined}>
           <div style="max-width: 400px; margin: 60px auto; padding: 0 16px;">
@@ -131,7 +131,7 @@ export function InviteExpiredPage({
           <meta name="viewport" content="width=device-width, initial-scale=1.0" />
           <title>Invitation Expired - Tome</title>
           <link rel="stylesheet" href="/public/css/base.css" />
-          <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+          <link rel="icon" type="image/x-icon" href="/public/favicon.ico" />
         </head>
         <body class={darkClass || undefined}>
           <div style="max-width: 400px; margin: 60px auto; padding: 0 16px; text-align: center;">

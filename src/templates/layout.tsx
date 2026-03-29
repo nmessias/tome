@@ -49,10 +49,10 @@ export function Layout({
           <meta name="viewport" content="width=device-width, initial-scale=1.0" />
           <title safe>{title} - Tome</title>
           <link rel="stylesheet" href={cssFile} />
-          <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-          <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
-          <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
-          <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+          <link rel="icon" type="image/x-icon" href="/public/favicon.ico" />
+          <link rel="icon" type="image/png" sizes="16x16" href="/public/favicon-16x16.png" />
+          <link rel="icon" type="image/png" sizes="32x32" href="/public/favicon-32x32.png" />
+          <link rel="apple-touch-icon" href="/public/apple-touch-icon.png" />
         </head>
         <body class={fullBodyClass || undefined}>
           <Header currentPath={currentPath} enabledSources={enabledSources} />
@@ -101,10 +101,10 @@ export function ReaderLayout({
           <title safe>{title} - Tome</title>
           <script>{initScript as "safe"}</script>
           <link rel="stylesheet" href={`/public/css/reader.css?v=${APP_VERSION}`} />
-          <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-          <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
-          <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
-          <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+          <link rel="icon" type="image/x-icon" href="/public/favicon.ico" />
+          <link rel="icon" type="image/png" sizes="16x16" href="/public/favicon-16x16.png" />
+          <link rel="icon" type="image/png" sizes="32x32" href="/public/favicon-32x32.png" />
+          <link rel="apple-touch-icon" href="/public/apple-touch-icon.png" />
         </head>
         <body class={bodyClass || undefined}>
           {children}
