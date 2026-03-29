@@ -6,6 +6,7 @@ import { handlePageRoute } from "./pages";
 import { handleApiRoute } from "./api";
 import { ErrorPage, LoginPage, InvitePage, InviteExpiredPage } from "../templates";
 import { auth, getSession, AUTH_ENABLED } from "../lib/auth";
+import type { ThemeName } from "../config";
 import {
   getInvitationByToken,
   isInvitationValid,
@@ -61,6 +62,7 @@ export async function handleRequest(req: Request): Promise<Response> {
   if (path === "/login") {
     if (method === "GET") {
       const settings = parseReaderSettings(req.headers.get("cookie"));
+      settings.isKindle = /Kindle|Silk/i.test(req.headers.get("user-agent") || "");
       const error = url.searchParams.get("error");
       return html(LoginPage({ settings, error: error || undefined }));
     }
@@ -78,6 +80,7 @@ export async function handleRequest(req: Request): Promise<Response> {
   if (inviteMatch) {
     const token = inviteMatch[1];
     const settings = parseReaderSettings(req.headers.get("cookie"));
+    settings.isKindle = /Kindle|Silk/i.test(req.headers.get("user-agent") || "");
     
     if (!isInvitationValid(token)) {
       return html(InviteExpiredPage({ settings }), 410);
@@ -116,6 +119,7 @@ export async function handleRequest(req: Request): Promise<Response> {
   const isAdmin = session?.user?.role === "admin";
 
   const settings = parseReaderSettings(req.headers.get("cookie"));
+  settings.isKindle = /Kindle|Silk/i.test(req.headers.get("user-agent") || "");
 
   console.log(`${method} ${path}`);
 
@@ -229,10 +233,10 @@ async function handleLogout(req: Request): Promise<Response> {
  */
 async function handleThemeToggle(req: Request): Promise<Response> {
   const formData = await req.formData();
-  const dark = formData.get("dark") === "1";
+  const theme = ((formData.get("theme") as string) || 'light') as ThemeName;
   
   const currentSettings = parseReaderSettings(req.headers.get("cookie"));
-  const newSettings = { ...currentSettings, dark };
+  const newSettings = { ...currentSettings, theme, dark: theme === 'dark' };
   
   const response = redirect("/settings");
   response.headers.set(

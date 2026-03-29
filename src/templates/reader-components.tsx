@@ -96,13 +96,17 @@ export function LineHeightRow({ display }: { display: string }): JSX.Element {
   );
 }
 
-export function ThemeToggle({ dark }: { dark: boolean }): JSX.Element {
+export function ThemeToggle({ dark, theme, isKindle = false }: { dark: boolean; theme?: string; isKindle?: boolean }): JSX.Element {
+  const activeTheme = theme || (dark ? 'dark' : 'light');
   return (
     <div class="settings-row">
       <label>Theme</label>
       <div class="theme-controls">
-        <button class={"theme-btn theme-light" + (!dark ? " active" : "")} data-theme="light">Light</button>
-        <button class={"theme-btn theme-dark" + (dark ? " active" : "")} data-theme="dark">Dark</button>
+        <button class={"theme-btn theme-light" + (activeTheme === "light" ? " active" : "")} data-theme="light">Light</button>
+        <button class={"theme-btn theme-dark" + (activeTheme === "dark" ? " active" : "")} data-theme="dark">Dark</button>
+        {!isKindle && (
+          <button class={"theme-btn theme-sepia" + (activeTheme === "sepia" ? " active" : "")} data-theme="sepia">Sepia</button>
+        )}
       </div>
     </div>
   );
@@ -163,12 +167,16 @@ export function SettingsModal({
   fontSizeDisplay,
   lineHeightDisplay = "1.6",
   dark = false,
+  theme,
+  isKindle = false,
   readingWidth = 650,
   children,
 }: PropsWithChildren<{
   fontSizeDisplay: string;
   lineHeightDisplay?: string;
   dark?: boolean;
+  theme?: string;
+  isKindle?: boolean;
   readingWidth?: number;
 }>): JSX.Element {
   return (
@@ -177,7 +185,7 @@ export function SettingsModal({
         <h2>Settings</h2>
         <FontSizeRow display={fontSizeDisplay} />
         <LineHeightRow display={lineHeightDisplay} />
-        <ThemeToggle dark={dark} />
+        <ThemeToggle dark={dark} theme={theme} isKindle={isKindle} />
         <WidthSelector display={(readingWidth || 650) + "px"} />
         {children}
         <RemoteControlSection />

@@ -53,10 +53,15 @@
   }
 
   function saveSettings() {
+    var theme = 'light';
+    if (document.body.classList.contains('dark-mode')) theme = 'dark';
+    else if (document.body.classList.contains('sepia-mode')) theme = 'sepia';
+    
     var settings = JSON.stringify({
       font: S.fontSizes[S.fontIndex],
       lineHeight: S.lineHeights[S.lineHeightIndex],
-      dark: document.body.classList.contains('dark-mode'),
+      dark: theme === 'dark',
+      theme: theme,
       readingWidth: S.widths[S.widthIndex]
     });
     setCookie('reader_settings', settings);
@@ -475,17 +480,17 @@
   // THEME
   // ============================================================
 
-  function setTheme(dark) {
-    if (dark) {
+  function setTheme(theme) {
+    document.body.classList.remove('dark-mode', 'sepia-mode');
+    if (theme === 'dark') {
       document.body.classList.add('dark-mode');
-    } else {
-      document.body.classList.remove('dark-mode');
+    } else if (theme === 'sepia') {
+      document.body.classList.add('sepia-mode');
     }
     var btns = document.querySelectorAll('.theme-btn');
     for (var i = 0; i < btns.length; i++) {
       var t = btns[i].getAttribute('data-theme');
-      if (t === 'light') btns[i].classList.toggle('active', !dark);
-      if (t === 'dark') btns[i].classList.toggle('active', dark);
+      btns[i].classList.toggle('active', t === theme);
     }
     saveSettings();
   }
@@ -543,6 +548,18 @@
 
     if (S.isDesktop) {
       switch (e.key) {
+        case 'ArrowLeft': {
+          e.preventDefault();
+          var prevId = S.els.navPrev && S.els.navPrev.getAttribute('data-chapter-id');
+          if (prevId) navigateToChapter(prevId, true);
+          break;
+        }
+        case 'ArrowRight': {
+          e.preventDefault();
+          var nextId = S.els.navNext && S.els.navNext.getAttribute('data-chapter-id');
+          if (nextId) navigateToChapter(nextId, false);
+          break;
+        }
         case 'ArrowDown':
           e.preventDefault();
           window.scrollBy({ top: 60, behavior: 'instant' });
@@ -983,7 +1000,7 @@
     for (var i = 0; i < themeBtns.length; i++) {
       (function(btn) {
         btn.onclick = function() {
-          setTheme(btn.getAttribute('data-theme') === 'dark');
+          setTheme(btn.getAttribute('data-theme'));
         };
       })(themeBtns[i]);
     }

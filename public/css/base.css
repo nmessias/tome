@@ -10,19 +10,32 @@
 body {
   margin: 0;
   padding: 0;
-  background: #fff;
-  color: #000;
+  background: #F8F9FA;
+  color: #212427;
   font-family: system-ui, -apple-system, sans-serif;
   font-size: 16px;
   line-height: 1.5;
 }
 
-a {
+body.kindle {
+  background: #fff;
   color: #000;
+}
+
+a {
+  color: #212427;
   text-decoration: underline;
 }
 
+body.kindle a {
+  color: #000;
+}
+
 a:visited {
+  color: #212427;
+}
+
+body.kindle a:visited {
   color: #000;
 }
 
@@ -32,7 +45,11 @@ a:visited {
   justify-content: space-between;
   align-items: center;
   padding: 12px 16px;
-  border-bottom: 1px solid #000;
+  border-bottom: 1px solid #212427;
+}
+
+body.kindle .header {
+  border-bottom-color: #000;
 }
 
 .header-title {
@@ -55,8 +72,12 @@ a:visited {
 .nav-link {
   padding: 8px 12px;
   text-decoration: none;
-  border: 1px solid #000;
+  border: 1px solid #212427;
   font-size: 14px;
+}
+
+body.kindle .nav-link {
+  border-color: #000;
 }
 
 .nav-link:hover {
@@ -64,6 +85,11 @@ a:visited {
 }
 
 .nav-link.active {
+  background: #212427;
+  color: #F8F9FA;
+}
+
+body.kindle .nav-link.active {
   background: #000;
   color: #fff;
 }
@@ -80,7 +106,11 @@ h1 {
   font-weight: bold;
   margin: 0 0 16px 0;
   padding-bottom: 8px;
-  border-bottom: 1px solid #000;
+  border-bottom: 1px solid #212427;
+}
+
+body.kindle h1 {
+  border-bottom-color: #000;
 }
 
 h2 {
@@ -95,7 +125,11 @@ h2 {
   font-weight: bold;
   margin: 24px 0 12px 0;
   padding-bottom: 4px;
-  border-bottom: 1px solid #000;
+  border-bottom: 1px solid #212427;
+}
+
+body.kindle .section-title {
+  border-bottom-color: #000;
 }
 
 .section-title:first-child {
@@ -106,16 +140,26 @@ h2 {
 .btn {
   display: inline-block;
   padding: 10px 16px;
-  background: #000;
-  color: #fff;
-  border: 1px solid #000;
+  background: #212427;
+  color: #F8F9FA;
+  border: 1px solid #212427;
   font-size: 14px;
   text-decoration: none;
   cursor: pointer;
   font-family: inherit;
 }
 
+body.kindle .btn {
+  background: #000;
+  color: #fff;
+  border-color: #000;
+}
+
 .btn:visited {
+  color: #F8F9FA;
+}
+
+body.kindle .btn:visited {
   color: #fff;
 }
 
@@ -124,11 +168,20 @@ h2 {
 }
 
 .btn-outline {
+  background: #F8F9FA;
+  color: #212427;
+}
+
+body.kindle .btn-outline {
   background: #fff;
   color: #000;
 }
 
 .btn-outline:visited {
+  color: #212427;
+}
+
+body.kindle .btn-outline:visited {
   color: #000;
 }
 
@@ -139,9 +192,13 @@ h2 {
 
 /* Cards */
 .card {
-  border: 1px solid #000;
+  border: 1px solid #212427;
   padding: 12px;
   margin-bottom: 12px;
+}
+
+body.kindle .card {
+  border-color: #000;
 }
 
 .card-title {
@@ -168,7 +225,11 @@ ul {
 
 li {
   padding: 12px 0;
-  border-bottom: 1px solid #000;
+  border-bottom: 1px solid #212427;
+}
+
+body.kindle li {
+  border-bottom-color: #000;
 }
 
 li:last-child {
@@ -177,9 +238,13 @@ li:last-child {
 
 /* Fiction items (legacy support) */
 .fiction-item {
-  border: 1px solid #000;
+  border: 1px solid #212427;
   padding: 12px;
   margin-bottom: 12px;
+}
+
+body.kindle .fiction-item {
+  border-color: #000;
 }
 
 .fiction-title {
@@ -196,8 +261,13 @@ li:last-child {
 .fiction-description {
   margin-top: 8px;
   padding: 8px;
-  border-left: 2px solid #000;
+  border-left: 2px solid #212427;
   font-size: 14px;
+}
+
+body.kindle .fiction-desc,
+body.kindle .fiction-description {
+  border-left-color: #000;
 }
 
 .chapter-list li {
@@ -206,40 +276,67 @@ li:last-child {
 
 /* Cover image */
 .cover-img {
-  border: 1px solid #000;
+  border: 1px solid #212427;
   flex-shrink: 0;
 }
 
+body.kindle .cover-img {
+  border-color: #000;
+}
+
 .cover-placeholder {
-  border: 1px solid #000;
+  border: 1px solid #212427;
   background: #fff;
   flex-shrink: 0;
 }
 
+body.kindle .cover-placeholder {
+  border-color: #000;
+}
+
 /* Alerts */
 .alert {
-  border: 1px solid #000;
+  border: 1px solid #212427;
   padding: 12px;
   margin: 16px 0;
 }
 
+body.kindle .alert {
+  border-color: #000;
+}
+
 .alert-error {
+  background: #212427;
+  color: #F8F9FA;
+}
+
+body.kindle .alert-error {
   background: #000;
   color: #fff;
 }
 
 .error {
-  background: #000;
-  color: #fff;
+  background: #212427;
+  color: #F8F9FA;
   padding: 12px;
   margin: 16px 0;
-  border: 1px solid #000;
+  border: 1px solid #212427;
+}
+
+body.kindle .error {
+  background: #000;
+  color: #fff;
+  border-color: #000;
 }
 
 .success {
-  border: 1px solid #000;
+  border: 1px solid #212427;
   padding: 12px;
   margin: 16px 0;
+}
+
+body.kindle .success {
+  border-color: #000;
 }
 
 /* Forms */
@@ -257,9 +354,16 @@ form textarea {
   width: 100%;
   padding: 10px;
   font-size: 14px;
-  border: 1px solid #000;
+  border: 1px solid #212427;
   font-family: inherit;
   background: #fff;
+}
+
+body.kindle form input[type="text"],
+body.kindle form input[type="password"],
+body.kindle form input[type="email"],
+body.kindle form textarea {
+  border-color: #000;
 }
 
 form textarea {
@@ -292,7 +396,11 @@ form .hint {
   gap: 12px;
   margin: 24px 0;
   padding-top: 16px;
-  border-top: 1px solid #000;
+  border-top: 1px solid #212427;
+}
+
+body.kindle .pagination {
+  border-top-color: #000;
 }
 
 .pagination .page-info {
@@ -307,9 +415,13 @@ form .hint {
   padding: 2px 6px;
   font-size: 12px;
   background: #fff;
-  border: 1px solid #000;
+  border: 1px solid #212427;
   cursor: pointer;
   font-family: inherit;
+}
+
+body.kindle .desc-toggle {
+  border-color: #000;
 }
 
 /* Tables */
@@ -321,7 +433,12 @@ table {
 th, td {
   text-align: left;
   padding: 8px;
-  border-bottom: 1px solid #000;
+  border-bottom: 1px solid #212427;
+}
+
+body.kindle th,
+body.kindle td {
+  border-bottom-color: #000;
 }
 
 th {
@@ -391,7 +508,11 @@ th {
   width: 120px;
   height: 180px;
   object-fit: cover;
-  border: 1px solid #000;
+  border: 1px solid #212427;
+}
+
+body.kindle .book-cover {
+  border-color: #000;
 }
 
 .book-cover-placeholder {
@@ -401,9 +522,13 @@ th {
   width: 120px;
   height: 180px;
   background: #e0e0e0;
-  border: 1px solid #000;
+  border: 1px solid #212427;
   font-size: 48px;
   font-weight: bold;
+}
+
+body.kindle .book-cover-placeholder {
+  border-color: #000;
 }
 
 .book-title {
@@ -432,8 +557,12 @@ th {
 
 .book-progress-bar {
   height: 100%;
-  background: #000;
+  background: #212427;
   border-radius: 2px;
+}
+
+body.kindle .book-progress-bar {
+  background: #000;
 }
 
 /* ==================== */
@@ -441,108 +570,218 @@ th {
 /* ==================== */
 
 body.dark-mode {
+  background: #121212;
+  color: #e0e0e0;
+  font-weight: 450;
+}
+
+body.kindle.dark-mode {
   background: #000;
   color: #fff;
+  font-weight: 400;
 }
 
 body.dark-mode a {
+  color: #e0e0e0;
+}
+
+body.kindle.dark-mode a {
   color: #fff;
 }
 
 body.dark-mode a:visited {
+  color: #e0e0e0;
+}
+
+body.kindle.dark-mode a:visited {
   color: #fff;
 }
 
 body.dark-mode .header {
+  border-color: #333;
+}
+
+body.kindle.dark-mode .header {
   border-color: #fff;
 }
 
 body.dark-mode .nav-link {
+  border-color: #e0e0e0;
+  color: #e0e0e0;
+}
+
+body.kindle.dark-mode .nav-link {
   border-color: #fff;
   color: #fff;
 }
 
 body.dark-mode .nav-link.active {
+  background: #e0e0e0;
+  color: #121212;
+}
+
+body.kindle.dark-mode .nav-link.active {
   background: #fff;
   color: #000;
 }
 
 body.dark-mode h1 {
+  border-color: #333;
+}
+
+body.kindle.dark-mode h1 {
   border-color: #fff;
 }
 
 body.dark-mode .section-title {
+  border-color: #333;
+}
+
+body.kindle.dark-mode .section-title {
   border-color: #fff;
 }
 
 body.dark-mode .btn {
+  background: #e0e0e0;
+  color: #121212;
+  border-color: #e0e0e0;
+}
+
+body.kindle.dark-mode .btn {
   background: #fff;
   color: #000;
   border-color: #fff;
 }
 
 body.dark-mode .btn:visited {
+  color: #121212;
+}
+
+body.kindle.dark-mode .btn:visited {
   color: #000;
 }
 
 body.dark-mode .btn-outline {
+  background: #121212;
+  color: #e0e0e0;
+  border-color: #e0e0e0;
+}
+
+body.kindle.dark-mode .btn-outline {
   background: #000;
   color: #fff;
   border-color: #fff;
 }
 
 body.dark-mode .btn-outline:visited {
+  color: #e0e0e0;
+}
+
+body.kindle.dark-mode .btn-outline:visited {
   color: #fff;
 }
 
 body.dark-mode .card {
+  border-color: #333;
+}
+
+body.kindle.dark-mode .card {
   border-color: #fff;
 }
 
 body.dark-mode .fiction-item {
+  border-color: #333;
+}
+
+body.kindle.dark-mode .fiction-item {
   border-color: #fff;
 }
 
 body.dark-mode .fiction-desc,
 body.dark-mode .fiction-description {
+  border-color: #333;
+}
+
+body.kindle.dark-mode .fiction-desc,
+body.kindle.dark-mode .fiction-description {
   border-color: #fff;
 }
 
 body.dark-mode li {
+  border-color: #333;
+}
+
+body.kindle.dark-mode li {
   border-color: #fff;
 }
 
 body.dark-mode .alert {
+  border-color: #333;
+}
+
+body.kindle.dark-mode .alert {
   border-color: #fff;
 }
 
 body.dark-mode .alert-error {
+  background: #e0e0e0;
+  color: #121212;
+}
+
+body.kindle.dark-mode .alert-error {
   background: #fff;
   color: #000;
 }
 
 body.dark-mode .error {
+  background: #e0e0e0;
+  color: #121212;
+  border-color: #e0e0e0;
+}
+
+body.kindle.dark-mode .error {
   background: #fff;
   color: #000;
   border-color: #fff;
 }
 
 body.dark-mode .success {
+  border-color: #333;
+}
+
+body.kindle.dark-mode .success {
   border-color: #fff;
 }
 
 body.dark-mode form input,
 body.dark-mode form textarea {
+  background: #1e1e1e;
+  color: #e0e0e0;
+  border-color: #555;
+}
+
+body.kindle.dark-mode form input,
+body.kindle.dark-mode form textarea {
   background: #000;
   color: #fff;
   border-color: #fff;
 }
 
 body.dark-mode .pagination {
+  border-color: #333;
+}
+
+body.kindle.dark-mode .pagination {
   border-color: #fff;
 }
 
 body.dark-mode .desc-toggle {
+  background: #1e1e1e;
+  color: #e0e0e0;
+  border-color: #555;
+}
+
+body.kindle.dark-mode .desc-toggle {
   background: #000;
   color: #fff;
   border-color: #fff;
@@ -550,20 +789,40 @@ body.dark-mode .desc-toggle {
 
 body.dark-mode th,
 body.dark-mode td {
+  border-color: #333;
+}
+
+body.kindle.dark-mode th,
+body.kindle.dark-mode td {
   border-color: #fff;
 }
 
 body.dark-mode .cover-img,
 body.dark-mode .cover-placeholder {
+  border-color: #333;
+}
+
+body.kindle.dark-mode .cover-img,
+body.kindle.dark-mode .cover-placeholder {
   border-color: #fff;
 }
 
 /* Book Grid - Dark Mode */
 body.dark-mode .book-cover {
+  border-color: #333;
+}
+
+body.kindle.dark-mode .book-cover {
   border-color: #fff;
 }
 
 body.dark-mode .book-cover-placeholder {
+  background: #333;
+  border-color: #333;
+  color: #e0e0e0;
+}
+
+body.kindle.dark-mode .book-cover-placeholder {
   background: #333;
   border-color: #fff;
   color: #fff;
@@ -578,5 +837,139 @@ body.dark-mode .book-progress {
 }
 
 body.dark-mode .book-progress-bar {
+  background: #e0e0e0;
+}
+
+body.kindle.dark-mode .book-progress-bar {
   background: #fff;
+}
+
+/* ==================== */
+/* Sepia Mode           */
+/* ==================== */
+
+body.sepia-mode {
+  background: #FBF0D9;
+  color: #5F4B32;
+}
+
+body.sepia-mode a {
+  color: #5F4B32;
+}
+
+body.sepia-mode a:visited {
+  color: #5F4B32;
+}
+
+body.sepia-mode .header {
+  border-bottom-color: #D4C4A8;
+}
+
+body.sepia-mode .nav-link {
+  border-color: #C4B496;
+  color: #5F4B32;
+}
+
+body.sepia-mode .nav-link.active {
+  background: #5F4B32;
+  color: #FBF0D9;
+}
+
+body.sepia-mode h1 {
+  border-bottom-color: #D4C4A8;
+}
+
+body.sepia-mode .section-title {
+  border-bottom-color: #D4C4A8;
+}
+
+body.sepia-mode .btn {
+  background: #5F4B32;
+  color: #FBF0D9;
+  border-color: #5F4B32;
+}
+
+body.sepia-mode .btn:visited {
+  color: #FBF0D9;
+}
+
+body.sepia-mode .btn-outline {
+  background: #FBF0D9;
+  color: #5F4B32;
+  border-color: #5F4B32;
+}
+
+body.sepia-mode .btn-outline:visited {
+  color: #5F4B32;
+}
+
+body.sepia-mode .card {
+  border-color: #C4B496;
+}
+
+body.sepia-mode .fiction-item {
+  border-color: #C4B496;
+}
+
+body.sepia-mode .fiction-desc,
+body.sepia-mode .fiction-description {
+  border-left-color: #C4B496;
+}
+
+body.sepia-mode li {
+  border-bottom-color: #C4B496;
+}
+
+body.sepia-mode .alert {
+  border-color: #C4B496;
+}
+
+body.sepia-mode .alert-error {
+  background: #5F4B32;
+  color: #FBF0D9;
+}
+
+body.sepia-mode .error {
+  background: #5F4B32;
+  color: #FBF0D9;
+  border-color: #5F4B32;
+}
+
+body.sepia-mode .success {
+  border-color: #C4B496;
+}
+
+body.sepia-mode form input,
+body.sepia-mode form textarea {
+  border-color: #C4B496;
+}
+
+body.sepia-mode .pagination {
+  border-top-color: #C4B496;
+}
+
+body.sepia-mode .desc-toggle {
+  border-color: #C4B496;
+}
+
+body.sepia-mode th,
+body.sepia-mode td {
+  border-bottom-color: #C4B496;
+}
+
+body.sepia-mode .cover-img,
+body.sepia-mode .cover-placeholder {
+  border-color: #C4B496;
+}
+
+body.sepia-mode .book-cover {
+  border-color: #C4B496;
+}
+
+body.sepia-mode .book-cover-placeholder {
+  border-color: #C4B496;
+}
+
+body.sepia-mode .book-progress-bar {
+  background: #5F4B32;
 }

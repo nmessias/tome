@@ -16,8 +16,11 @@ export function EpubReaderPage({
   settings?: ReaderSettings;
 }): JSX.Element {
   const bodyClass = settings.dark ? "dark-mode" : "";
+  const kindleClass = settings.isKindle ? "kindle" : "";
+  const themeBodyClass = [bodyClass, kindleClass].filter(Boolean).join(" ");
   const fontSizeStyle = `font-size: ${settings.font}px;`;
   const lineHeight = settings.lineHeight || 1.6;
+  const activeTheme = settings.theme || (settings.dark ? 'dark' : 'light');
 
   return (
     <>
@@ -29,7 +32,7 @@ export function EpubReaderPage({
           <title safe>{book.title} - Tome</title>
           <link rel="stylesheet" href={`/public/css/epub-reader.css?v=${APP_VERSION}`} />
         </head>
-        <body class={bodyClass || undefined}>
+        <body class={themeBodyClass || undefined}>
           <header class="epub-header">
             <div class="header-left">
               <span class="remote-icon" id="remote-icon" style="display: none;">Remote</span>
@@ -78,8 +81,11 @@ export function EpubReaderPage({
             <div class="settings-row">
               <label>Theme</label>
               <div class="theme-controls">
-                <button class="theme-btn theme-light" data-theme="light">Light</button>
-                <button class="theme-btn theme-dark" data-theme="dark">Dark</button>
+                <button class={"theme-btn theme-light" + (activeTheme === "light" ? " active" : "")} data-theme="light">Light</button>
+                <button class={"theme-btn theme-dark" + (activeTheme === "dark" ? " active" : "")} data-theme="dark">Dark</button>
+                {!settings.isKindle && (
+                  <button class={"theme-btn theme-sepia" + (activeTheme === "sepia" ? " active" : "")} data-theme="sepia">Sepia</button>
+                )}
               </div>
             </div>
           </SettingsModal>

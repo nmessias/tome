@@ -97,15 +97,47 @@ export function SettingsPage({
 
       <SectionTitle>Display</SectionTitle>
       <div class="card">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <span>Dark Mode</span>
-          <form method="POST" action="/settings/theme" style="margin: 0;">
-            <input type="hidden" name="dark" value={settings.dark ? "0" : "1"} />
-            <button type="submit" class="btn btn-small">
-              {settings.dark ? "Turn Off" : "Turn On"}
-            </button>
-          </form>
-        </div>
+        {settings.isKindle ? (
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span>Dark Mode</span>
+            <form method="POST" action="/settings/theme" style="margin: 0;">
+              <input type="hidden" name="theme" value={settings.dark ? "light" : "dark"} />
+              <button type="submit" class="btn btn-small">
+                {settings.dark ? "Turn Off" : "Turn On"}
+              </button>
+            </form>
+          </div>
+        ) : (
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span>Theme</span>
+            <form method="POST" action="/settings/theme" style="margin: 0; display: flex; gap: 8px;">
+              <button
+                type="submit"
+                name="theme"
+                value="light"
+                class={"btn btn-small" + ((settings.theme || 'light') === 'light' ? "" : " btn-outline")}
+              >
+                Light
+              </button>
+              <button
+                type="submit"
+                name="theme"
+                value="dark"
+                class={"btn btn-small" + (settings.theme === 'dark' ? "" : " btn-outline")}
+              >
+                Dark
+              </button>
+              <button
+                type="submit"
+                name="theme"
+                value="sepia"
+                class={"btn btn-small" + (settings.theme === 'sepia' ? "" : " btn-outline")}
+              >
+                Sepia
+              </button>
+            </form>
+          </div>
+        )}
       </div>
 
       {sources.royalroad && (

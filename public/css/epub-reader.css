@@ -23,26 +23,39 @@ body {
   padding: 0;
   height: 100vh;
   overflow: hidden;
-  background: #fff;
-  color: #000;
+  background: #F8F9FA;
+  color: #212427;
   font-family: Georgia, "Times New Roman", serif;
   font-size: 18px;
   line-height: 1.5;
 }
 
-a {
+body.kindle {
+  background: #fff;
   color: #000;
+}
+
+a {
+  color: #212427;
   text-decoration: underline;
 }
 
+body.kindle a {
+  color: #000;
+}
+
 a:visited {
+  color: #555;
+}
+
+body.kindle a:visited {
   color: #333;
 }
 
 .epub-header {
   padding: 8px 12px;
-  border-bottom: 2px solid #000;
-  background: #fff;
+  border-bottom: 2px solid #212427;
+  background: #F8F9FA;
   position: fixed;
   top: 0;
   left: 0;
@@ -51,6 +64,11 @@ a:visited {
   display: none;
   justify-content: space-between;
   align-items: flex-start;
+}
+
+body.kindle .epub-header {
+  border-bottom-color: #000;
+  background: #fff;
 }
 
 .epub-header.visible {
@@ -102,11 +120,15 @@ a:visited {
 }
 
 .settings-btn {
-  background: #fff;
+  background: #F8F9FA;
   border: 1px solid #999;
   padding: 4px 10px;
   font-size: 14px;
   cursor: pointer;
+}
+
+body.kindle .settings-btn {
+  background: #fff;
 }
 
 .epub-wrapper {
@@ -147,6 +169,12 @@ a:visited {
 }
 
 body.dark-mode .epub-loading.error {
+  color: #f66;
+  background: #121212;
+  border-color: #f66;
+}
+
+body.kindle.dark-mode .epub-loading.error {
   color: #f66;
   background: #000;
   border-color: #f66;
@@ -203,9 +231,13 @@ body.dark-mode .epub-loading.error {
   display: none;
   justify-content: space-between;
   padding: 6px;
-  background: #fff;
+  background: #F8F9FA;
   border-top: 1px solid #ccc;
   z-index: 10;
+}
+
+body.kindle .nav-fixed {
+  background: #fff;
 }
 
 .nav-fixed.visible {
@@ -218,11 +250,16 @@ body.dark-mode .epub-loading.error {
   margin: 0 4px;
   padding: 16px 8px;
   font-size: 14px;
-  background: #fff;
-  color: #000;
+  background: #F8F9FA;
+  color: #212427;
   border: 1px solid #999;
   cursor: pointer;
   text-decoration: none;
+}
+
+body.kindle .nav-fixed .btn {
+  background: #fff;
+  color: #000;
 }
 
 .nav-fixed button:disabled {
@@ -252,10 +289,15 @@ body.dark-mode .epub-loading.error {
 .settings-panel,
 .delete-panel {
   background: #fff;
-  border: 2px solid #000;
+  border: 2px solid #212427;
   padding: 16px;
   width: 90%;
   max-width: 300px;
+}
+
+body.kindle .settings-panel,
+body.kindle .delete-panel {
+  border-color: #000;
 }
 
 .settings-panel h2,
@@ -291,8 +333,12 @@ body.dark-mode .epub-loading.error {
   height: 36px;
   font-size: 18px;
   background: #fff;
-  border: 1px solid #000;
+  border: 1px solid #212427;
   cursor: pointer;
+}
+
+body.kindle .font-controls button {
+  border-color: #000;
 }
 
 .font-controls span {
@@ -312,8 +358,12 @@ body.dark-mode .epub-loading.error {
   height: 36px;
   font-size: 18px;
   background: #fff;
-  border: 1px solid #000;
+  border: 1px solid #212427;
   cursor: pointer;
+}
+
+body.kindle .line-controls button {
+  border-color: #000;
 }
 
 .line-controls span {
@@ -331,11 +381,20 @@ body.dark-mode .epub-loading.error {
   padding: 6px 12px;
   font-size: 12px;
   background: #fff;
-  border: 1px solid #000;
+  border: 1px solid #212427;
   cursor: pointer;
 }
 
+body.kindle .theme-btn {
+  border-color: #000;
+}
+
 .theme-btn.active {
+  background: #212427;
+  color: #F8F9FA;
+}
+
+body.kindle .theme-btn.active {
   background: #000;
   color: #fff;
 }
@@ -344,11 +403,16 @@ body.dark-mode .epub-loading.error {
   width: 100%;
   padding: 10px;
   margin-top: 8px;
-  background: #000;
-  color: #fff;
+  background: #212427;
+  color: #F8F9FA;
   border: none;
   font-size: 14px;
   cursor: pointer;
+}
+
+body.kindle .settings-close {
+  background: #000;
+  color: #fff;
 }
 
 .delete-actions {
@@ -361,20 +425,39 @@ body.dark-mode .epub-loading.error {
   padding: 10px 16px;
   font-size: 14px;
   cursor: pointer;
-  border: 1px solid #000;
+  border: 1px solid #212427;
+}
+
+body.kindle .delete-actions .btn {
+  border-color: #000;
 }
 
 .delete-actions .btn-outline {
+  background: #F8F9FA;
+  color: #212427;
+}
+
+body.kindle .delete-actions .btn-outline {
   background: #fff;
   color: #000;
 }
 
 .delete-confirm {
+  background: #212427;
+  color: #F8F9FA;
+}
+
+body.kindle .delete-confirm {
   background: #000;
   color: #fff;
 }
 
 .delete-cancel {
+  background: #F8F9FA;
+  color: #212427;
+}
+
+body.kindle .delete-cancel {
   background: #fff;
   color: #000;
 }
@@ -397,9 +480,13 @@ body.dark-mode .epub-loading.error {
 .remote-btn {
   padding: 8px 16px;
   background: #fff;
-  border: 1px solid #000;
+  border: 1px solid #212427;
   font-size: 14px;
   cursor: pointer;
+}
+
+body.kindle .remote-btn {
+  border-color: #000;
 }
 
 .remote-btn:disabled {
@@ -445,12 +532,27 @@ body.dark-mode .epub-loading.error {
   margin: 0;
 }
 
+/* ==================== */
+/* Dark Mode            */
+/* ==================== */
+
 body.dark-mode {
+  background: #121212;
+  color: #e0e0e0;
+  font-weight: 450;
+}
+
+body.kindle.dark-mode {
   background: #000;
   color: #fff;
+  font-weight: 400;
 }
 
 body.dark-mode a {
+  color: #e0e0e0;
+}
+
+body.kindle.dark-mode a {
   color: #fff;
 }
 
@@ -458,13 +560,22 @@ body.dark-mode a:visited {
   color: #ccc;
 }
 
+body.kindle.dark-mode a:visited {
+  color: #ccc;
+}
+
 body.dark-mode .epub-header {
+  background: #121212;
+  border-color: #333;
+}
+
+body.kindle.dark-mode .epub-header {
   background: #000;
   border-color: #fff;
 }
 
 body.dark-mode .back-btn {
-  color: #fff;
+  color: #e0e0e0;
   border-color: #666;
 }
 
@@ -473,6 +584,12 @@ body.dark-mode .epub-header .book-author {
 }
 
 body.dark-mode .settings-btn {
+  background: #121212;
+  color: #e0e0e0;
+  border-color: #555;
+}
+
+body.kindle.dark-mode .settings-btn {
   background: #000;
   color: #fff;
   border-color: #666;
@@ -487,11 +604,22 @@ body.dark-mode .page-indicator {
 }
 
 body.dark-mode .nav-fixed {
-  background: #000;
+  background: #121212;
   border-color: #333;
 }
 
+body.kindle.dark-mode .nav-fixed {
+  background: #000;
+  border-color: #fff;
+}
+
 body.dark-mode .nav-fixed .btn {
+  background: #121212;
+  color: #e0e0e0;
+  border-color: #555;
+}
+
+body.kindle.dark-mode .nav-fixed .btn {
   background: #000;
   color: #fff;
   border-color: #666;
@@ -499,48 +627,97 @@ body.dark-mode .nav-fixed .btn {
 
 body.dark-mode .settings-panel,
 body.dark-mode .delete-panel {
+  background: #1e1e1e;
+  border-color: #555;
+  color: #e0e0e0;
+}
+
+body.kindle.dark-mode .settings-panel,
+body.kindle.dark-mode .delete-panel {
   background: #000;
   border-color: #fff;
   color: #fff;
 }
 
 body.dark-mode .font-controls button {
+  background: #1e1e1e;
+  color: #e0e0e0;
+  border-color: #666;
+}
+
+body.kindle.dark-mode .font-controls button {
   background: #000;
   color: #fff;
   border-color: #fff;
 }
 
 body.dark-mode .theme-btn {
+  background: #1e1e1e;
+  color: #e0e0e0;
+  border-color: #666;
+}
+
+body.kindle.dark-mode .theme-btn {
   background: #000;
   color: #fff;
   border-color: #fff;
 }
 
 body.dark-mode .theme-btn.active {
+  background: #e0e0e0;
+  color: #1e1e1e;
+}
+
+body.kindle.dark-mode .theme-btn.active {
   background: #fff;
   color: #000;
 }
 
 body.dark-mode .settings-close {
+  background: #e0e0e0;
+  color: #1e1e1e;
+}
+
+body.kindle.dark-mode .settings-close {
   background: #fff;
   color: #000;
 }
 
 body.dark-mode .delete-actions .btn {
+  border-color: #666;
+}
+
+body.kindle.dark-mode .delete-actions .btn {
   border-color: #fff;
 }
 
 body.dark-mode .delete-actions .btn-outline {
+  background: #121212;
+  color: #e0e0e0;
+}
+
+body.kindle.dark-mode .delete-actions .btn-outline {
   background: #000;
   color: #fff;
 }
 
 body.dark-mode .delete-confirm {
+  background: #e0e0e0;
+  color: #1e1e1e;
+}
+
+body.kindle.dark-mode .delete-confirm {
   background: #fff;
   color: #000;
 }
 
 body.dark-mode .line-controls button {
+  background: #1e1e1e;
+  color: #e0e0e0;
+  border-color: #666;
+}
+
+body.kindle.dark-mode .line-controls button {
   background: #000;
   color: #fff;
   border-color: #fff;
@@ -549,17 +726,23 @@ body.dark-mode .line-controls button {
 body.dark-mode .remote-icon {
   background: #333;
   border-color: #666;
-  color: #fff;
+  color: #e0e0e0;
 }
 
 body.dark-mode .remote-btn {
+  background: #1e1e1e;
+  color: #e0e0e0;
+  border-color: #666;
+}
+
+body.kindle.dark-mode .remote-btn {
   background: #000;
   color: #fff;
   border-color: #fff;
 }
 
 body.dark-mode .remote-btn.remote-disable {
-  background: #222;
+  background: #333;
   color: #999;
 }
 
@@ -579,4 +762,150 @@ body.dark-mode .remote-qr {
 
 body.dark-mode .remote-status {
   color: #999;
+}
+
+/* ==================== */
+/* Sepia Mode           */
+/* ==================== */
+
+body.sepia-mode {
+  background: #FBF0D9;
+  color: #5F4B32;
+}
+
+body.sepia-mode a {
+  color: #7A5C3A;
+}
+
+body.sepia-mode a:visited {
+  color: #6B4E30;
+}
+
+body.sepia-mode .epub-header {
+  background: #FBF0D9;
+  border-color: #D4C4A8;
+}
+
+body.sepia-mode .back-btn {
+  color: #5F4B32;
+  border-color: #C4B496;
+}
+
+body.sepia-mode .epub-header .book-author {
+  color: #8B7355;
+}
+
+body.sepia-mode .settings-btn {
+  background: #FBF0D9;
+  color: #5F4B32;
+  border-color: #C4B496;
+}
+
+body.sepia-mode .page-indicator {
+  color: #A08B6E;
+}
+
+body.sepia-mode .nav-fixed {
+  background: #FBF0D9;
+  border-color: #D4C4A8;
+}
+
+body.sepia-mode .nav-fixed .btn {
+  background: #FBF0D9;
+  color: #5F4B32;
+  border-color: #C4B496;
+}
+
+body.sepia-mode .settings-panel,
+body.sepia-mode .delete-panel {
+  background: #F5E8D0;
+  border-color: #C4B496;
+  color: #5F4B32;
+}
+
+body.sepia-mode .font-controls button {
+  background: #FBF0D9;
+  color: #5F4B32;
+  border-color: #C4B496;
+}
+
+body.sepia-mode .theme-btn {
+  background: #FBF0D9;
+  color: #5F4B32;
+  border-color: #C4B496;
+}
+
+body.sepia-mode .theme-btn.active {
+  background: #5F4B32;
+  color: #FBF0D9;
+}
+
+body.sepia-mode .settings-close {
+  background: #5F4B32;
+  color: #FBF0D9;
+}
+
+body.sepia-mode .delete-actions .btn {
+  border-color: #C4B496;
+}
+
+body.sepia-mode .delete-actions .btn-outline {
+  background: #FBF0D9;
+  color: #5F4B32;
+}
+
+body.sepia-mode .delete-confirm {
+  background: #5F4B32;
+  color: #FBF0D9;
+}
+
+body.sepia-mode .delete-cancel {
+  background: #FBF0D9;
+  color: #5F4B32;
+}
+
+body.sepia-mode .line-controls button {
+  background: #FBF0D9;
+  color: #5F4B32;
+  border-color: #C4B496;
+}
+
+body.sepia-mode .remote-icon {
+  background: #E8DCC4;
+  border-color: #A08B6E;
+  color: #5F4B32;
+}
+
+body.sepia-mode .remote-btn {
+  background: #FBF0D9;
+  color: #5F4B32;
+  border-color: #C4B496;
+}
+
+body.sepia-mode .remote-btn.remote-disable {
+  background: #E8DCC4;
+  color: #A08B6E;
+}
+
+body.sepia-mode .remote-reconnect {
+  border-color: #6B8E5A;
+  background: #E8F0E0;
+}
+
+body.sepia-mode .remote-reconnect p {
+  color: #4A6B3A;
+}
+
+body.sepia-mode .remote-qr {
+  border-color: #C4B496;
+  background: #F0E4CC;
+}
+
+body.sepia-mode .remote-status {
+  color: #A08B6E;
+}
+
+body.sepia-mode .epub-loading.error {
+  background: #FBF0D9;
+  border-color: #c00;
 }

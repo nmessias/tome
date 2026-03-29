@@ -57,18 +57,24 @@ export const TOPLISTS: ToplistType[] = [
 ];
 
 // Reader settings
+export type ThemeName = 'light' | 'dark' | 'sepia';
+
 export interface ReaderSettings {
   dark: boolean;
+  theme?: ThemeName;
   font: number;
   lineHeight?: number;
   readingWidth?: number;
+  isKindle?: boolean;
 }
 
 export const DEFAULT_READER_SETTINGS: ReaderSettings = {
   dark: false,
+  theme: 'light',
   font: 18,
   lineHeight: 1.6,
   readingWidth: 650,
+  isKindle: false,
 };
 
 // source: null = always shown, "royalroad"/"epub"/"freewebnovel" = only if that source is enabled

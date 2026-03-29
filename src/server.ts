@@ -1,7 +1,7 @@
 /**
  * HTTP server utilities and helpers
  */
-import { DEFAULT_READER_SETTINGS, type ReaderSettings } from "./config";
+import { DEFAULT_READER_SETTINGS, type ReaderSettings, type ThemeName } from "./config";
 
 // ============ Response Helpers ============
 
@@ -70,9 +70,13 @@ export function parseReaderSettings(cookieHeader: string | null): ReaderSettings
   try {
     const decoded = decodeURIComponent(match[1]);
     const parsed = JSON.parse(decoded);
+    const theme: ThemeName = parsed.theme || (parsed.dark ? 'dark' : 'light');
     return {
-      dark: parsed.dark === true,
+      dark: theme === 'dark',
+      theme,
       font: typeof parsed.font === "number" ? parsed.font : 18,
+      lineHeight: parsed.lineHeight,
+      readingWidth: parsed.readingWidth,
     };
   } catch {
     return DEFAULT_READER_SETTINGS;

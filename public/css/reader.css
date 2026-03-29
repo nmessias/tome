@@ -7,7 +7,7 @@
   font-family: 'Literata';
   src: url('/public/fonts/Literata-Regular.woff2') format('woff2'),
        url('/public/fonts/Literata-Variable.ttf') format('truetype');
-  font-weight: 400;
+  font-weight: 200 900;
   font-style: normal;
   font-display: swap;
 }
@@ -25,7 +25,7 @@
   font-family: 'Literata';
   src: url('/public/fonts/Literata-Italic.woff2') format('woff2'),
        url('/public/fonts/Literata-Italic-Variable.ttf') format('truetype');
-  font-weight: 400;
+  font-weight: 200 900;
   font-style: italic;
   font-display: swap;
 }
@@ -39,27 +39,40 @@ body {
   padding: 0;
   height: 100vh;
   overflow: hidden;
-  background: #fff;
-  color: #000;
+  background: #F8F9FA;
+  color: #212427;
   font-family: Georgia, "Times New Roman", serif;
   font-size: 18px;
   line-height: 1.5;
 }
 
-a {
+body.kindle {
+  background: #fff;
   color: #000;
+}
+
+a {
+  color: #212427;
   text-decoration: underline;
 }
 
+body.kindle a {
+  color: #000;
+}
+
 a:visited {
+  color: #555;
+}
+
+body.kindle a:visited {
   color: #333;
 }
 
 /* Reader header */
 .reader-header {
   padding: 8px 12px;
-  border-bottom: 2px solid #000;
-  background: #fff;
+  border-bottom: 2px solid #212427;
+  background: #F8F9FA;
   position: fixed;
   top: 0;
   left: 0;
@@ -68,6 +81,11 @@ a:visited {
   display: none;
   justify-content: space-between;
   align-items: flex-start;
+}
+
+body.kindle .reader-header {
+  border-bottom-color: #000;
+  background: #fff;
 }
 
 .reader-header.visible {
@@ -96,10 +114,14 @@ a:visited {
 }
 
 .reader-header .header-nav a {
-  color: #000;
+  color: #212427;
   text-decoration: none;
   padding: 2px 6px;
   border: 1px solid #999;
+}
+
+body.kindle .reader-header .header-nav a {
+  color: #000;
 }
 
 .reader-header h1 {
@@ -119,11 +141,15 @@ a:visited {
 }
 
 .reader-header .settings-btn {
-  background: #fff;
+  background: #F8F9FA;
   border: 1px solid #999;
   padding: 4px 10px;
   font-size: 14px;
   cursor: pointer;
+}
+
+body.kindle .reader-header .settings-btn {
+  background: #fff;
 }
 
 /* Reader content area */
@@ -237,9 +263,13 @@ a:visited {
   display: none;
   justify-content: space-between;
   padding: 6px;
-  background: #fff;
+  background: #F8F9FA;
   border-top: 1px solid #ccc;
   z-index: 10;
+}
+
+body.kindle .nav-fixed {
+  background: #fff;
 }
 
 .nav-fixed.visible {
@@ -252,11 +282,16 @@ a:visited {
   margin: 0 4px;
   padding: 16px 8px;
   font-size: 14px;
-  background: #fff;
-  color: #000;
+  background: #F8F9FA;
+  color: #212427;
   border: 1px solid #999;
   cursor: pointer;
   text-decoration: none;
+}
+
+body.kindle .nav-fixed .btn {
+  background: #fff;
+  color: #000;
 }
 
 .nav-fixed button:disabled {
@@ -284,10 +319,14 @@ a:visited {
 
 .settings-panel {
   background: #fff;
-  border: 2px solid #000;
+  border: 2px solid #212427;
   padding: 16px;
   width: 90%;
   max-width: 300px;
+}
+
+body.kindle .settings-panel {
+  border-color: #000;
 }
 
 .settings-panel h2 {
@@ -317,8 +356,12 @@ a:visited {
   height: 36px;
   font-size: 18px;
   background: #fff;
-  border: 1px solid #000;
+  border: 1px solid #212427;
   cursor: pointer;
+}
+
+body.kindle .font-controls button {
+  border-color: #000;
 }
 
 .font-controls span {
@@ -331,11 +374,16 @@ a:visited {
   width: 100%;
   padding: 10px;
   margin-top: 8px;
-  background: #000;
-  color: #fff;
+  background: #212427;
+  color: #F8F9FA;
   border: none;
   font-size: 14px;
   cursor: pointer;
+}
+
+body.kindle .settings-close {
+  background: #000;
+  color: #fff;
 }
 
 /* Remote control indicator */
@@ -358,9 +406,13 @@ a:visited {
 .remote-btn {
   padding: 8px 16px;
   background: #fff;
-  border: 1px solid #000;
+  border: 1px solid #212427;
   font-size: 14px;
   cursor: pointer;
+}
+
+body.kindle .remote-btn {
+  border-color: #000;
 }
 
 .remote-btn:disabled {
@@ -414,11 +466,15 @@ a:visited {
   top: 0;
   left: 0;
   height: 3px;
-  background: #000;
+  background: #212427;
   z-index: 20;
   width: 0%;
   transition: width 0.1s linear;
   pointer-events: none;
+}
+
+body.kindle .progress-bar {
+  background: #000;
 }
 
 /* Line height controls */
@@ -433,8 +489,12 @@ a:visited {
   height: 36px;
   font-size: 18px;
   background: #fff;
-  border: 1px solid #000;
+  border: 1px solid #212427;
   cursor: pointer;
+}
+
+body.kindle .line-controls button {
+  border-color: #000;
 }
 
 .line-controls span {
@@ -461,8 +521,12 @@ a:visited {
   height: 36px;
   font-size: 18px;
   background: #fff;
-  border: 1px solid #000;
+  border: 1px solid #212427;
   cursor: pointer;
+}
+
+body.kindle .width-controls button {
+  border-color: #000;
 }
 
 .width-controls span {
@@ -475,11 +539,20 @@ a:visited {
   padding: 6px 12px;
   font-size: 12px;
   background: #fff;
-  border: 1px solid #000;
+  border: 1px solid #212427;
   cursor: pointer;
 }
 
+body.kindle .theme-btn {
+  border-color: #000;
+}
+
 .theme-btn.active {
+  background: #212427;
+  color: #F8F9FA;
+}
+
+body.kindle .theme-btn.active {
   background: #000;
   color: #fff;
 }
@@ -581,8 +654,15 @@ a:visited {
 /* ==================== */
 
 body.dark-mode {
-  background: #1a1a1a;
+  background: #121212;
   color: #e0e0e0;
+  font-weight: 450;
+}
+
+body.kindle.dark-mode {
+  background: #000;
+  color: #fff;
+  font-weight: 400;
 }
 
 body.dark-mode a {
@@ -594,8 +674,13 @@ body.dark-mode a:visited {
 }
 
 body.dark-mode .reader-header {
-  background: #1a1a1a;
+  background: #121212;
   border-color: #333;
+}
+
+body.kindle.dark-mode .reader-header {
+  background: #000;
+  border-color: #fff;
 }
 
 body.dark-mode .header-nav a {
@@ -604,9 +689,15 @@ body.dark-mode .header-nav a {
 }
 
 body.dark-mode .settings-btn {
-  background: #1a1a1a;
+  background: #121212;
   color: #e0e0e0;
   border-color: #555;
+}
+
+body.kindle.dark-mode .settings-btn {
+  background: #000;
+  color: #fff;
+  border-color: #666;
 }
 
 body.dark-mode .page-indicator {
@@ -614,14 +705,25 @@ body.dark-mode .page-indicator {
 }
 
 body.dark-mode .nav-fixed {
-  background: #1a1a1a;
+  background: #121212;
   border-color: #333;
 }
 
+body.kindle.dark-mode .nav-fixed {
+  background: #000;
+  border-color: #fff;
+}
+
 body.dark-mode .nav-fixed .btn {
-  background: #1a1a1a;
+  background: #121212;
   color: #e0e0e0;
   border-color: #555;
+}
+
+body.kindle.dark-mode .nav-fixed .btn {
+  background: #000;
+  color: #fff;
+  border-color: #666;
 }
 
 body.dark-mode .progress-bar {
@@ -629,9 +731,15 @@ body.dark-mode .progress-bar {
 }
 
 body.dark-mode .settings-panel {
-  background: #222;
+  background: #1e1e1e;
   border-color: #555;
   color: #e0e0e0;
+}
+
+body.kindle.dark-mode .settings-panel {
+  background: #000;
+  border-color: #fff;
+  color: #fff;
 }
 
 body.dark-mode .settings-panel h2 {
@@ -639,37 +747,71 @@ body.dark-mode .settings-panel h2 {
 }
 
 body.dark-mode .font-controls button {
-  background: #222;
+  background: #1e1e1e;
   color: #e0e0e0;
   border-color: #666;
+}
+
+body.kindle.dark-mode .font-controls button {
+  background: #000;
+  color: #fff;
+  border-color: #fff;
 }
 
 body.dark-mode .settings-close {
   background: #e0e0e0;
-  color: #222;
+  color: #1e1e1e;
+}
+
+body.kindle.dark-mode .settings-close {
+  background: #fff;
+  color: #000;
 }
 
 body.dark-mode .line-controls button {
-  background: #222;
+  background: #1e1e1e;
   color: #e0e0e0;
   border-color: #666;
 }
 
+body.kindle.dark-mode .line-controls button {
+  background: #000;
+  color: #fff;
+  border-color: #fff;
+}
+
 body.dark-mode .theme-btn {
-  background: #222;
+  background: #1e1e1e;
   color: #e0e0e0;
   border-color: #666;
+}
+
+body.kindle.dark-mode .theme-btn {
+  background: #000;
+  color: #fff;
+  border-color: #fff;
 }
 
 body.dark-mode .theme-btn.active {
   background: #e0e0e0;
-  color: #222;
+  color: #1e1e1e;
+}
+
+body.kindle.dark-mode .theme-btn.active {
+  background: #fff;
+  color: #000;
 }
 
 body.dark-mode .width-controls button {
-  background: #222;
+  background: #1e1e1e;
   color: #e0e0e0;
   border-color: #666;
+}
+
+body.kindle.dark-mode .width-controls button {
+  background: #000;
+  color: #fff;
+  border-color: #fff;
 }
 
 body.dark-mode .remote-icon {
@@ -679,9 +821,15 @@ body.dark-mode .remote-icon {
 }
 
 body.dark-mode .remote-btn {
-  background: #222;
+  background: #1e1e1e;
   color: #e0e0e0;
   border-color: #666;
+}
+
+body.kindle.dark-mode .remote-btn {
+  background: #000;
+  color: #fff;
+  border-color: #fff;
 }
 
 body.dark-mode .remote-btn.remote-disable {
@@ -715,5 +863,147 @@ body.dark-mode .remote-status {
 
   body.dark-mode .nav-fixed {
     border-color: #333;
+  }
+}
+
+/* ==================== */
+/* Sepia Mode           */
+/* ==================== */
+
+body.sepia-mode {
+  background: #FBF0D9;
+  color: #5F4B32;
+}
+
+body.sepia-mode a {
+  color: #7A5C3A;
+}
+
+body.sepia-mode a:visited {
+  color: #6B4E30;
+}
+
+body.sepia-mode .reader-header {
+  background: #FBF0D9;
+  border-color: #D4C4A8;
+}
+
+body.sepia-mode .header-nav a {
+  color: #5F4B32;
+  border-color: #C4B496;
+}
+
+body.sepia-mode .settings-btn {
+  background: #FBF0D9;
+  color: #5F4B32;
+  border-color: #C4B496;
+}
+
+body.sepia-mode .page-indicator {
+  color: #A08B6E;
+}
+
+body.sepia-mode .nav-fixed {
+  background: #FBF0D9;
+  border-color: #D4C4A8;
+}
+
+body.sepia-mode .nav-fixed .btn {
+  background: #FBF0D9;
+  color: #5F4B32;
+  border-color: #C4B496;
+}
+
+body.sepia-mode .progress-bar {
+  background: #5F4B32;
+}
+
+body.sepia-mode .settings-panel {
+  background: #F5E8D0;
+  border-color: #C4B496;
+  color: #5F4B32;
+}
+
+body.sepia-mode .settings-panel h2 {
+  color: #5F4B32;
+}
+
+body.sepia-mode .font-controls button {
+  background: #FBF0D9;
+  color: #5F4B32;
+  border-color: #C4B496;
+}
+
+body.sepia-mode .settings-close {
+  background: #5F4B32;
+  color: #FBF0D9;
+}
+
+body.sepia-mode .line-controls button {
+  background: #FBF0D9;
+  color: #5F4B32;
+  border-color: #C4B496;
+}
+
+body.sepia-mode .theme-btn {
+  background: #FBF0D9;
+  color: #5F4B32;
+  border-color: #C4B496;
+}
+
+body.sepia-mode .theme-btn.active {
+  background: #5F4B32;
+  color: #FBF0D9;
+}
+
+body.sepia-mode .width-controls button {
+  background: #FBF0D9;
+  color: #5F4B32;
+  border-color: #C4B496;
+}
+
+body.sepia-mode .remote-icon {
+  background: #E8DCC4;
+  border-color: #A08B6E;
+  color: #5F4B32;
+}
+
+body.sepia-mode .remote-btn {
+  background: #FBF0D9;
+  color: #5F4B32;
+  border-color: #C4B496;
+}
+
+body.sepia-mode .remote-btn.remote-disable {
+  background: #E8DCC4;
+  color: #A08B6E;
+}
+
+body.sepia-mode .remote-reconnect {
+  border-color: #6B8E5A;
+  background: #E8F0E0;
+}
+
+body.sepia-mode .remote-reconnect p {
+  color: #4A6B3A;
+}
+
+body.sepia-mode .remote-qr {
+  border-color: #C4B496;
+  background: #F0E4CC;
+}
+
+body.sepia-mode .remote-status {
+  color: #A08B6E;
+}
+
+/* Sepia mode - desktop specific */
+@media (min-width: 768px) {
+  body.sepia-mode .reader-header {
+    border-color: #D4C4A8;
+  }
+
+  body.sepia-mode .nav-fixed {
+    border-color: #D4C4A8;
   }
 }

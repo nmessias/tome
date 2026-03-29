@@ -87,6 +87,8 @@ export function ReaderPage({
         fontSizeDisplay={settings.font + "px"}
         lineHeightDisplay={(settings.lineHeight || 1.6).toFixed(1)}
         dark={settings.dark}
+        theme={settings.theme}
+        isKindle={settings.isKindle}
         readingWidth={settings.readingWidth || 650}
       />
     </ReaderLayout>

@@ -30,8 +30,9 @@ export function Layout({
   currentPath = "",
   enabledSources = [],
 }: PropsWithChildren<LayoutProps>): JSX.Element {
-  const darkClass = settings.dark ? "dark-mode" : "";
-  const fullBodyClass = [bodyClass, darkClass].filter(Boolean).join(" ");
+  const themeClass = settings.theme === 'sepia' ? 'sepia-mode' : (settings.dark ? "dark-mode" : "");
+  const kindleClass = settings.isKindle ? "kindle" : "";
+  const fullBodyClass = [bodyClass, themeClass, kindleClass].filter(Boolean).join(" ");
   const cssFile = css === "reader" 
     ? `/public/css/reader.css?v=${APP_VERSION}` 
     : `/public/css/base.css?v=${APP_VERSION}`;
@@ -78,7 +79,9 @@ export function ReaderLayout({
   settings = DEFAULT_READER_SETTINGS,
   initialPage = 1,
 }: PropsWithChildren<ReaderLayoutProps>): JSX.Element {
-  const bodyClass = settings.dark ? "dark-mode" : "";
+  const themeClass = settings.theme === 'sepia' ? 'sepia-mode' : (settings.dark ? "dark-mode" : "");
+  const kindleClass = settings.isKindle ? "kindle" : "";
+  const bodyClass = [themeClass, kindleClass].filter(Boolean).join(" ");
   
   // Inline script to disable browser scroll restoration and set initial page
   // Must run before any content renders to prevent flash

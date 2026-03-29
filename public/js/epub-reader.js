@@ -126,7 +126,7 @@
     fontIndex: 2,
     lineHeights: [1.4, 1.6, 1.8, 2.0, 2.2],
     lineIndex: 1,
-    isDark: false,
+    theme: 'light',
     injectedStyles: [],
     remoteWs: null,
     remoteToken: null,
@@ -407,7 +407,8 @@
   function saveSettings() {
     var settings = JSON.stringify({
       font: S.fontSizes[S.fontIndex],
-      dark: S.isDark,
+      dark: S.theme === 'dark',
+      theme: S.theme,
       lineHeight: S.lineHeights[S.lineIndex]
     });
     setCookie('reader_settings', settings);
@@ -581,17 +582,25 @@
   }
 
   function applyTheme() {
-    if (S.isDark) {
+    var isKindle = document.body.classList.contains('kindle');
+    document.body.classList.remove('dark-mode', 'sepia-mode');
+    
+    if (S.theme === 'dark') {
       document.body.classList.add('dark-mode');
       if (S.rendition) {
-        S.rendition.themes.override('color', '#fff');
-        S.rendition.themes.override('background', '#000');
+        S.rendition.themes.override('color', isKindle ? '#fff' : '#e0e0e0');
+        S.rendition.themes.override('background', isKindle ? '#000' : '#121212');
+      }
+    } else if (S.theme === 'sepia') {
+      document.body.classList.add('sepia-mode');
+      if (S.rendition) {
+        S.rendition.themes.override('color', '#5F4B32');
+        S.rendition.themes.override('background', '#FBF0D9');
       }
     } else {
-      document.body.classList.remove('dark-mode');
       if (S.rendition) {
-        S.rendition.themes.override('color', '#000');
-        S.rendition.themes.override('background', '#fff');
+        S.rendition.themes.override('color', isKindle ? '#000' : '#212427');
+        S.rendition.themes.override('background', isKindle ? '#fff' : '#F8F9FA');
       }
     }
 
@@ -600,28 +609,15 @@
   }
 
   function updateThemeButtons() {
-    var lightBtn = $('.theme-light');
-    var darkBtn = $('.theme-dark');
-
-    if (lightBtn) {
-      if (S.isDark) {
-        lightBtn.classList.remove('active');
-      } else {
-        lightBtn.classList.add('active');
-      }
-    }
-
-    if (darkBtn) {
-      if (S.isDark) {
-        darkBtn.classList.add('active');
-      } else {
-        darkBtn.classList.remove('active');
-      }
+    var btns = document.querySelectorAll('.theme-btn');
+    for (var i = 0; i < btns.length; i++) {
+      var t = btns[i].getAttribute('data-theme');
+      btns[i].classList.toggle('active', t === S.theme);
     }
   }
 
   function setTheme(theme) {
-    S.isDark = (theme === 'dark');
+    S.theme = theme;
     applyTheme();
   }
 
@@ -766,9 +762,17 @@
     });
     S.rendition.themes.select('default');
 
-    if (S.isDark) {
-      S.rendition.themes.override('color', '#fff');
-      S.rendition.themes.override('background', '#000');
+    if (S.theme === 'dark') {
+      var isKindle = document.body.classList.contains('kindle');
+      S.rendition.themes.override('color', isKindle ? '#fff' : '#e0e0e0');
+      S.rendition.themes.override('background', isKindle ? '#000' : '#121212');
+    } else if (S.theme === 'sepia') {
+      S.rendition.themes.override('color', '#5F4B32');
+      S.rendition.themes.override('background', '#FBF0D9');
+    } else {
+      var isKindle2 = document.body.classList.contains('kindle');
+      S.rendition.themes.override('color', isKindle2 ? '#000' : '#212427');
+      S.rendition.themes.override('background', isKindle2 ? '#fff' : '#F8F9FA');
     }
 
     if (savedCfi && savedCfi.length > 0) {
@@ -821,7 +825,13 @@
   }
 
   function detectInitialSettings() {
-    S.isDark = document.body.classList.contains('dark-mode');
+    if (document.body.classList.contains('dark-mode')) {
+      S.theme = 'dark';
+    } else if (document.body.classList.contains('sepia-mode')) {
+      S.theme = 'sepia';
+    } else {
+      S.theme = 'light';
+    }
 
     var container = $('#epub-container');
     if (container && container.style.fontSize) {
@@ -889,10 +899,12 @@
     if (lineDecrease) lineDecrease.onclick = function() { changeLineHeight(-1); };
     if (lineIncrease) lineIncrease.onclick = function() { changeLineHeight(1); };
 
-    var lightBtn = $('.theme-light');
-    var darkBtn = $('.theme-dark');
-    if (lightBtn) lightBtn.onclick = function() { setTheme('light'); };
-    if (darkBtn) darkBtn.onclick = function() { setTheme('dark'); };
+    var themeBtns = document.querySelectorAll('.theme-btn');
+    for (var i = 0; i < themeBtns.length; i++) {
+      (function(btn) {
+        btn.onclick = function() { setTheme(btn.getAttribute('data-theme')); };
+      })(themeBtns[i]);
+    }
 
     var remoteBtn = document.getElementById('remote-btn');
     if (remoteBtn) remoteBtn.onclick = enableRemote;
