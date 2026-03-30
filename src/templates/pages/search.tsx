@@ -1,25 +1,22 @@
-/**
- * Search page template
- */
 import { Layout } from "../layout";
 import { FictionCard, Pagination, paginate } from "../components";
 import type { Fiction } from "../../types";
 import type { ReaderSettings } from "../../config";
 import { DEFAULT_READER_SETTINGS } from "../../config";
+import type { SourceType } from "../../services/sources";
 
-/**
- * Search page with form and results
- */
 export function SearchPage({
   query = "",
   results = [],
   page = 1,
   settings = DEFAULT_READER_SETTINGS,
+  enabledSources = [],
 }: {
   query?: string;
   results?: Fiction[];
   page?: number;
   settings?: ReaderSettings;
+  enabledSources?: SourceType[];
 }): JSX.Element {
   const searchForm = (
     <form method="GET" action="/search" style="margin-bottom: 20px;">
@@ -40,10 +37,9 @@ export function SearchPage({
     </form>
   );
 
-  // No query - show empty search form
   if (!query) {
     return (
-      <Layout title="Search" settings={settings} currentPath="/search">
+      <Layout title="Search" settings={settings} currentPath="/search" enabledSources={enabledSources}>
         <h1>Search</h1>
         {searchForm}
         <p>Enter a title to search Royal Road.</p>
@@ -51,10 +47,9 @@ export function SearchPage({
     );
   }
 
-  // Query but no results
   if (results.length === 0) {
     return (
-      <Layout title="Search" settings={settings} currentPath="/search">
+      <Layout title="Search" settings={settings} currentPath="/search" enabledSources={enabledSources}>
         <h1>Search</h1>
         {searchForm}
         <p>
@@ -64,11 +59,10 @@ export function SearchPage({
     );
   }
 
-  // Results found
   const paginatedResults = paginate(results, page);
 
   return (
-    <Layout title="Search Results" settings={settings} currentPath="/search">
+    <Layout title="Search Results" settings={settings} currentPath="/search" enabledSources={enabledSources}>
       <h1>Search Results</h1>
       {searchForm}
       <p>

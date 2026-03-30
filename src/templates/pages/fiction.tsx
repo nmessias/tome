@@ -1,26 +1,18 @@
-/**
- * Fiction detail page template
- */
 import { Layout } from "../layout";
 import { CoverImage, Pagination, SectionTitle } from "../components";
 import type { ReaderSettings } from "../../config";
 import { DEFAULT_READER_SETTINGS, CHAPTERS_PER_PAGE } from "../../config";
 import type { Fiction } from "../../types";
+import type { SourceType } from "../../services/sources";
 
-/**
- * Format a number with commas (e.g., 1234567 -> "1,234,567")
- */
 function formatNumber(num: number | undefined): string {
   if (num === undefined) return "—";
   return num.toLocaleString();
 }
 
-/**
- * Format a rating as stars (e.g., 4.5 -> "4.5★")
- */
 function formatRating(rating: number | undefined): string {
   if (rating === undefined) return "—";
-  return `${rating.toFixed(2)}★`;
+  return `${rating.toFixed(1)}★`;
 }
 
 export function FictionPage({
@@ -28,11 +20,15 @@ export function FictionPage({
   chapterPage = 1,
   settings = DEFAULT_READER_SETTINGS,
   error,
+  enabledSources = [],
+  from,
 }: {
   fiction: Fiction;
   chapterPage?: number;
   settings?: ReaderSettings;
   error?: string;
+  enabledSources?: SourceType[];
+  from?: string;
 }): JSX.Element {
   const chapters = fiction.chapters || [];
   const totalChapterPages = Math.ceil(chapters.length / CHAPTERS_PER_PAGE);
@@ -50,8 +46,11 @@ export function FictionPage({
 
   const hasLongDesc = fiction.description && fiction.description.length > 300;
 
+  const backLabel = from === "follows" ? "Back to Follows" : from === "toplists" ? "Back to Top Lists" : from === "search" ? "Back to Search" : "Back to Follows";
+  const backUrl = from === "toplists" ? "/toplists" : from === "search" ? "/search" : "/follows";
+
   return (
-    <Layout title={fiction.title} settings={settings}>
+    <Layout title={fiction.title} settings={settings} currentPath="/fiction" enabledSources={enabledSources}>
       {/* Fiction Header */}
       <div style="display: flex; gap: 16px; margin-bottom: 16px;">
         <CoverImage url={fiction.coverUrl} alt={fiction.title} size="large" />
@@ -183,9 +182,9 @@ export function FictionPage({
       {paginatedChapters.length > 0 ? (
         paginatedChapters.map((c, i) => {
           const isRead = c.isRead === true;
-          const isNextToRead = c.id === fiction.continueChapterId;
-          const prefix = isRead ? "✓ " : isNextToRead ? "→ " : "";
-          const style = isRead ? "opacity: 0.6;" : isNextToRead ? "font-weight: bold;" : "";
+          const isNextToRead = !isRead && c.id === fiction.continueChapterId;
+          const prefix = isNextToRead ? "→ " : isRead ? "✓ " : "";
+          const style = isNextToRead ? "font-weight: bold;" : isRead ? "opacity: 0.6;" : "";
 
           return (
             <div class="card" style={`padding: 8px 12px; ${style}`}>
@@ -211,7 +210,7 @@ export function FictionPage({
       )}
 
       <div class="mt-24">
-        <a href="/follows" class="btn btn-outline btn-small">Back to Follows</a>
+        <a href={backUrl} class="btn btn-outline btn-small">{backLabel}</a>
       </div>
 
       {hasLongDesc && (

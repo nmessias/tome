@@ -346,7 +346,7 @@ export async function handlePageRoute(
     try {
       const page = parseInt(url.searchParams.get("page") || "1", 10);
       const fictions = await getFollows(userId);
-      return html(FollowsPage({ fictions, page, settings }));
+      return html(FollowsPage({ fictions, page, settings, enabledSources }));
     } catch (error: any) {
       console.error("Error fetching follows:", error);
       return html(
@@ -370,7 +370,7 @@ export async function handlePageRoute(
     try {
       const page = parseInt(url.searchParams.get("page") || "1", 10);
       const history = await getHistory(userId);
-      return html(HistoryPage({ history, page, settings }));
+      return html(HistoryPage({ history, page, settings, enabledSources }));
     } catch (error: any) {
       console.error("Error fetching history:", error);
       return html(
@@ -386,7 +386,7 @@ export async function handlePageRoute(
 
   // Toplists index
   if (path === "/toplists" && method === "GET") {
-    return html(ToplistsPage({ settings }));
+    return html(ToplistsPage({ settings, enabledSources }));
   }
 
   // Search
@@ -406,7 +406,7 @@ export async function handlePageRoute(
 
     try {
       const results = await searchFictions(query);
-      return html(SearchPage({ query, results, page, settings }));
+      return html(SearchPage({ query, results, page, settings, enabledSources }));
     } catch (error: any) {
       console.error(`Error searching for "${query}":`, error);
       return html(
@@ -434,7 +434,7 @@ export async function handlePageRoute(
     try {
       const page = parseInt(url.searchParams.get("page") || "1", 10);
       const fictions = await getToplist(toplist);
-      return html(ToplistPage({ toplist, fictions, page, settings }));
+      return html(ToplistPage({ toplist, fictions, page, settings, enabledSources }));
     } catch (error: any) {
       console.error(`Error fetching toplist ${slug}:`, error);
       return html(
@@ -486,6 +486,7 @@ export async function handlePageRoute(
     const id = parseInt(fictionMatch[0], 10);
     const page = parseInt(url.searchParams.get("page") || "1", 10);
     const error = url.searchParams.get("error") || undefined;
+    const from = url.searchParams.get("from") || undefined;
 
     if (!hasRoyalRoadSession(userId)) {
       return html(
@@ -494,11 +495,11 @@ export async function handlePageRoute(
     }
 
     try {
-      const fiction = await getFiction(id);
+      const fiction = await getFiction(id, userId);
       if (!fiction) {
         return html(ErrorPage({ title: "Not Found", message: `Fiction ${id} not found.`, settings }), 404);
       }
-      return html(FictionPage({ fiction, chapterPage: page, settings, error }));
+      return html(FictionPage({ fiction, chapterPage: page, settings, error, enabledSources, from }));
     } catch (error: any) {
       console.error(`Error fetching fiction ${id}:`, error);
       return html(

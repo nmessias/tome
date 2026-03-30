@@ -1,22 +1,19 @@
-/**
- * Toplists index and toplist detail page templates
- */
 import { Layout } from "../layout";
 import { FictionCard, Pagination, paginate, DescriptionToggleScript } from "../components";
 import type { ReaderSettings, ToplistType } from "../../config";
 import { DEFAULT_READER_SETTINGS, TOPLISTS, ITEMS_PER_PAGE } from "../../config";
 import type { Fiction } from "../../types";
+import type { SourceType } from "../../services/sources";
 
-/**
- * Toplists index page - shows all available toplists
- */
 export function ToplistsPage({
   settings = DEFAULT_READER_SETTINGS,
+  enabledSources = [],
 }: {
   settings?: ReaderSettings;
+  enabledSources?: SourceType[];
 }): JSX.Element {
   return (
-    <Layout title="Top Lists" settings={settings} currentPath="/toplists">
+    <Layout title="Top Lists" settings={settings} currentPath="/toplists" enabledSources={enabledSources}>
       <h1>Top Lists</h1>
       {TOPLISTS.map((t) => (
         <div class="card">
@@ -29,23 +26,22 @@ export function ToplistsPage({
   );
 }
 
-/**
- * Single toplist page - shows fictions from a specific toplist
- */
 export function ToplistPage({
   toplist,
   fictions,
   page = 1,
   settings = DEFAULT_READER_SETTINGS,
+  enabledSources = [],
 }: {
   toplist: ToplistType;
   fictions: Fiction[];
   page?: number;
   settings?: ReaderSettings;
+  enabledSources?: SourceType[];
 }): JSX.Element {
   if (fictions.length === 0) {
     return (
-      <Layout title={toplist.name} settings={settings} currentPath="/toplists">
+      <Layout title={toplist.name} settings={settings} currentPath="/toplists" enabledSources={enabledSources}>
         <h1 safe>{toplist.name}</h1>
         <p>No fictions found. Try again later.</p>
         <a href="/toplists" class="btn btn-outline">
@@ -59,7 +55,7 @@ export function ToplistPage({
   const paginatedFictions = paginate(fictions, page);
 
   return (
-    <Layout title={toplist.name} settings={settings} currentPath="/toplists">
+    <Layout title={toplist.name} settings={settings} currentPath="/toplists" enabledSources={enabledSources}>
       <h1 safe>{toplist.name}</h1>
       {paginatedFictions.map((f, i) => (
         <FictionCard fiction={f} rank={startIndex + i + 1} showDescription={true} />

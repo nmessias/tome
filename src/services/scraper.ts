@@ -270,7 +270,8 @@ async function tryHttpFetch(url: string, userId?: string): Promise<{ content: st
     
     // Check for login redirect (cookies not working)
     if (html.includes('action="/account/login"') || response.url.includes("/account/login")) {
-      console.warn("[Scraper] WARNING: HTTP fetch got login page - cookies may be invalid or expired");
+      console.warn("[Scraper] HTTP fetch got login page - cookies may be invalid or expired");
+      return null;
     }
     
     console.log(`[Scraper] HTTP fetch succeeded in ${Date.now() - startTime}ms`);
@@ -1406,9 +1407,7 @@ export async function setBookmark(
       
       // Invalidate caches so we get fresh state
       deleteCache(`fiction:${fictionId}`);
-      if (type === "follow") {
-        deleteCache("follows");
-      }
+      deleteCache(`follows:${userId}`);
       
       return { success: true };
     }
