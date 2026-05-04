@@ -85,6 +85,7 @@ export const ALL_NAV_LINKS = [
   { href: "/", label: "Home", source: null },
   { href: "/library", label: "Library", source: "epub" as const },
   { href: "/follows", label: "Follows", source: "royalroad" as const },
+  { href: "/read-later", label: "Read Later", source: "royalroad" as const },
   { href: "/history", label: "History", source: "royalroad" as const },
   { href: "/toplists", label: "Top Lists", source: "royalroad" as const },
   { href: "/search", label: "Search", source: "royalroad" as const },

@@ -874,6 +874,81 @@ export async function getHistory(userId: string): Promise<HistoryEntry[]> {
   return history;
 }
 
+export async function getReadLater(userId: string, ttl: number = CACHE_TTL.FOLLOWS): Promise<Fiction[]> {
+  const cacheKey = `readlater:${userId}`;
+  const cached = getCache(cacheKey);
+  if (cached) {
+    console.log("Returning cached read later");
+    return JSON.parse(cached);
+  }
+
+  const { page, content } = await getPage(`${ROYAL_ROAD_BASE_URL}/my/readlater`, ".fiction-list-item", userId);
+  if (page) await page.close();
+
+  const { document } = parseHTML(content);
+  const fictions: Fiction[] = [];
+
+  const rows = document.querySelectorAll(".fiction-list-item");
+  console.log(`Found ${rows.length} read later items`);
+
+  for (const row of rows) {
+    try {
+      const titleEl = row.querySelector("h2.fiction-title a");
+      if (!titleEl) continue;
+
+      const href = titleEl.getAttribute("href") || "";
+      const idMatch = href.match(/\/fiction\/(\d+)/);
+      if (!idMatch) continue;
+
+      const id = parseInt(idMatch[1], 10);
+      const title = titleEl.textContent?.trim() || "";
+
+      let author = "";
+      const authorEl = row.querySelector("span.author a[href*='/profile/']");
+      if (authorEl) {
+        author = authorEl.textContent?.trim() || "";
+      }
+
+      const coverEl = row.querySelector("img[data-type='cover']");
+      let coverUrl = coverEl?.getAttribute("src") || undefined;
+      if (coverUrl && !coverUrl.startsWith("http")) {
+        coverUrl = `https://www.royalroad.com${coverUrl}`;
+      }
+
+      let pages: number | undefined;
+      const pageCountEl = row.querySelector("span.page-count");
+      if (pageCountEl) {
+        const text = pageCountEl.textContent?.trim() || "";
+        const numMatch = text.match(/([\d,]+)/);
+        if (numMatch) {
+          pages = parseInt(numMatch[1].replace(/,/g, ""), 10);
+        }
+      }
+
+      const descEl = row.querySelector(".hidden-content");
+      const description = descEl?.textContent?.trim() || "";
+
+      fictions.push({
+        id,
+        title,
+        author,
+        url: `${ROYAL_ROAD_BASE_URL}${href}`,
+        coverUrl,
+        description,
+        stats: { pages },
+      });
+    } catch (e) {
+      console.error("Error parsing read later item:", e);
+    }
+  }
+
+  if (fictions.length > 0) {
+    setCache(cacheKey, JSON.stringify(fictions), ttl);
+  }
+
+  return fictions;
+}
+
 export async function getToplist(toplist: ToplistType, userId?: string, ttl: number = CACHE_TTL.TOPLIST): Promise<Fiction[]> {
   const cacheKey = `toplist:${toplist.slug}`;
   const cached = getCache(cacheKey);
@@ -1447,6 +1522,7 @@ export async function setBookmark(
       // Invalidate caches so we get fresh state
       deleteCache(`fiction:${fictionId}`);
       deleteCache(`follows:${userId}`);
+      deleteCache(`readlater:${userId}`);
       
       return { success: true };
     }

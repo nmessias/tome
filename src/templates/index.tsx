@@ -28,6 +28,7 @@ export { HomePage } from "./pages/home";
 export { SettingsPage } from "./pages/settings";
 export { FollowsPage } from "./pages/follows";
 export { HistoryPage } from "./pages/history";
+export { ReadLaterPage } from "./pages/read-later";
 export { ToplistsPage, ToplistPage } from "./pages/toplists";
 export { FictionPage } from "./pages/fiction";
 export { ReaderPage } from "./pages/reader";

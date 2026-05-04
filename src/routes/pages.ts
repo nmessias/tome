@@ -7,6 +7,7 @@ import {
   SettingsPage,
   FollowsPage,
   HistoryPage,
+  ReadLaterPage,
   ToplistsPage,
   ToplistPage,
   FictionPage,
@@ -35,6 +36,7 @@ import {
 import {
   getFollows,
   getHistory,
+  getReadLater,
   getToplist,
   getToplistCached,
   getFiction,
@@ -408,6 +410,31 @@ export async function handlePageRoute(
           title: "Error Loading History",
           message: error.message || "Failed to load history. Try again.",
           retryUrl: "/history",
+          settings,
+        })
+      );
+    }
+  }
+
+  // Read Later
+  if (path === "/read-later" && method === "GET") {
+    if (!hasRoyalRoadSession(userId)) {
+      return html(
+        ErrorPage({ title: "Not Configured", message: "Please configure your session cookies first.", retryUrl: "/settings", settings })
+      );
+    }
+
+    try {
+      const page = parseInt(url.searchParams.get("page") || "1", 10);
+      const fictions = await getReadLater(userId);
+      return html(ReadLaterPage({ fictions, page, settings, enabledSources }));
+    } catch (error: any) {
+      console.error("Error fetching read later:", error);
+      return html(
+        ErrorPage({
+          title: "Error Loading Read Later",
+          message: error.message || "Failed to load read later list. Try again.",
+          retryUrl: "/read-later",
           settings,
         })
       );
