@@ -19,82 +19,77 @@ export async function performAutoLogin(userId: string): Promise<boolean> {
   const startTime = Date.now();
 
   try {
-    const { firefox } = await import("playwright");
-    const browser = await firefox.launch({
-      headless: true,
-      firefoxUserPrefs: {
-        "browser.cache.disk.enable": false,
-        "browser.cache.memory.enable": true,
-        "browser.cache.memory.capacity": 32768,
-        "browser.sessionhistory.max_entries": 2,
-        "browser.sessionstore.max_tabs_undo": 0,
-        "media.autoplay.enabled": false,
-        "media.peerconnection.enabled": false,
-        "dom.webnotifications.enabled": false,
-        "geo.enabled": false,
+    // Step 1: GET login page to extract CSRF token and initial cookies
+    const loginPageRes = await fetch(`${ROYAL_ROAD_BASE_URL}/account/login?returnurl=%2Fhome`, {
+      headers: {
+        "User-Agent": USER_AGENT,
+        "Accept": "text/html,application/xhtml+xml",
       },
+      redirect: "manual",
     });
 
-    try {
-      const context = await browser.newContext({
-        userAgent: USER_AGENT,
-        viewport: { width: 1280, height: 720 },
-        locale: "en-US",
-        timezoneId: "America/New_York",
-      });
+    const loginHtml = await loginPageRes.text();
+    const initialCookies = loginPageRes.headers.getSetCookie();
 
-      const page = await context.newPage();
-
-      await page.goto(`${ROYAL_ROAD_BASE_URL}/account/login?returnurl=%2Fhome`, {
-        waitUntil: "networkidle",
-        timeout: 30000,
-      });
-
-      const currentUrl = page.url();
-      if (!currentUrl.includes("/account/login")) {
-        console.log("[AutoLogin] Already logged in, refreshing cookies");
-        const cookies = await context.cookies();
-        for (const cookie of cookies) {
-          if (cookie.name === ".AspNetCore.Identity.Application" || cookie.name === "cf_clearance") {
-            setRoyalRoadCookie(userId, cookie.name, cookie.value);
+    // Check for login page / CSRF token (also serves as "already logged in" check)
+    const tokenMatch = loginHtml.match(/name="__RequestVerificationToken"[^>]*value="([^"]*)"/);
+    if (!tokenMatch) {
+      if (loginPageRes.status === 302 || loginHtml.includes("window.location") || !loginHtml.includes("Sign In")) {
+        console.log("[AutoLogin] Already logged in or login page not accessible, refreshing cookies");
+        const cookieMatch = initialCookies.find(c => c.includes(".AspNetCore.Identity.Application"));
+        if (cookieMatch) {
+          const value = cookieMatch.split("=")[1]?.split(";")[0];
+          if (value) {
+            setRoyalRoadCookie(userId, ".AspNetCore.Identity.Application", value);
           }
         }
         return true;
       }
-
-      await page.fill('input[type="email"]', ROYAL_ROAD_USERNAME);
-      await page.fill('input[type="password"]', ROYAL_ROAD_PASSWORD);
-
-      const rememberCheckbox = page.locator('input[type="checkbox"]');
-      if (await rememberCheckbox.isVisible()) {
-        await rememberCheckbox.check();
-      }
-
-      await page.click('button[type="submit"]');
-
-      await page.waitForTimeout(3000);
-      await page.waitForLoadState("networkidle");
-
-      if (page.url().includes("/account/login")) {
-        console.error("[AutoLogin] Still on login page - credentials may be invalid");
-        return false;
-      }
-
-      const cookies = await context.cookies();
-
-      let savedCount = 0;
-      for (const cookie of cookies) {
-        if (cookie.name === ".AspNetCore.Identity.Application" || cookie.name === "cf_clearance") {
-          setRoyalRoadCookie(userId, cookie.name, cookie.value);
-          savedCount++;
-        }
-      }
-
-      console.log(`[AutoLogin] Successfully logged in and saved ${savedCount} cookies in ${Date.now() - startTime}ms`);
-      return savedCount > 0;
-    } finally {
-      await browser.close();
+      console.error("[AutoLogin] Could not find CSRF token on login page - Cloudflare may be blocking");
+      return false;
     }
+
+    const csrfToken = tokenMatch[1];
+    console.log(`[AutoLogin] Got CSRF token, ${initialCookies.length} initial cookies`);
+
+    // Step 2: POST credentials
+    const formData = new URLSearchParams();
+    formData.append("Email", ROYAL_ROAD_USERNAME);
+    formData.append("Password", ROYAL_ROAD_PASSWORD);
+    formData.append("Remember", "true");
+    formData.append("__RequestVerificationToken", csrfToken);
+    formData.append("returnUrl", "/home");
+
+    const cookieHeader = initialCookies.map(c => c.split(";")[0]).join("; ");
+
+    const loginRes = await fetch(`${ROYAL_ROAD_BASE_URL}/account/login?returnurl=%2Fhome`, {
+      method: "POST",
+      headers: {
+        "User-Agent": USER_AGENT,
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Accept": "text/html",
+        "Referer": `${ROYAL_ROAD_BASE_URL}/account/login?returnurl=%2Fhome`,
+        "Cookie": cookieHeader,
+      },
+      body: formData.toString(),
+      redirect: "manual",
+    });
+
+    const responseCookies = loginRes.headers.getSetCookie();
+
+    // Find and save the identity cookie
+    const identityCookie = responseCookies.find(c => c.includes(".AspNetCore.Identity.Application"));
+    if (identityCookie) {
+      const value = identityCookie.split("=")[1]?.split(";")[0];
+      if (value) {
+        setRoyalRoadCookie(userId, ".AspNetCore.Identity.Application", value);
+        console.log(`[AutoLogin] Logged in successfully in ${Date.now() - startTime}ms`);
+        return true;
+      }
+    }
+
+    console.error("[AutoLogin] No identity cookie in response - credentials may be invalid");
+    return false;
   } catch (error) {
     console.error(`[AutoLogin] Failed after ${Date.now() - startTime}ms:`, error);
     return false;
