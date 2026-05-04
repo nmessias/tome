@@ -34,6 +34,9 @@ export const DB_PATH = "./data/sessions.db";
 
 // Royal Road
 export const ROYAL_ROAD_BASE_URL = "https://www.royalroad.com";
+export const ROYAL_ROAD_USERNAME = process.env.ROYAL_ROAD_USERNAME || "";
+export const ROYAL_ROAD_PASSWORD = process.env.ROYAL_ROAD_PASSWORD || "";
+export const ROYAL_ROAD_AUTO_LOGIN_ENABLED = !!(ROYAL_ROAD_USERNAME && ROYAL_ROAD_PASSWORD);
 
 // FreeWebNovel
 export const FREEWEBNOVEL_BASE_URL = "https://freewebnovel.com";

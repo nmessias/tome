@@ -7,6 +7,7 @@ import { parseHTML } from "linkedom";
 import { getCache, setCache, deleteCache } from "./cache";
 import { getRoyalRoadCookiesForPlaywright, hasRoyalRoadSession } from "./royalroad-credentials";
 import { ROYAL_ROAD_BASE_URL, CACHE_TTL, SCRAPER_TIMEOUT, SCRAPER_SELECTOR_TIMEOUT, ENABLE_BROWSER } from "../config";
+import { performAutoLogin, ROYAL_ROAD_AUTO_LOGIN_ENABLED } from "./royalroad-auth";
 
 // Playwright types (imported dynamically when ENABLE_BROWSER=true)
 type Browser = import("playwright").Browser;
@@ -232,7 +233,7 @@ function getCookiesForFetch(userId: string): string {
  * Try fetching page via HTTP first (fast path, ~100ms)
  * Returns HTML content if successful, null if Cloudflare blocked or error
  */
-async function tryHttpFetch(url: string, userId?: string): Promise<{ content: string; finalUrl: string } | null> {
+async function tryHttpFetch(url: string, userId?: string, alreadyRetriedWithLogin?: boolean): Promise<{ content: string; finalUrl: string } | null> {
   const startTime = Date.now();
   
   try {
@@ -271,6 +272,13 @@ async function tryHttpFetch(url: string, userId?: string): Promise<{ content: st
     // Check for login redirect (cookies not working)
     if (html.includes('action="/account/login"') || response.url.includes("/account/login")) {
       console.warn("[Scraper] HTTP fetch got login page - cookies may be invalid or expired");
+      if (userId && !alreadyRetriedWithLogin && ROYAL_ROAD_AUTO_LOGIN_ENABLED) {
+        console.log("[Scraper] Attempting auto-login before retry...");
+        const loggedIn = await performAutoLogin(userId);
+        if (loggedIn) {
+          return tryHttpFetch(url, userId, true);
+        }
+      }
       return null;
     }
     
@@ -395,13 +403,22 @@ async function createAnonContext(): Promise<void> {
 async function getPage(
   url: string,
   waitForSelector?: string,
-  userId?: string
+  userId?: string,
+  alreadyRetriedWithLogin?: boolean
 ): Promise<{ page: Page | null; content: string }> {
   const startTime = Date.now();
   const useAnon = !userId;
   
   if (!useAnon && !hasRoyalRoadSession(userId)) {
-    throw new Error("Session cookies not configured. Please set up your Royal Road cookies first.");
+    if (ROYAL_ROAD_AUTO_LOGIN_ENABLED) {
+      console.log("[Scraper] No session found, attempting auto-login...");
+      const loggedIn = await performAutoLogin(userId);
+      if (!loggedIn) {
+        throw new Error("Auto-login failed. Please configure your Royal Road session manually.");
+      }
+    } else {
+      throw new Error("Session cookies not configured. Please set up your Royal Road cookies first.");
+    }
   }
 
   console.log(`[Scraper] Trying HTTP fetch for ${url} (${useAnon ? 'anon' : 'auth'})`);
@@ -470,6 +487,15 @@ async function getPage(
       
       if (page.url().includes("/account/login") || pageContent.includes('action="/account/login"')) {
         console.warn("[Scraper] WARNING: Redirected to login page - cookies may be invalid or expired!");
+        if (userId && !alreadyRetriedWithLogin && ROYAL_ROAD_AUTO_LOGIN_ENABLED) {
+          await page.close();
+          console.log("[Scraper] Attempting auto-login before retry...");
+          const loggedIn = await performAutoLogin(userId);
+          if (loggedIn) {
+            await createContext(userId);
+          }
+          continue;
+        }
       }
 
       if (waitForSelector) {
@@ -1356,7 +1382,20 @@ export async function validateCookies(userId: string): Promise<boolean> {
     const { page, content } = await getPage(`${ROYAL_ROAD_BASE_URL}/my/follows`, undefined, userId);
     if (page) await page.close();
     
-    return !content.includes('action="/account/login"') && !content.includes("Sign In");
+    const valid = !content.includes('action="/account/login"') && !content.includes("Sign In");
+    
+    if (!valid && ROYAL_ROAD_AUTO_LOGIN_ENABLED) {
+      console.log("[Scraper] Cookie validation failed, attempting auto-login...");
+      const loggedIn = await performAutoLogin(userId);
+      if (loggedIn) {
+        await createContext(userId);
+        const { page: retryPage, content: retryContent } = await getPage(`${ROYAL_ROAD_BASE_URL}/my/follows`, undefined, userId, true);
+        if (retryPage) await retryPage.close();
+        return !retryContent.includes('action="/account/login"') && !retryContent.includes("Sign In");
+      }
+    }
+    
+    return valid;
   } catch (e) {
     console.error("Cookie validation failed:", e);
     return false;

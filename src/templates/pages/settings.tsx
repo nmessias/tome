@@ -32,6 +32,7 @@ export function SettingsPage({
   invitations = [],
   sources = { royalroad: false, epub: false, freewebnovel: false },
   enabledSources = [],
+  autoLoginEnabled = false,
 }: {
   message?: string;
   isError?: boolean;
@@ -41,6 +42,7 @@ export function SettingsPage({
   invitations?: Invitation[];
   sources?: SourcesState;
   enabledSources?: SourceType[];
+  autoLoginEnabled?: boolean;
 }): JSX.Element {
   const totalSize = stats ? stats.totalSize + stats.imageSize : 0;
 
@@ -143,10 +145,30 @@ export function SettingsPage({
       {sources.royalroad && (
         <>
           <SectionTitle>Royal Road Session</SectionTitle>
-          <p style="font-size: 14px;">
-            Enter your Royal Road session cookies to access your follows and reading history.
-            Find these in your browser's developer tools (F12 → Application → Cookies).
-          </p>
+
+          {autoLoginEnabled ? (
+            <div class="card" style="margin-bottom: 16px;">
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                <span style="color: #0a0; font-size: 18px;">✓</span>
+                <strong>Auto-login configured</strong>
+              </div>
+              <p style="font-size: 14px; margin: 0;">
+                Royal Road credentials are set via environment variables. The app will
+                automatically log in when your session expires.
+              </p>
+              <div class="form-actions" style="margin-top: 12px;">
+                <form method="POST" action="/settings/auto-login" style="margin: 0;">
+                  <button type="submit" class="btn">Refresh Session Now</button>
+                </form>
+              </div>
+            </div>
+          ) : (
+            <p style="font-size: 14px;">
+              Enter your Royal Road session cookies to access your follows and reading history.
+              Find these in your browser's developer tools (F12 → Application → Cookies).
+            </p>
+          )}
+
           <form method="POST" action="/settings/cookies">
             <div class="form-group">
               <label for="identity">.AspNetCore.Identity.Application</label>

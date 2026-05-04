@@ -29,6 +29,10 @@ import {
   clearRoyalRoadCookies,
 } from "../services/royalroad-credentials";
 import {
+  performAutoLogin,
+  ROYAL_ROAD_AUTO_LOGIN_ENABLED,
+} from "../services/royalroad-auth";
+import {
   getFollows,
   getHistory,
   getToplist,
@@ -172,7 +176,32 @@ export async function handlePageRoute(
       expiresAt: inv.expiresAt,
       inviteUrl: `${req.headers.get("x-forwarded-proto") || "http"}://${req.headers.get("host") || "localhost:3000"}/invite/${inv.token}`,
     })) : [];
-    return html(SettingsPage({ settings, stats, isAdmin, invitations, sources, enabledSources }));
+    return html(SettingsPage({ settings, stats, isAdmin, invitations, sources, enabledSources, autoLoginEnabled: ROYAL_ROAD_AUTO_LOGIN_ENABLED }));
+  }
+
+  // Settings - Auto-login (triggered manually)
+  if (path === "/settings/auto-login" && method === "POST") {
+    const stats = getCacheStats();
+    const userSources = getUserSources(userId);
+    const sources = {
+      royalroad: userSources.find(s => s.source === "royalroad")?.enabled ?? false,
+      epub: userSources.find(s => s.source === "epub")?.enabled ?? false,
+      freewebnovel: userSources.find(s => s.source === "freewebnovel")?.enabled ?? false,
+    };
+
+    if (!ROYAL_ROAD_AUTO_LOGIN_ENABLED) {
+      return html(SettingsPage({ message: "Auto-login not configured. Set ROYAL_ROAD_USERNAME and ROYAL_ROAD_PASSWORD.", isError: true, settings, stats, sources, enabledSources, autoLoginEnabled: false }));
+    }
+
+    const success = await performAutoLogin(userId);
+    if (success) {
+      await createContext(userId);
+      await validateCookies(userId);
+      triggerCacheWarm().catch(console.error);
+      return html(SettingsPage({ message: "Auto-login successful! Session refreshed.", isError: false, settings, stats, sources, enabledSources, autoLoginEnabled: true }));
+    } else {
+      return html(SettingsPage({ message: "Auto-login failed. Check your Royal Road credentials.", isError: true, settings, stats, sources, enabledSources, autoLoginEnabled: true }));
+    }
   }
 
   // Settings - POST cookies
@@ -193,7 +222,7 @@ export async function handlePageRoute(
     if (!identity) {
       const stats = getCacheStats();
       return html(
-        SettingsPage({ message: "The .AspNetCore.Identity.Application cookie is required.", isError: true, settings, stats, sources: getSourcesState(), enabledSources })
+        SettingsPage({ message: "The .AspNetCore.Identity.Application cookie is required.", isError: true, settings, stats, sources: getSourcesState(), enabledSources, autoLoginEnabled: ROYAL_ROAD_AUTO_LOGIN_ENABLED })
       );
     }
 
@@ -215,11 +244,12 @@ export async function handlePageRoute(
           stats,
           sources: getSourcesState(),
           enabledSources,
+          autoLoginEnabled: ROYAL_ROAD_AUTO_LOGIN_ENABLED,
         })
       );
     } else {
       return html(
-        SettingsPage({ message: "Cookies saved but validation failed. Check your cookie values.", isError: true, settings, stats, sources: getSourcesState(), enabledSources })
+        SettingsPage({ message: "Cookies saved but validation failed. Check your cookie values.", isError: true, settings, stats, sources: getSourcesState(), enabledSources, autoLoginEnabled: ROYAL_ROAD_AUTO_LOGIN_ENABLED })
       );
     }
   }
@@ -235,7 +265,7 @@ export async function handlePageRoute(
       epub: userSources.find(s => s.source === "epub")?.enabled ?? false,
       freewebnovel: userSources.find(s => s.source === "freewebnovel")?.enabled ?? false,
     };
-    return html(SettingsPage({ message: "Cookies and cache cleared.", isError: false, settings, stats, isAdmin, sources, enabledSources }));
+    return html(SettingsPage({ message: "Cookies and cache cleared.", isError: false, settings, stats, isAdmin, sources, enabledSources, autoLoginEnabled: ROYAL_ROAD_AUTO_LOGIN_ENABLED }));
   }
 
   if (path === "/settings/invitations" && method === "POST") {
@@ -255,7 +285,7 @@ export async function handlePageRoute(
         expiresAt: inv.expiresAt,
         inviteUrl: `${req.headers.get("x-forwarded-proto") || "http"}://${req.headers.get("host") || "localhost:3000"}/invite/${inv.token}`,
       }));
-      return html(SettingsPage({ message: "Email is required", isError: true, settings, stats, isAdmin, invitations }));
+      return html(SettingsPage({ message: "Email is required", isError: true, settings, stats, isAdmin, invitations, autoLoginEnabled: ROYAL_ROAD_AUTO_LOGIN_ENABLED }));
     }
     
     createInvitation(email, userId);
@@ -317,7 +347,7 @@ export async function handlePageRoute(
       epub: userSources.find(s => s.source === "epub")?.enabled ?? false,
       freewebnovel: userSources.find(s => s.source === "freewebnovel")?.enabled ?? false,
     };
-    return html(SettingsPage({ message, settings, stats, sources, enabledSources }));
+    return html(SettingsPage({ message, settings, stats, sources, enabledSources, autoLoginEnabled: ROYAL_ROAD_AUTO_LOGIN_ENABLED }));
   }
 
   // Legacy /setup redirect to /settings
