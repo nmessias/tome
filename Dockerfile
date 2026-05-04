@@ -6,6 +6,10 @@ COPY package.json bun.lockb* ./
 
 RUN bun install --frozen-lockfile || bun install
 
+# Install Playwright system dependencies and Firefox browser
+# (used for Cloudflare bypass and auto-login)
+RUN npx playwright install-deps firefox && npx playwright install firefox
+
 COPY . .
 
 RUN mkdir -p /app/data
