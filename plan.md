@@ -12,7 +12,7 @@ Verification gate after every phase: `bun run typecheck` must pass. Phases 1–2
 
 ---
 
-## Phase 1 — The source seam + unified `/read/` routes (this repo)
+## Phase 1 — The source seam + unified `/read/` routes (this repo) ✅ DONE
 
 **Goal:** routes and templates become source-agnostic. Sources become interchangeable adapters behind one registry. URLs move to `/read/:source/...` (ADR-0002). No behavior change: same data, same pages, new URLs.
 
@@ -99,7 +99,7 @@ Replace all per-source branches with registry calls, using the ADR-0002 table:
 
 ---
 
-## Phase 2 — Feature seam + remote control as reference feature (this repo)
+## Phase 2 — Feature seam + remote control as reference feature (this repo) ✅ DONE
 
 **Goal:** features become packages of routes/WS/migrations; remote control is the first, proving the interface.
 
@@ -114,7 +114,7 @@ Replace all per-source branches with registry calls, using the ADR-0002 table:
 
 ---
 
-## Phase 3 — Package split & plugin loading (3 repos)
+## Phase 3 — Package split & plugin loading (3 repos) ✅ DONE
 
 **Goal:** core repo becomes scraper-free; sources install as npm packages.
 
@@ -130,7 +130,7 @@ Fresh clone of core + `bun add tome-source-royalroad` + `TOME_PLUGINS=tome-sourc
 
 ---
 
-## Phase 4 — Community surface
+## Phase 4 — Community surface ✅ DONE
 
 - `docs/plugins.md`: authoring guide — how to implement a `Source` (contract, capabilities, ref semantics), how to implement a `Feature`, how to test against core types, publishing checklist.
 - Example repo `tome-source-example` implementing a trivial source (static content) as the copy-paste starting point.

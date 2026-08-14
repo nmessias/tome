@@ -146,7 +146,7 @@ Then: open `/read/<name>` (source home), `/read/<name>/search`, settings → ena
 3. LICENSE file.
 4. `bun run typecheck` passes.
 5. Smoke test against a local Tome instance (above).
-6. Publish: `npm publish` (or `bun publish`). Add a GitHub Action on tag push: `npm publish --access public` (see `docs/publishing.yml` in this repo).
+6. Publish: `npm publish` (or `bun publish`). Each plugin repo ships a GitHub Action (`.github/workflows/publish.yml`) that runs typecheck + tests and publishes on `v*` tags — add the `NPM_TOKEN` secret to the repo, then `git tag v1.0.0 && git push --tags`.
 
 After publishing, tell users:
 
