@@ -9,10 +9,12 @@ import { registerFeature } from "./services/feature-registry";
 import { TOME_PLUGINS } from "./config";
 import { epubSource } from "./sources/epub";
 import { epubFeature } from "./features/epub";
+import { remoteFeature } from "./features/remote";
 import { wsTestFeature } from "./features/ws-test";
 
 registerSource(epubSource);
 registerFeature(epubFeature);
+registerFeature(remoteFeature);
 registerFeature(wsTestFeature);
 
 export async function loadPlugins(): Promise<void> {

@@ -36,7 +36,9 @@
     "better-auth": "^1.4.9",
     "better-sqlite3": "^12.5.0",
     "jszip": "^3.10.1",
-    "qrcode": "^1.5.4"
+    "qrcode": "^1.5.4",
+    "tome-source-freewebnovel": "github:nmessias/tome-source-freewebnovel",
+    "tome-source-royalroad": "github:nmessias/tome-source-royalroad"
   },
   "optionalDependencies": {
     "playwright": "^1.40.0"
