@@ -121,7 +121,7 @@ export function runMigrations(): void {
   `);
   
   // Create user_source_credentials table for per-user source credentials
-  // Supports: royalroad, patreon, webnovel, ao3, ffnet, epub, etc.
+  // One row per (user, source, credential name). Sources are identified by their registered machine name.
   db.run(`
     CREATE TABLE IF NOT EXISTS "user_source_credentials" (
       "id" INTEGER PRIMARY KEY AUTOINCREMENT,

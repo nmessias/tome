@@ -15,7 +15,7 @@ export interface CacheEntry {
 
 export interface Fiction {
   id: number;
-  slug?: string;       // String-based ID for sources like FreeWebNovel
+  slug?: string;       // String-based fiction ref (numeric sources use id)
   title: string;
   author: string;
   url: string;

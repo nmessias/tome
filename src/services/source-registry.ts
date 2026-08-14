@@ -76,7 +76,7 @@ export interface SourceAutoLogin {
 }
 
 export interface Source {
-  /** Machine name; appears in URLs ("royalroad", "freewebnovel", "epub", ...). */
+  /** Machine name; appears in URLs (/read/:source/...). */
   name: string;
   displayName: string;
   description?: string;

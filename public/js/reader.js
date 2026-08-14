@@ -33,7 +33,7 @@
     isDesktop: false,
     // SPA navigation (unified scheme)
     cache: {},
-    source: null,       // source name, e.g. 'royalroad' | 'freewebnovel'
+    source: null,       // source machine name from the wrapper's data-source
     fictionRef: null,   // fiction ref as it appears in /read/:source/:fictionRef
     chapterRef: null,   // current chapter ref
     trackProgress: false,

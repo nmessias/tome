@@ -6,9 +6,28 @@ Tome is a web fiction proxy that scrapes content from various sources and presen
 
 ## Supported Sources
 
-- **Royal Road** - Western web fiction platform
-- *Patreon* - Coming soon
-- *Chinese/Korean novel sites* - Planned
+Sources are plugins installed as npm packages (see [Plugin Index](#plugin-index)). The core repo ships one built-in source:
+
+- **EPUB** - Upload and read your own EPUB files (reference adapter)
+
+Available source plugins:
+
+- [**tome-source-royalroad**](https://github.com/nmessias/tome-source-royalroad) - Royal Road (search, follows, history, toplists, read-later, bookmarks)
+- [**tome-source-freewebnovel**](https://github.com/nmessias/tome-source-freewebnovel) - FreeWebNovel (search, local library)
+
+## Plugin Index
+
+Sources and features install as npm packages and load at startup via the `TOME_PLUGINS` environment variable. No scraper code lives in the core repo — see [docs/plugins.md](docs/plugins.md) to write your own.
+
+```bash
+bun add tome-source-royalroad
+# or, until published to npm:
+bun add github:nmessias/tome-source-royalroad
+
+echo 'TOME_PLUGINS=tome-source-royalroad' >> .env
+```
+
+Restart the server; the source appears in Settings and under `/read/royalroad/...`.
 
 ## Supported Devices
 

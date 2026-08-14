@@ -1,6 +1,6 @@
 /**
  * Shared reader UI components
- * Used by all reader pages (Royal Road, EPUB, FreeWebNovel)
+ * Used by all reader pages (every source)
  * to avoid duplication and ensure new features (like remote control)
  * are automatically available to all sources.
  */

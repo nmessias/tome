@@ -6,8 +6,11 @@ COPY package.json bun.lockb* ./
 
 RUN bun install --frozen-lockfile || bun install
 
+# Source plugins (TOME_PLUGINS). Uncomment and adjust per deployment:
+# RUN bun add tome-source-royalroad tome-source-freewebnovel
+
 # Install Playwright system dependencies and Firefox browser
-# (used for Cloudflare bypass and auto-login)
+# (used by the royalroad plugin for Cloudflare bypass and auto-login)
 RUN bunx playwright install-deps firefox && bunx playwright install firefox
 
 COPY . .
