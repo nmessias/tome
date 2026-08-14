@@ -6,8 +6,12 @@
 // Server configuration
 export const PORT = parseInt(process.env.PORT || "3000", 10);
 
-// Browser/Playwright (disabled by default for smaller image, set ENABLE_BROWSER=true to enable)
-export const ENABLE_BROWSER = process.env.ENABLE_BROWSER === "true";
+// Plugins (Phase 3): comma-separated npm package names loaded at startup.
+// Each package exports a `source` (Source) and/or `feature` (Feature).
+export const TOME_PLUGINS = (process.env.TOME_PLUGINS || "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
 
 // Authentication (for production deployment)
 export const AUTH_USERNAME = process.env.AUTH_USERNAME || "";
@@ -32,33 +36,6 @@ export const CHAPTERS_PER_PAGE = 20;
 // Database
 export const DB_PATH = "./data/sessions.db";
 
-// Royal Road
-export const ROYAL_ROAD_BASE_URL = "https://www.royalroad.com";
-export const ROYAL_ROAD_USERNAME = process.env.ROYAL_ROAD_USERNAME || "";
-export const ROYAL_ROAD_PASSWORD = process.env.ROYAL_ROAD_PASSWORD || "";
-export const ROYAL_ROAD_AUTO_LOGIN_ENABLED = !!(ROYAL_ROAD_USERNAME && ROYAL_ROAD_PASSWORD);
-
-// FreeWebNovel
-export const FREEWEBNOVEL_BASE_URL = "https://freewebnovel.com";
-
-// Scraper timeouts (hardcoded for reliability - NODE_ENV might not be set)
-export const SCRAPER_TIMEOUT = 60000;  // 60 seconds for navigation
-export const SCRAPER_SELECTOR_TIMEOUT = 20000;  // 20 seconds for selectors
-
-// Toplists configuration
-export interface ToplistType {
-  slug: string;
-  name: string;
-  url: string;
-}
-
-export const TOPLISTS: ToplistType[] = [
-  { slug: 'rising-stars', name: 'Rising Stars', url: `${ROYAL_ROAD_BASE_URL}/fictions/rising-stars` },
-  { slug: 'best-rated', name: 'Best Rated', url: `${ROYAL_ROAD_BASE_URL}/fictions/best-rated` },
-  { slug: 'weekly-popular', name: 'Weekly Popular', url: `${ROYAL_ROAD_BASE_URL}/fictions/weekly-popular` },
-  { slug: 'active-popular', name: 'Active Popular', url: `${ROYAL_ROAD_BASE_URL}/fictions/active-popular` },
-];
-
 // Reader settings
 export type ThemeName = 'light' | 'dark' | 'sepia';
 
@@ -81,4 +58,4 @@ export const DEFAULT_READER_SETTINGS: ReaderSettings = {
 };
 
 // App version for cache busting
-export const APP_VERSION = "1.4.2";
+export const APP_VERSION = "1.5.0";

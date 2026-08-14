@@ -50,6 +50,10 @@ export interface Feature {
   wsPaths?: FeatureWsPath[];
   /** Create feature-owned DB tables; called by runMigrations after core tables. */
   migrations?(db: Database): void;
+  /** Background work on boot (e.g. cache warming, browser init). */
+  start?(): void | Promise<void>;
+  /** Shutdown hook on SIGINT. */
+  stop?(): void | Promise<void>;
 }
 
 const registeredFeatures: Feature[] = [];

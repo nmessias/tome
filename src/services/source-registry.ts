@@ -17,8 +17,9 @@ import type {
   HistoryEntry,
   ChapterContent,
   LibraryEntry,
+  ToplistType,
 } from "../types";
-import type { ToplistType, ReaderSettings } from "../config";
+import type { ReaderSettings } from "../config";
 
 // ============ Types ============
 

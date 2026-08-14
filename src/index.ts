@@ -1,13 +1,12 @@
 /**
  * Tome - Web Fiction Proxy for E-ink Devices
  * Main entry point — app shell only. No feature-specific logic here (Phase 2):
- * sources and features register in ./registration; WS paths come from
- * registered features.
+ * sources and features register via ./registration (static core + TOME_PLUGINS
+ * packages); WS paths, background jobs, and migrations come from registered
+ * features.
  */
-import { PORT, ENABLE_BROWSER } from "./config";
+import { PORT } from "./config";
 import { handleRequest } from "./routes";
-import { initBrowser, closeBrowser } from "./services/scraper";
-import { startJobs, stopJobs } from "./services/jobs";
 import { seedAdminUser } from "./lib/auth";
 import { runMigrations } from "./lib/migrate";
 import {
@@ -16,19 +15,22 @@ import {
   type FeatureWsPath,
 } from "./services/feature-registry";
 import type { ServerWebSocket } from "bun";
-// Side-effect: register the built-in sources and features (Phase 3 replaces
-// this with TOME_PLUGINS scanning). Must run before any request is handled.
-import "./registration";
+// Side-effect: register built-in sources/features. Plugins load via loadPlugins.
+import { loadPlugins } from "./registration";
 
 console.log("Starting Tome...");
 
-// Run migrations first, then seed admin user
+await loadPlugins();
+
+// Run migrations first (core + plugin migrations), then seed admin user
 runMigrations();
 
 seedAdminUser()
-  .then(() => ENABLE_BROWSER ? initBrowser() : Promise.resolve())
   .then(() => {
-    startJobs();
+    // Feature background work (browser init, cache warming, ...)
+    for (const feature of getFeatures()) {
+      feature.start?.();
+    }
   })
   .catch(console.error);
 
@@ -76,7 +78,8 @@ console.log("Press Ctrl+C to stop");
 // Handle graceful shutdown
 process.on("SIGINT", async () => {
   console.log("\nShutting down...");
-  stopJobs();
-  if (ENABLE_BROWSER) await closeBrowser();
+  for (const feature of getFeatures()) {
+    await feature.stop?.();
+  }
   process.exit(0);
 });
