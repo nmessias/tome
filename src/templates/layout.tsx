@@ -3,7 +3,7 @@
  */
 import type { PropsWithChildren } from "@kitajs/html";
 import type { ReaderSettings } from "../config";
-import type { SourceType } from "../services/sources";
+import type { Source } from "../services/source-registry";
 import { DEFAULT_READER_SETTINGS, APP_VERSION } from "../config";
 import { Header } from "./components";
 
@@ -14,7 +14,7 @@ export interface LayoutProps {
   scripts?: string[];
   settings?: ReaderSettings;
   currentPath?: string;
-  enabledSources?: SourceType[];
+  sources?: Source[];
 }
 
 /**
@@ -28,7 +28,7 @@ export function Layout({
   scripts = [],
   settings = DEFAULT_READER_SETTINGS,
   currentPath = "",
-  enabledSources = [],
+  sources = [],
 }: PropsWithChildren<LayoutProps>): JSX.Element {
   const themeClass = settings.theme === 'sepia' ? 'sepia-mode' : (settings.dark ? "dark-mode" : "");
   const kindleClass = settings.isKindle ? "kindle" : "";
@@ -55,7 +55,7 @@ export function Layout({
           <link rel="apple-touch-icon" href="/public/apple-touch-icon.png" />
         </head>
         <body class={fullBodyClass || undefined}>
-          <Header currentPath={currentPath} enabledSources={enabledSources} />
+          <Header currentPath={currentPath} sources={sources} />
           <main class="main">
             {children}
           </main>

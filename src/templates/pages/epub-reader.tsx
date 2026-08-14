@@ -40,7 +40,7 @@ export function EpubReaderPage({
           <header class="epub-header">
             <div class="header-left">
               <span class="remote-icon" id="remote-icon" style="display: none;">Remote</span>
-              <a href="/library" class="back-btn">← Library</a>
+              <a href="/read/epub/library" class="back-btn">← Library</a>
               <h1 class="book-title" safe>{book.title}</h1>
               {book.author && <span class="book-author" safe>{book.author as string}</span>}
             </div>
@@ -68,7 +68,7 @@ export function EpubReaderPage({
             prevLabel="← Prev"
             nextLabel="Next →"
             indexLabel="Library"
-            indexHref="/library"
+            indexHref="/read/epub/library"
             prevAttrs={{ disabled: true }}
             nextAttrs={{ disabled: true }}
           />

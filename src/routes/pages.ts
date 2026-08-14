@@ -1,7 +1,10 @@
 /**
- * Page routes (HTML responses)
+ * Page routes (HTML responses) — Phase 1: unified /read/:source/... (ADR-0002).
+ *
+ * Every source-specific branch is gone; routes resolve the Source from the
+ * registry and gate on its capabilities. Unknown or disabled sources 404.
  */
-import { html, parseFormData, matchPath, URL_PATTERNS, redirect } from "../server";
+import { html, parseFormData, redirect } from "../server";
 import {
   HomePage,
   SettingsPage,
@@ -15,8 +18,11 @@ import {
   ErrorPage,
   WsTestPage,
   RemotePage,
+  SourceHomePage,
 } from "../templates";
 import { ReaderPage } from "../templates/pages/reader";
+import { LibraryPage } from "../templates/pages/library";
+import { LibraryUploadPage } from "../templates/pages/library-upload";
 import {
   clearCache,
   clearCacheByType,
@@ -25,29 +31,16 @@ import {
   getCacheStats,
 } from "../services/cache";
 import {
-  hasRoyalRoadSession,
-  setRoyalRoadCookie,
-  clearRoyalRoadCookies,
-} from "../services/royalroad-credentials";
-import {
-  performAutoLogin,
-  ROYAL_ROAD_AUTO_LOGIN_ENABLED,
-} from "../services/royalroad-auth";
-import {
-  getFollows,
-  getHistory,
-  getReadLater,
-  getToplist,
-  getToplistCached,
-  getFiction,
-  getChapter,
-  validateCookies,
-  createContext,
-  searchFictions,
-  setBookmark,
-} from "../services/scraper";
-import { triggerCacheWarm } from "../services/jobs";
-import { TOPLISTS } from "../config";
+  getAllSources,
+  getSource,
+  getSourceByName,
+  getEnabledSources,
+  getSourceWithCapability,
+  getSourcesWithCapability,
+  setSourceEnabled,
+  type Source,
+  type SourceRouteContext,
+} from "../services/source-registry";
 import type { ReaderSettings } from "../config";
 import type { Fiction } from "../types";
 import { isValidToken } from "../services/remote";
@@ -56,44 +49,85 @@ import {
   getPendingInvitations,
   revokeInvitation,
 } from "../services/invitations";
-import {
-  getUserSources,
-  setSourceEnabled,
-  getEnabledSources,
-  isSourceEnabled,
-  type SourceType,
-} from "../services/sources";
-import {
-  uploadEpub,
-  getUserLibrary,
-  getBook,
-  deleteBook,
-} from "../services/epub";
-import { LibraryPage } from "../templates/pages/library";
-import { LibraryUploadPage } from "../templates/pages/library-upload";
-import { EpubReaderPage } from "../templates/pages/epub-reader";
-import { FwnSearchPage } from "../templates/pages/fwn-search";
-import { FwnFictionPage } from "../templates/pages/fwn-fiction";
-import { FwnReaderPage } from "../templates/pages/fwn-reader";
-import { FwnLibraryPage } from "../templates/pages/fwn-library";
-import {
-  searchFictions as fwnSearchFictions,
-  getFiction as fwnGetFiction,
-  getChapter as fwnGetChapter,
-} from "../services/fwn-scraper";
-import {
-  getLibrary as fwnGetLibrary,
-  getLibraryEntry as fwnGetLibraryEntry,
-  isInLibrary as fwnIsInLibrary,
-  addToLibrary as fwnAddToLibrary,
-  removeFromLibrary as fwnRemoveFromLibrary,
-  updateTotalChapters as fwnUpdateTotalChapters,
-} from "../services/fwn-library";
+import type { Invitation } from "../templates/pages/settings";
+
+// ============ Helpers ============
+
+/** Credential-capable source that has no session yet (drives home/setup UI). */
+function needsSession(source: Source, userId: string): boolean {
+  return source.capabilities.credentials && !!source.hasSession && !source.hasSession(userId);
+}
+
+function notFound(settings: ReaderSettings, message: string): Response {
+  return html(ErrorPage({ title: "Not Found", message, settings }), 404);
+}
+
+function notConfigured(settings: ReaderSettings, sourceName: string): Response {
+  return html(
+    ErrorPage({
+      title: "Not Configured",
+      message: `Please configure your ${sourceName} credentials first.`,
+      retryUrl: "/settings",
+      settings,
+    }),
+    404
+  );
+}
 
 /**
- * Handle page routes
- * Returns Response if matched, null otherwise
+ * Render the settings page with registry-driven props (sources list,
+ * enabled state, invitations, cache stats).
  */
+function renderSettings(
+  req: Request,
+  userId: string,
+  isAdmin: boolean,
+  settings: ReaderSettings,
+  extra: {
+    message?: string;
+    isError?: boolean;
+  } = {}
+): Response {
+  const stats = getCacheStats();
+  const invitations: Invitation[] = isAdmin
+    ? getPendingInvitations().map((inv) => ({
+        id: inv.id,
+        email: inv.email,
+        token: inv.token,
+        expiresAt: inv.expiresAt,
+        inviteUrl: `${req.headers.get("x-forwarded-proto") || "http"}://${req.headers.get("host") || "localhost:3000"}/invite/${inv.token}`,
+      }))
+    : [];
+  return html(
+    SettingsPage({
+      ...extra,
+      settings,
+      stats,
+      isAdmin,
+      invitations,
+      allSources: getAllSources(),
+      enabledSources: getEnabledSources(userId),
+    })
+  );
+}
+
+/**
+ * Legacy top-level capability pages (/follows, /history, /read-later,
+ * /toplists) redirect to the unified /read/:source/... path when exactly one
+ * enabled source has the capability; otherwise null (caller renders 404).
+ */
+function legacyCapabilityRedirect(
+  userId: string,
+  capability: "follows" | "history" | "readLater" | "toplists",
+  subpath: string
+): Response | null {
+  const sources = getSourcesWithCapability(userId, capability);
+  if (sources.length !== 1) return null;
+  return redirect(`/read/${sources[0].name}/${subpath}`);
+}
+
+// ============ Main handler ============
+
 export async function handlePageRoute(
   req: Request,
   path: string,
@@ -103,7 +137,7 @@ export async function handlePageRoute(
   isAdmin: boolean
 ): Promise<Response | null> {
   const method = req.method;
-  const enabledSources = getEnabledSources(userId);
+  const ctx: SourceRouteContext = { req, path, url, settings, userId, isAdmin };
 
   // WebSocket diagnostic test page
   if (path === "/ws-test" && method === "GET") {
@@ -111,185 +145,136 @@ export async function handlePageRoute(
     const host = req.headers.get("host") || "localhost:3000";
     const wsProtocol = protocol === "https" ? "wss" : "ws";
     const wsUrl = `${wsProtocol}://${host}/ws/test`;
-    
+
     return html(WsTestPage({ settings, wsUrl }));
   }
 
   const remoteMatch = path.match(/^\/remote\/([a-z0-9]+)$/);
   if (remoteMatch && method === "GET") {
     const token = remoteMatch[1];
-    
+
     if (!isValidToken(token)) {
-      return html(ErrorPage({ 
-        title: "Invalid Session", 
-        message: "This remote control session has expired or is invalid.", 
-        settings 
-      }), 404);
+      return html(
+        ErrorPage({
+          title: "Invalid Session",
+          message: "This remote control session has expired or is invalid.",
+          settings,
+        }),
+        404
+      );
     }
-    
+
     const protocol = req.headers.get("x-forwarded-proto") || "http";
     const host = req.headers.get("host") || "localhost:3000";
     const wsProtocol = protocol === "https" ? "wss" : "ws";
     const wsUrl = `${wsProtocol}://${host}/ws/remote/${token}?role=controller`;
-    
+
     return new Response(RemotePage({ token, wsUrl }) as string, {
       headers: { "Content-Type": "text/html; charset=utf-8" },
     });
   }
 
+  // ============ Home ============
+
   if (path === "/" && method === "GET") {
-    const hasCookies = hasRoyalRoadSession(userId);
-    
-    // Only show toplists if cookies are configured
+    const toplistSource = getSourceWithCapability(userId, "toplists");
+    const hasSession = !toplistSource || !toplistSource.hasSession || toplistSource.hasSession(userId);
+
     let risingStars: Fiction[] = [];
     let weeklyPopular: Fiction[] = [];
-    
-    if (hasCookies) {
-      const risingStarsToplist = TOPLISTS.find(t => t.slug === 'rising-stars');
-      const weeklyPopularToplist = TOPLISTS.find(t => t.slug === 'weekly-popular');
-      
-      // Use cache-only to avoid blocking the homepage on slow scraping
-      risingStars = (risingStarsToplist ? getToplistCached(risingStarsToplist) : null)?.slice(0, 10) || [];
-      weeklyPopular = (weeklyPopularToplist ? getToplistCached(weeklyPopularToplist) : null)?.slice(0, 10) || [];
+    if (toplistSource && hasSession && toplistSource.getToplistCached && toplistSource.toplists) {
+      const risingStarsToplist = toplistSource.toplists.find((t) => t.slug === "rising-stars");
+      const weeklyPopularToplist = toplistSource.toplists.find((t) => t.slug === "weekly-popular");
+      // Cache-only to avoid blocking the homepage on slow scraping
+      risingStars = (risingStarsToplist ? toplistSource.getToplistCached(risingStarsToplist) : null)?.slice(0, 10) || [];
+      weeklyPopular = (weeklyPopularToplist ? toplistSource.getToplistCached(weeklyPopularToplist) : null)?.slice(0, 10) || [];
     }
-    
-    return html(HomePage({ 
-      settings, 
-      risingStars,
-      weeklyPopular,
-      hasCookies,
-      enabledSources,
-    }));
+
+    const needsSetupSource =
+      getSourcesWithCapability(userId, "credentials").find((s) => s.hasSession && !s.hasSession(userId)) || null;
+
+    return html(
+      HomePage({
+        settings,
+        risingStars,
+        weeklyPopular,
+        toplistSource: hasSession ? toplistSource : null,
+        needsSetupSource,
+        sources: getEnabledSources(userId),
+      })
+    );
   }
 
-  // Settings - GET
+  // ============ Settings ============
+
   if (path === "/settings" && method === "GET") {
-    const stats = getCacheStats();
-    const userSources = getUserSources(userId);
-    const sources = {
-      royalroad: userSources.find(s => s.source === "royalroad")?.enabled ?? false,
-      epub: userSources.find(s => s.source === "epub")?.enabled ?? false,
-      freewebnovel: userSources.find(s => s.source === "freewebnovel")?.enabled ?? false,
-    };
-    const invitations = isAdmin ? getPendingInvitations().map(inv => ({
-      id: inv.id,
-      email: inv.email,
-      token: inv.token,
-      expiresAt: inv.expiresAt,
-      inviteUrl: `${req.headers.get("x-forwarded-proto") || "http"}://${req.headers.get("host") || "localhost:3000"}/invite/${inv.token}`,
-    })) : [];
-    return html(SettingsPage({ settings, stats, isAdmin, invitations, sources, enabledSources, autoLoginEnabled: ROYAL_ROAD_AUTO_LOGIN_ENABLED }));
+    return renderSettings(req, userId, isAdmin, settings);
   }
 
-  // Settings - Auto-login (triggered manually)
-  if (path === "/settings/auto-login" && method === "POST") {
-    const stats = getCacheStats();
-    const userSources = getUserSources(userId);
-    const sources = {
-      royalroad: userSources.find(s => s.source === "royalroad")?.enabled ?? false,
-      epub: userSources.find(s => s.source === "epub")?.enabled ?? false,
-      freewebnovel: userSources.find(s => s.source === "freewebnovel")?.enabled ?? false,
-    };
-
-    if (!ROYAL_ROAD_AUTO_LOGIN_ENABLED) {
-      return html(SettingsPage({ message: "Auto-login not configured. Set ROYAL_ROAD_USERNAME and ROYAL_ROAD_PASSWORD.", isError: true, settings, stats, sources, enabledSources, autoLoginEnabled: false }));
-    }
-
-    const success = await performAutoLogin(userId);
-    if (success) {
-      await createContext(userId);
-      await validateCookies(userId);
-      triggerCacheWarm().catch(console.error);
-      return html(SettingsPage({ message: "Auto-login successful! Session refreshed.", isError: false, settings, stats, sources, enabledSources, autoLoginEnabled: true }));
-    } else {
-      return html(SettingsPage({ message: "Auto-login failed. Check your Royal Road credentials.", isError: true, settings, stats, sources, enabledSources, autoLoginEnabled: true }));
-    }
-  }
-
-  // Settings - POST cookies
-  if (path === "/settings/cookies" && method === "POST") {
+  // Settings - source toggle (any registered source)
+  if (path === "/settings/sources" && method === "POST") {
     const form = await parseFormData(req);
-    const identity = form.identity?.trim();
-    const cfclearance = form.cfclearance?.trim();
-
-    const getSourcesState = () => {
-      const userSources = getUserSources(userId);
-      return {
-        royalroad: userSources.find(s => s.source === "royalroad")?.enabled ?? false,
-        epub: userSources.find(s => s.source === "epub")?.enabled ?? false,
-        freewebnovel: userSources.find(s => s.source === "freewebnovel")?.enabled ?? false,
-      };
-    };
-
-    if (!identity) {
-      const stats = getCacheStats();
-      return html(
-        SettingsPage({ message: "The .AspNetCore.Identity.Application cookie is required.", isError: true, settings, stats, sources: getSourcesState(), enabledSources, autoLoginEnabled: ROYAL_ROAD_AUTO_LOGIN_ENABLED })
-      );
+    const name = form.source;
+    if (name && getSourceByName(name)) {
+      setSourceEnabled(userId, name, form.enabled === "1");
     }
-
-    setRoyalRoadCookie(userId, ".AspNetCore.Identity.Application", identity);
-    if (cfclearance) {
-      setRoyalRoadCookie(userId, "cf_clearance", cfclearance);
-    }
-
-    const valid = await validateCookies(userId);
-    const stats = getCacheStats();
-
-    if (valid) {
-      triggerCacheWarm().catch(console.error);
-      return html(
-        SettingsPage({
-          message: "Cookies saved and validated! Cache warming started.",
-          isError: false,
-          settings,
-          stats,
-          sources: getSourcesState(),
-          enabledSources,
-          autoLoginEnabled: ROYAL_ROAD_AUTO_LOGIN_ENABLED,
-        })
-      );
-    } else {
-      return html(
-        SettingsPage({ message: "Cookies saved but validation failed. Check your cookie values.", isError: true, settings, stats, sources: getSourcesState(), enabledSources, autoLoginEnabled: ROYAL_ROAD_AUTO_LOGIN_ENABLED })
-      );
-    }
+    return redirect("/settings");
   }
 
-  if (path === "/settings/cookies/clear" && method === "GET") {
-    clearRoyalRoadCookies(userId);
-    clearCache();
-    await createContext(userId);
-    const stats = getCacheStats();
-    const userSources = getUserSources(userId);
-    const sources = {
-      royalroad: userSources.find(s => s.source === "royalroad")?.enabled ?? false,
-      epub: userSources.find(s => s.source === "epub")?.enabled ?? false,
-      freewebnovel: userSources.find(s => s.source === "freewebnovel")?.enabled ?? false,
-    };
-    return html(SettingsPage({ message: "Cookies and cache cleared.", isError: false, settings, stats, isAdmin, sources, enabledSources, autoLoginEnabled: ROYAL_ROAD_AUTO_LOGIN_ENABLED }));
+  // Settings - credentials form (capability-gated, rendered from credentialFields)
+  const credentialsMatch = path.match(/^\/settings\/sources\/([\w-]+)\/credentials$/);
+  if (credentialsMatch && method === "POST") {
+    const source = getSource(userId, credentialsMatch[1]);
+    if (!source || !source.capabilities.credentials || !source.saveCredentials) {
+      return redirect("/settings");
+    }
+    const values = await parseFormData(req);
+    const result = await source.saveCredentials(userId, values);
+    return renderSettings(req, userId, isAdmin, settings, {
+      message: result.error || result.warning || "Credentials saved.",
+      isError: !!result.error,
+    });
+  }
+
+  // Settings - clear credentials
+  const credentialsClearMatch = path.match(/^\/settings\/sources\/([\w-]+)\/credentials\/clear$/);
+  if (credentialsClearMatch && method === "GET") {
+    const source = getSource(userId, credentialsClearMatch[1]);
+    if (source?.clearCredentials) {
+      await source.clearCredentials(userId);
+    }
+    return redirect("/settings");
+  }
+
+  // Settings - auto-login refresh (source.autoLogin)
+  const autoLoginMatch = path.match(/^\/settings\/sources\/([\w-]+)\/auto-login$/);
+  if (autoLoginMatch && method === "POST") {
+    const source = getSource(userId, autoLoginMatch[1]);
+    if (!source?.autoLogin?.enabled) {
+      return renderSettings(req, userId, isAdmin, settings, {
+        message: "Auto-login not configured.",
+        isError: true,
+      });
+    }
+    const success = await source.autoLogin.refresh(userId);
+    return renderSettings(req, userId, isAdmin, settings, {
+      message: success ? "Auto-login successful! Session refreshed." : "Auto-login failed. Check your credentials.",
+      isError: !success,
+    });
   }
 
   if (path === "/settings/invitations" && method === "POST") {
     if (!isAdmin) {
       return redirect("/settings");
     }
-    
+
     const form = await parseFormData(req);
     const email = form.email?.trim();
-    const stats = getCacheStats();
-    
+
     if (!email) {
-      const invitations = getPendingInvitations().map(inv => ({
-        id: inv.id,
-        email: inv.email,
-        token: inv.token,
-        expiresAt: inv.expiresAt,
-        inviteUrl: `${req.headers.get("x-forwarded-proto") || "http"}://${req.headers.get("host") || "localhost:3000"}/invite/${inv.token}`,
-      }));
-      return html(SettingsPage({ message: "Email is required", isError: true, settings, stats, isAdmin, invitations, autoLoginEnabled: ROYAL_ROAD_AUTO_LOGIN_ENABLED }));
+      return renderSettings(req, userId, isAdmin, settings, { message: "Email is required", isError: true });
     }
-    
+
     createInvitation(email, userId);
     return redirect("/settings");
   }
@@ -299,26 +284,7 @@ export async function handlePageRoute(
     if (!isAdmin) {
       return redirect("/settings");
     }
-    
-    const invitationId = revokeMatch[1];
-    revokeInvitation(invitationId);
-    return redirect("/settings");
-  }
-
-  if (path === "/settings/theme" && method === "POST") {
-    return new Response(null, {
-      status: 303,
-      headers: { Location: "/settings" },
-    });
-  }
-
-  const sourceToggleMatch = path.match(/^\/settings\/sources\/(royalroad|epub|freewebnovel)$/);
-  if (sourceToggleMatch && method === "POST") {
-    const source = sourceToggleMatch[1] as SourceType;
-    const form = await parseFormData(req);
-    const enabled = form.enabled === "1";
-    
-    setSourceEnabled(userId, source, enabled);
+    revokeInvitation(revokeMatch[1]);
     return redirect("/settings");
   }
 
@@ -342,492 +308,363 @@ export async function handlePageRoute(
       message = `Cleared ${deleted} ${type} cache entries.`;
     }
 
-    const stats = getCacheStats();
-    const userSources = getUserSources(userId);
-    const sources = {
-      royalroad: userSources.find(s => s.source === "royalroad")?.enabled ?? false,
-      epub: userSources.find(s => s.source === "epub")?.enabled ?? false,
-      freewebnovel: userSources.find(s => s.source === "freewebnovel")?.enabled ?? false,
-    };
-    return html(SettingsPage({ message, settings, stats, sources, enabledSources, autoLoginEnabled: ROYAL_ROAD_AUTO_LOGIN_ENABLED }));
+    return renderSettings(req, userId, isAdmin, settings, { message });
   }
 
-  // Legacy /setup redirect to /settings
+  // Legacy /setup and /cache redirects
   if (path === "/setup" && method === "GET") {
-    return new Response(null, {
-      status: 301,
-      headers: { Location: "/settings" },
-    });
+    return new Response(null, { status: 301, headers: { Location: "/settings" } });
+  }
+  if (path === "/cache" && method === "GET") {
+    return new Response(null, { status: 301, headers: { Location: "/settings" } });
   }
 
-  // Legacy /cache redirect to /settings
-  if (path === "/cache" && method === "GET") {
-    return new Response(null, {
-      status: 301,
-      headers: { Location: "/settings" },
-    });
-  }
+  // ============ Legacy capability pages → unified redirects (ADR-0002) ============
 
   if (path === "/follows" && method === "GET") {
-    if (!hasRoyalRoadSession(userId)) {
-      return html(
-        ErrorPage({ title: "Not Configured", message: "Please configure your session cookies first.", retryUrl: "/settings", settings })
-      );
+    const r = legacyCapabilityRedirect(userId, "follows", "follows");
+    if (r) return r;
+    return notFound(settings, "No enabled source provides follows.");
+  }
+  if (path === "/history" && method === "GET") {
+    const r = legacyCapabilityRedirect(userId, "history", "history");
+    if (r) return r;
+    return notFound(settings, "No enabled source provides history.");
+  }
+  if (path === "/read-later" && method === "GET") {
+    const r = legacyCapabilityRedirect(userId, "readLater", "read-later");
+    if (r) return r;
+    return notFound(settings, "No enabled source provides read later.");
+  }
+  if (path === "/toplists" && method === "GET") {
+    const r = legacyCapabilityRedirect(userId, "toplists", "toplists");
+    if (r) return r;
+    return notFound(settings, "No enabled source provides toplists.");
+  }
+
+  // ============ Unified /read/:source/... routes (ADR-0002) ============
+
+  const readMatch = path.match(/^\/read\/([\w-]+)(\/.*)?$/);
+  if (!readMatch) return null;
+  const sourceName = readMatch[1];
+  const rest = readMatch[2] || "";
+  const source = getSource(userId, sourceName);
+  if (!source) return notFound(settings, `Source "${sourceName}" not found or disabled.`);
+
+  // ---- /read/:source — source home ----
+  if (rest === "" && method === "GET") {
+    return html(SourceHomePage({ source, settings, sources: getEnabledSources(userId) }));
+  }
+
+  // ---- /read/:source/search ----
+  if (rest === "/search" && method === "GET") {
+    if (!source.capabilities.search || !source.search) {
+      return notFound(settings, `${source.displayName} does not support search.`);
+    }
+    if (needsSession(source, userId)) return notConfigured(settings, source.displayName);
+
+    const query = url.searchParams.get("q")?.trim() || "";
+    const page = parseInt(url.searchParams.get("page") || "1", 10);
+
+    if (!query) {
+      return html(SearchPage({ source, settings, sources: getEnabledSources(userId) }));
     }
 
     try {
-      const page = parseInt(url.searchParams.get("page") || "1", 10);
-      const fictions = await getFollows(userId);
-      return html(FollowsPage({ fictions, page, settings, enabledSources }));
+      const results = await source.search(query, userId);
+      return html(SearchPage({ source, query, results, page, settings, sources: getEnabledSources(userId) }));
     } catch (error: any) {
-      console.error("Error fetching follows:", error);
+      console.error(`Error searching ${source.name} for "${query}":`, error);
+      return html(
+        ErrorPage({
+          title: "Search Error",
+          message: error.message || `Failed to search ${source.displayName}. Try again.`,
+          retryUrl: `/read/${source.name}/search`,
+          settings,
+        })
+      );
+    }
+  }
+
+  // ---- /read/:source/follows ----
+  if (rest === "/follows" && method === "GET") {
+    if (!source.capabilities.follows || !source.getFollows) {
+      return notFound(settings, `${source.displayName} does not provide follows.`);
+    }
+    if (needsSession(source, userId)) return notConfigured(settings, source.displayName);
+
+    try {
+      const page = parseInt(url.searchParams.get("page") || "1", 10);
+      const fictions = await source.getFollows(userId);
+      return html(FollowsPage({ source, fictions, page, settings, sources: getEnabledSources(userId) }));
+    } catch (error: any) {
+      console.error(`Error fetching follows for ${source.name}:`, error);
       return html(
         ErrorPage({
           title: "Error Loading Follows",
           message: error.message || "Failed to load follows. Try again.",
-          retryUrl: "/follows",
+          retryUrl: `/read/${source.name}/follows`,
           settings,
         })
       );
     }
   }
 
-  if (path === "/history" && method === "GET") {
-    if (!hasRoyalRoadSession(userId)) {
-      return html(
-        ErrorPage({ title: "Not Configured", message: "Please configure your session cookies first.", retryUrl: "/settings", settings })
-      );
+  // ---- /read/:source/history ----
+  if (rest === "/history" && method === "GET") {
+    if (!source.capabilities.history || !source.getHistory) {
+      return notFound(settings, `${source.displayName} does not provide history.`);
     }
+    if (needsSession(source, userId)) return notConfigured(settings, source.displayName);
 
     try {
       const page = parseInt(url.searchParams.get("page") || "1", 10);
-      const history = await getHistory(userId);
-      return html(HistoryPage({ history, page, settings, enabledSources }));
+      const history = await source.getHistory(userId);
+      return html(HistoryPage({ source, history, page, settings, sources: getEnabledSources(userId) }));
     } catch (error: any) {
-      console.error("Error fetching history:", error);
+      console.error(`Error fetching history for ${source.name}:`, error);
       return html(
         ErrorPage({
           title: "Error Loading History",
           message: error.message || "Failed to load history. Try again.",
-          retryUrl: "/history",
+          retryUrl: `/read/${source.name}/history`,
           settings,
         })
       );
     }
   }
 
-  // Read Later
-  if (path === "/read-later" && method === "GET") {
-    if (!hasRoyalRoadSession(userId)) {
-      return html(
-        ErrorPage({ title: "Not Configured", message: "Please configure your session cookies first.", retryUrl: "/settings", settings })
-      );
+  // ---- /read/:source/read-later ----
+  if (rest === "/read-later" && method === "GET") {
+    if (!source.capabilities.readLater || !source.getReadLater) {
+      return notFound(settings, `${source.displayName} does not provide read later.`);
     }
+    if (needsSession(source, userId)) return notConfigured(settings, source.displayName);
 
     try {
       const page = parseInt(url.searchParams.get("page") || "1", 10);
-      const fictions = await getReadLater(userId);
-      return html(ReadLaterPage({ fictions, page, settings, enabledSources }));
+      const fictions = await source.getReadLater(userId);
+      return html(ReadLaterPage({ source, fictions, page, settings, sources: getEnabledSources(userId) }));
     } catch (error: any) {
-      console.error("Error fetching read later:", error);
+      console.error(`Error fetching read later for ${source.name}:`, error);
       return html(
         ErrorPage({
           title: "Error Loading Read Later",
           message: error.message || "Failed to load read later list. Try again.",
-          retryUrl: "/read-later",
+          retryUrl: `/read/${source.name}/read-later`,
           settings,
         })
       );
     }
   }
 
-  // Toplists index
-  if (path === "/toplists" && method === "GET") {
-    return html(ToplistsPage({ settings, enabledSources }));
+  // ---- /read/:source/toplists and /read/:source/toplists/:slug ----
+  if (rest === "/toplists" && method === "GET") {
+    if (!source.capabilities.toplists || !source.getToplist) {
+      return notFound(settings, `${source.displayName} does not provide toplists.`);
+    }
+    if (needsSession(source, userId)) return notConfigured(settings, source.displayName);
+    return html(ToplistsPage({ source, settings, sources: getEnabledSources(userId) }));
   }
 
-  // Search
-  if (path === "/search" && method === "GET") {
-    const query = url.searchParams.get("q")?.trim() || "";
-    const page = parseInt(url.searchParams.get("page") || "1", 10);
-
-    if (!query) {
-      return html(SearchPage({ settings }));
-    }
-
-    if (!hasRoyalRoadSession(userId)) {
-      return html(
-        ErrorPage({ title: "Not Configured", message: "Please configure your session cookies first.", retryUrl: "/settings", settings })
-      );
-    }
-
-    try {
-      const results = await searchFictions(query);
-      return html(SearchPage({ query, results, page, settings, enabledSources }));
-    } catch (error: any) {
-      console.error(`Error searching for "${query}":`, error);
-      return html(
-        ErrorPage({ title: "Search Error", message: error.message || "Failed to search. Try again.", retryUrl: "/search", settings })
-      );
-    }
-  }
-
-  // Toplist detail
-  const toplistMatch = matchPath(path, URL_PATTERNS.toplist);
+  const toplistMatch = rest.match(/^\/toplists\/([\w-]+)$/);
   if (toplistMatch && method === "GET") {
-    const slug = toplistMatch[0];
-    const toplist = TOPLISTS.find(t => t.slug === slug);
-
-    if (!toplist) {
-      return html(ErrorPage({ title: "Not Found", message: `Toplist "${slug}" not found.`, settings }), 404);
+    if (!source.capabilities.toplists || !source.getToplist) {
+      return notFound(settings, `${source.displayName} does not provide toplists.`);
     }
+    if (needsSession(source, userId)) return notConfigured(settings, source.displayName);
 
-    if (!hasRoyalRoadSession(userId)) {
-      return html(
-        ErrorPage({ title: "Not Configured", message: "Please configure your session cookies first.", retryUrl: "/settings", settings })
-      );
+    const slug = toplistMatch[1];
+    const toplist = (source.toplists || []).find((t) => t.slug === slug);
+    if (!toplist) {
+      return notFound(settings, `Toplist "${slug}" not found.`);
     }
 
     try {
       const page = parseInt(url.searchParams.get("page") || "1", 10);
-      const fictions = await getToplist(toplist);
-      return html(ToplistPage({ toplist, fictions, page, settings, enabledSources }));
+      const fictions = await source.getToplist(toplist, userId);
+      return html(ToplistPage({ source, toplist, fictions, page, settings, sources: getEnabledSources(userId) }));
     } catch (error: any) {
-      console.error(`Error fetching toplist ${slug}:`, error);
+      console.error(`Error fetching toplist ${slug} for ${source.name}:`, error);
       return html(
         ErrorPage({
           title: "Error Loading Toplist",
           message: error.message || "Failed to load toplist. Try again.",
-          retryUrl: `/toplist/${slug}`,
+          retryUrl: `/read/${source.name}/toplists/${slug}`,
           settings,
         })
       );
     }
   }
 
-  // Fiction bookmark action (Follow, Favorite, Read Later)
-  const bookmarkMatch = path.match(/^\/fiction\/(\d+)\/bookmark$/);
-  if (bookmarkMatch && method === "POST") {
-    const id = parseInt(bookmarkMatch[1], 10);
-    
-    if (!hasRoyalRoadSession(userId)) {
-      return redirect(`/fiction/${id}?error=${encodeURIComponent("Not logged in")}`);
+  // ---- /read/:source/library ----
+  if (rest === "/library" && method === "GET") {
+    if (!source.capabilities.library || !source.getLibrary) {
+      return notFound(settings, `${source.displayName} does not provide a library.`);
     }
-    
+    const entries = await source.getLibrary(userId);
+    return html(LibraryPage({ source, entries, settings, sources: getEnabledSources(userId) }));
+  }
+
+  // ---- /read/:source/upload (GET form, POST upload) ----
+  if (rest === "/upload" && method === "GET") {
+    if (!source.canUpload || !source.upload) {
+      return notFound(settings, `${source.displayName} does not support uploads.`);
+    }
+    return html(LibraryUploadPage({ source, settings, sources: getEnabledSources(userId) }));
+  }
+
+  if (rest === "/upload" && method === "POST") {
+    if (!source.canUpload || !source.upload) {
+      return notFound(settings, `${source.displayName} does not support uploads.`);
+    }
     try {
-      const formData = await parseFormData(req);
-      const type = formData.type as "follow" | "favorite" | "ril";
-      const mark = formData.mark === "true";
-      const csrfToken = formData.csrf;
-      
-      if (!type || !csrfToken) {
-        return redirect(`/fiction/${id}?error=${encodeURIComponent("Invalid request")}`);
+      const formData = await req.formData();
+      const file = formData.get("epub") as File | null;
+
+      if (!file || file.size === 0) {
+        return html(
+          LibraryUploadPage({ source, settings, sources: getEnabledSources(userId), message: "Please select a file.", isError: true })
+        );
       }
-      
-      const result = await setBookmark(userId, id, type, mark, csrfToken);
-      
-      if (result.success) {
-        return redirect(`/fiction/${id}`);
-      } else {
-        return redirect(`/fiction/${id}?error=${encodeURIComponent(result.error || "Action failed")}`);
+
+      const buffer = Buffer.from(await file.arrayBuffer());
+      const result = await source.upload(userId, buffer, file.name);
+
+      if (!result.success) {
+        return html(LibraryUploadPage({ source, settings, sources: getEnabledSources(userId), message: result.error, isError: true }));
       }
+
+      return redirect(`/read/${source.name}/library`);
     } catch (error: any) {
-      console.error(`Error setting bookmark for fiction ${id}:`, error);
-      return redirect(`/fiction/${id}?error=${encodeURIComponent("Something went wrong")}`);
+      console.error(`Error uploading to ${source.name}:`, error);
+      return html(
+        LibraryUploadPage({ source, settings, sources: getEnabledSources(userId), message: "Failed to upload file. Please try again.", isError: true })
+      );
     }
   }
 
-  // Fiction detail
-  const fictionMatch = matchPath(path, URL_PATTERNS.fiction);
+  // ---- /read/:source/:fictionRef/bookmark (POST) ----
+  const bookmarkMatch = rest.match(/^\/([^/]+)\/bookmark$/);
+  if (bookmarkMatch && method === "POST") {
+    const fictionRef = bookmarkMatch[1];
+    if (!source.capabilities.bookmarks || !source.setBookmark) {
+      return notFound(settings, `${source.displayName} does not support bookmarks.`);
+    }
+    if (needsSession(source, userId)) {
+      return redirect(`/read/${source.name}/${fictionRef}?error=${encodeURIComponent("Not logged in")}`);
+    }
+
+    try {
+      const formData = await parseFormData(req);
+      const type = formData.type;
+      const mark = formData.mark === "true";
+      const csrfToken = formData.csrf;
+
+      if (!type || !csrfToken) {
+        return redirect(`/read/${source.name}/${fictionRef}?error=${encodeURIComponent("Invalid request")}`);
+      }
+
+      const result = await source.setBookmark(userId, fictionRef, type, mark, csrfToken);
+      if (result.success) {
+        return redirect(`/read/${source.name}/${fictionRef}`);
+      }
+      return redirect(`/read/${source.name}/${fictionRef}?error=${encodeURIComponent(result.error || "Action failed")}`);
+    } catch (error: any) {
+      console.error(`Error setting bookmark for ${source.name}/${fictionRef}:`, error);
+      return redirect(`/read/${source.name}/${fictionRef}?error=${encodeURIComponent("Something went wrong")}`);
+    }
+  }
+
+  // ---- /read/:source/:fictionRef/library (POST) ----
+  const libraryActionMatch = rest.match(/^\/([^/]+)\/library$/);
+  if (libraryActionMatch && method === "POST") {
+    const fictionRef = libraryActionMatch[1];
+    if (!source.capabilities.library || !source.addToLibrary || !source.removeFromLibrary) {
+      return notFound(settings, `${source.displayName} does not support a library.`);
+    }
+
+    const form = await parseFormData(req);
+    if (form.action === "remove") {
+      source.removeFromLibrary(userId, fictionRef);
+    } else {
+      await source.addToLibrary(userId, fictionRef);
+    }
+    return redirect(`/read/${source.name}/${fictionRef}`);
+  }
+
+  // ---- /read/:source/:fictionRef — fiction detail ----
+  const fictionMatch = rest.match(/^\/([^/]+)$/);
   if (fictionMatch && method === "GET") {
-    const id = parseInt(fictionMatch[0], 10);
+    const fictionRef = fictionMatch[1];
+    if (!source.getFiction) return notFound(settings, `${source.displayName} has no fiction pages.`);
+    if (needsSession(source, userId)) return notConfigured(settings, source.displayName);
+
     const page = parseInt(url.searchParams.get("page") || "1", 10);
     const error = url.searchParams.get("error") || undefined;
     const from = url.searchParams.get("from") || undefined;
 
-    if (!hasRoyalRoadSession(userId)) {
-      return html(
-        ErrorPage({ title: "Not Configured", message: "Please configure your session cookies first.", retryUrl: "/settings", settings })
-      );
-    }
-
     try {
-      const fiction = await getFiction(id, userId);
+      const fiction = await source.getFiction(fictionRef, userId);
       if (!fiction) {
-        return html(ErrorPage({ title: "Not Found", message: `Fiction ${id} not found.`, settings }), 404);
+        return notFound(settings, `Fiction "${fictionRef}" not found.`);
       }
-      return html(FictionPage({ fiction, chapterPage: page, settings, error, enabledSources, from }));
+      return html(
+        FictionPage({
+          fiction,
+          source,
+          chapterPage: page,
+          settings,
+          error,
+          sources: getEnabledSources(userId),
+          from,
+        })
+      );
     } catch (error: any) {
-      console.error(`Error fetching fiction ${id}:`, error);
+      console.error(`Error fetching fiction ${source.name}/${fictionRef}:`, error);
       return html(
         ErrorPage({
           title: "Error Loading Fiction",
           message: error.message || "Failed to load fiction. Try again.",
-          retryUrl: `/fiction/${id}`,
+          retryUrl: `/read/${source.name}/${fictionRef}`,
           settings,
         })
       );
     }
   }
 
-  // Chapter reader
-  const chapterMatch = matchPath(path, URL_PATTERNS.chapter);
+  // ---- /read/:source/:fictionRef/:chapterRef — reader ----
+  const chapterMatch = rest.match(/^\/([^/]+)\/([^/]+)$/);
   if (chapterMatch && method === "GET") {
-    const id = parseInt(chapterMatch[0], 10);
+    const fictionRef = chapterMatch[1];
+    const chapterRef = chapterMatch[2];
+    if (!source.getChapter) return notFound(settings, `${source.displayName} has no chapter pages.`);
+    if (needsSession(source, userId)) return notConfigured(settings, source.displayName);
+
     const initialPage = Math.max(1, parseInt(url.searchParams.get("p") || "1", 10));
 
-    if (!hasRoyalRoadSession(userId)) {
-      return html(
-        ErrorPage({ title: "Not Configured", message: "Please configure your session cookies first.", retryUrl: "/settings", settings })
-      );
-    }
-
     try {
-      const chapter = await getChapter(id, userId);
+      const chapter = await source.getChapter(fictionRef, chapterRef, userId);
       if (!chapter) {
-        return html(ErrorPage({ title: "Not Found", message: `Chapter ${id} not found.`, settings }), 404);
+        return notFound(settings, `Chapter "${chapterRef}" not found.`);
       }
-      return html(ReaderPage({ chapter, settings, initialPage }));
+      return html(
+        ReaderPage({
+          chapter,
+          source,
+          fictionRef,
+          settings,
+          initialPage,
+          trackProgress: !!source.updateProgress,
+        })
+      );
     } catch (error: any) {
-      console.error(`Error fetching chapter ${id}:`, error);
+      console.error(`Error fetching chapter ${source.name}/${fictionRef}/${chapterRef}:`, error);
       return html(
         ErrorPage({
           title: "Error Loading Chapter",
           message: error.message || "Failed to load chapter. Try again.",
-          retryUrl: `/chapter/${id}`,
-          settings,
-        })
-      );
-    }
-  }
-
-  if (path === "/library" && method === "GET") {
-    if (!isSourceEnabled(userId, "epub")) {
-      return html(
-        ErrorPage({ title: "EPUB Not Enabled", message: "Enable EPUB source in settings to use the library.", retryUrl: "/settings", settings })
-      );
-    }
-    
-    const books = getUserLibrary(userId);
-    return html(LibraryPage({ books, settings, enabledSources }));
-  }
-
-  if (path === "/library/upload" && method === "GET") {
-    if (!isSourceEnabled(userId, "epub")) {
-      return html(
-        ErrorPage({ title: "EPUB Not Enabled", message: "Enable EPUB source in settings to upload books.", retryUrl: "/settings", settings })
-      );
-    }
-    
-    return html(LibraryUploadPage({ settings, enabledSources }));
-  }
-
-  if (path === "/library/upload" && method === "POST") {
-    if (!isSourceEnabled(userId, "epub")) {
-      return redirect("/settings");
-    }
-    
-    try {
-      const formData = await req.formData();
-      const file = formData.get("epub") as File | null;
-      
-      if (!file || file.size === 0) {
-        return html(LibraryUploadPage({ settings, enabledSources, message: "Please select an EPUB file.", isError: true }));
-      }
-      
-      if (!file.name.toLowerCase().endsWith(".epub")) {
-        return html(LibraryUploadPage({ settings, enabledSources, message: "Only EPUB files are supported.", isError: true }));
-      }
-      
-      const buffer = Buffer.from(await file.arrayBuffer());
-      const result = await uploadEpub(userId, buffer, file.name);
-      
-      if (!result.success) {
-        return html(LibraryUploadPage({ settings, enabledSources, message: result.error, isError: true }));
-      }
-      
-      return redirect("/library");
-    } catch (error: any) {
-      console.error("Error uploading EPUB:", error);
-      return html(LibraryUploadPage({ settings, enabledSources, message: "Failed to upload file. Please try again.", isError: true }));
-    }
-  }
-
-  const epubReaderMatch = path.match(/^\/epub\/([a-f0-9-]+)$/);
-  if (epubReaderMatch && method === "GET") {
-    const bookId = epubReaderMatch[1];
-    
-    if (!isSourceEnabled(userId, "epub")) {
-      return html(
-        ErrorPage({ title: "EPUB Not Enabled", message: "Enable EPUB source in settings to read books.", retryUrl: "/settings", settings })
-      );
-    }
-    
-    const book = getBook(bookId, userId);
-    if (!book) {
-      return html(ErrorPage({ title: "Not Found", message: "Book not found in your library.", retryUrl: "/library", settings }), 404);
-    }
-    
-    return html(EpubReaderPage({ book, settings }));
-  }
-
-  const epubDeleteMatch = path.match(/^\/epub\/([a-f0-9-]+)\/delete$/);
-  if (epubDeleteMatch && method === "POST") {
-    const bookId = epubDeleteMatch[1];
-    
-    if (!isSourceEnabled(userId, "epub")) {
-      return redirect("/settings");
-    }
-    
-    deleteBook(bookId, userId);
-    return redirect("/library");
-  }
-
-  // ============ FreeWebNovel Routes ============
-
-  // FWN Library
-  if (path === "/fwn/library" && method === "GET") {
-    if (!isSourceEnabled(userId, "freewebnovel")) {
-      return html(
-        ErrorPage({ title: "FreeWebNovel Not Enabled", message: "Enable FreeWebNovel source in settings to use the library.", retryUrl: "/settings", settings })
-      );
-    }
-
-    const entries = fwnGetLibrary(userId);
-    return html(FwnLibraryPage({ entries, settings, enabledSources }));
-  }
-
-  // FWN Search
-  if (path === "/fwn/search" && method === "GET") {
-    if (!isSourceEnabled(userId, "freewebnovel")) {
-      return html(
-        ErrorPage({ title: "FreeWebNovel Not Enabled", message: "Enable FreeWebNovel source in settings.", retryUrl: "/settings", settings })
-      );
-    }
-
-    const query = url.searchParams.get("q")?.trim() || "";
-    const page = parseInt(url.searchParams.get("page") || "1", 10);
-
-    if (!query) {
-      return html(FwnSearchPage({ settings, enabledSources }));
-    }
-
-    try {
-      const results = await fwnSearchFictions(query);
-      return html(FwnSearchPage({ query, results, page, settings, enabledSources }));
-    } catch (error: any) {
-      console.error(`Error searching FWN for "${query}":`, error);
-      return html(
-        ErrorPage({ title: "Search Error", message: error.message || "Failed to search FreeWebNovel. Try again.", retryUrl: "/fwn/search", settings })
-      );
-    }
-  }
-
-  // FWN Fiction detail
-  const fwnFictionMatch = matchPath(path, URL_PATTERNS.fwnFiction);
-  if (fwnFictionMatch && method === "GET") {
-    const slug = fwnFictionMatch[0];
-
-    if (!isSourceEnabled(userId, "freewebnovel")) {
-      return html(
-        ErrorPage({ title: "FreeWebNovel Not Enabled", message: "Enable FreeWebNovel source in settings.", retryUrl: "/settings", settings })
-      );
-    }
-
-    try {
-      const fiction = await fwnGetFiction(slug);
-      if (!fiction) {
-        return html(ErrorPage({ title: "Not Found", message: `Novel "${slug}" not found on FreeWebNovel.`, settings }), 404);
-      }
-
-      const inLibrary = fwnIsInLibrary(userId, slug);
-      const libraryEntry = inLibrary ? fwnGetLibraryEntry(userId, slug) : null;
-      const lastChapterRead = libraryEntry?.lastChapterRead || 0;
-
-      // Update total chapters in library if the user has it
-      if (inLibrary && fiction.chapters && fiction.chapters.length > 0) {
-        fwnUpdateTotalChapters(userId, slug, fiction.chapters.length);
-      }
-
-      const page = parseInt(url.searchParams.get("page") || "1", 10);
-      return html(FwnFictionPage({ fiction, chapterPage: page, settings, enabledSources, isInLibrary: inLibrary, lastChapterRead }));
-    } catch (error: any) {
-      console.error(`Error fetching FWN fiction ${slug}:`, error);
-      return html(
-        ErrorPage({
-          title: "Error Loading Novel",
-          message: error.message || "Failed to load novel. Try again.",
-          retryUrl: `/fwn/fiction/${slug}`,
-          settings,
-        })
-      );
-    }
-  }
-
-  // FWN Fiction library action (add/remove)
-  const fwnLibraryActionMatch = matchPath(path, URL_PATTERNS.fwnFictionLibrary);
-  if (fwnLibraryActionMatch && method === "POST") {
-    const slug = fwnLibraryActionMatch[0];
-
-    if (!isSourceEnabled(userId, "freewebnovel")) {
-      return redirect("/settings");
-    }
-
-    const form = await parseFormData(req);
-    const action = form.action;
-
-    if (action === "add") {
-      // Fetch fiction metadata to store in library
-      try {
-        const fiction = await fwnGetFiction(slug);
-        if (fiction) {
-          fwnAddToLibrary(
-            userId,
-            slug,
-            fiction.title,
-            fiction.author,
-            fiction.coverUrl,
-            fiction.description,
-            fiction.chapters?.length
-          );
-        }
-      } catch {
-        // Even if fetch fails, add with minimal info
-        fwnAddToLibrary(userId, slug, slug);
-      }
-    } else if (action === "remove") {
-      fwnRemoveFromLibrary(userId, slug);
-    }
-
-    return redirect(`/fwn/fiction/${slug}`);
-  }
-
-  // FWN Chapter reader
-  const fwnReadMatch = matchPath(path, URL_PATTERNS.fwnRead);
-  if (fwnReadMatch && method === "GET") {
-    const slug = fwnReadMatch[0];
-    const chapterNum = parseInt(fwnReadMatch[1], 10);
-    const initialPage = Math.max(1, parseInt(url.searchParams.get("p") || "1", 10));
-
-    if (!isSourceEnabled(userId, "freewebnovel")) {
-      return html(
-        ErrorPage({ title: "FreeWebNovel Not Enabled", message: "Enable FreeWebNovel source in settings.", retryUrl: "/settings", settings })
-      );
-    }
-
-    try {
-      const chapter = await fwnGetChapter(slug, chapterNum);
-      if (!chapter) {
-        return html(ErrorPage({ title: "Not Found", message: `Chapter ${chapterNum} not found.`, settings }), 404);
-      }
-      return html(FwnReaderPage({ chapter, settings, initialPage }));
-    } catch (error: any) {
-      console.error(`Error fetching FWN chapter ${slug}/chapter-${chapterNum}:`, error);
-      return html(
-        ErrorPage({
-          title: "Error Loading Chapter",
-          message: error.message || "Failed to load chapter. Try again.",
-          retryUrl: `/fwn/read/${slug}/${chapterNum}`,
+          retryUrl: `/read/${source.name}/${fictionRef}/${chapterRef}`,
           settings,
         })
       );

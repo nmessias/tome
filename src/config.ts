@@ -80,21 +80,5 @@ export const DEFAULT_READER_SETTINGS: ReaderSettings = {
   isKindle: false,
 };
 
-// source: null = always shown, "royalroad"/"epub"/"freewebnovel" = only if that source is enabled
-export const ALL_NAV_LINKS = [
-  { href: "/", label: "Home", source: null },
-  { href: "/library", label: "Library", source: "epub" as const },
-  { href: "/follows", label: "Follows", source: "royalroad" as const },
-  { href: "/read-later", label: "Read Later", source: "royalroad" as const },
-  { href: "/history", label: "History", source: "royalroad" as const },
-  { href: "/toplists", label: "Top Lists", source: "royalroad" as const },
-  { href: "/search", label: "Search", source: "royalroad" as const },
-  { href: "/fwn/library", label: "FWN Library", source: "freewebnovel" as const },
-  { href: "/fwn/search", label: "FWN Search", source: "freewebnovel" as const },
-  { href: "/settings", label: "Settings", source: null },
-] as const;
-
-export const NAV_LINKS = ALL_NAV_LINKS;
-
 // App version for cache busting
 export const APP_VERSION = "1.4.2";

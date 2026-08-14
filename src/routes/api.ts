@@ -1,10 +1,9 @@
 /**
- * API routes (JSON responses)
+ * API routes (JSON responses) — Phase 1: unified /api/read/:source/... (ADR-0002).
  */
-import { json, matchPath, URL_PATTERNS } from "../server";
-import { getChapter, getFiction } from "../services/scraper";
+import { json } from "../server";
 import { getImageCache, setImageCache } from "../services/cache";
-import { CACHE_TTL } from "../config";
+import { getSource } from "../services/source-registry";
 import { createRemoteSession, isValidToken, invalidateToken, generateQRCode } from "../services/remote";
 import {
   createInvitation,
@@ -12,22 +11,6 @@ import {
   revokeInvitation,
   getInvitationExpiryDays,
 } from "../services/invitations";
-import {
-  getBook,
-  getEpubFilePath,
-  getCoverPath,
-  updateProgress,
-  getEpubFileContent,
-} from "../services/epub";
-import { isSourceEnabled } from "../services/sources";
-import {
-  getChapter as fwnGetChapter,
-} from "../services/fwn-scraper";
-import {
-  updateProgress as fwnUpdateProgress,
-  isInLibrary as fwnIsInLibrary,
-} from "../services/fwn-library";
-import * as fs from "fs";
 
 export async function handleApiRoute(
   req: Request,
@@ -37,61 +20,56 @@ export async function handleApiRoute(
 ): Promise<Response | null> {
   const method = req.method;
 
-  // Chapter API (JSON) for SPA navigation - GET
-  const chapterApiMatch = matchPath(path, URL_PATTERNS.chapterApi);
-  if (chapterApiMatch && method === "GET") {
-    const id = parseInt(chapterApiMatch[0], 10);
+  // ============ Unified chapter API: GET chapter JSON, POST progress ============
+  const readApiMatch = path.match(/^\/api\/read\/([\w-]+)\/([^/]+)\/([^/]+)$/);
+  if (readApiMatch) {
+    const [, sourceName, fictionRef, chapterRef] = readApiMatch;
+    const source = getSource(userId, sourceName);
+    if (!source) return json({ error: "Source not found or disabled" }, 404);
 
-    try {
-      const chapter = await getChapter(id, userId, CACHE_TTL.CHAPTER);
-      if (!chapter) {
-        return json({ error: "Chapter not found" }, 404);
+    if (method === "GET") {
+      if (!source.getChapter) return json({ error: "Chapter not found" }, 404);
+      try {
+        const chapter = await source.getChapter(fictionRef, chapterRef, userId);
+        if (!chapter) return json({ error: "Chapter not found" }, 404);
+        return json({
+          ref: chapter.ref ?? chapterRef,
+          title: chapter.title,
+          content: chapter.content,
+          fictionTitle: chapter.fictionTitle || null,
+          fictionRef: chapter.fictionRef || fictionRef,
+          prevRef: chapter.prevRef ?? null,
+          nextRef: chapter.nextRef ?? null,
+        });
+      } catch (error: any) {
+        console.error(`Error fetching chapter API ${sourceName}/${fictionRef}/${chapterRef}:`, error);
+        return json({ error: error.message || "Failed to load chapter" }, 500);
       }
+    }
 
-      // Extract chapter IDs from URLs
-      const prevChapterId = chapter.prevChapterUrl
-        ? parseInt(chapter.prevChapterUrl.replace("/chapter/", ""), 10)
-        : null;
-      const nextChapterId = chapter.nextChapterUrl
-        ? parseInt(chapter.nextChapterUrl.replace("/chapter/", ""), 10)
-        : null;
-
-      return json({
-        id: chapter.id,
-        title: chapter.title,
-        content: chapter.content,
-        fictionId: chapter.fictionId,
-        fictionTitle: chapter.fictionTitle,
-        prevChapterId,
-        nextChapterId,
-      });
-    } catch (error: any) {
-      console.error(`Error fetching chapter API ${id}:`, error);
-      return json({ error: error.message || "Failed to load chapter" }, 500);
+    if (method === "POST") {
+      if (!source.updateProgress) return json({ error: "Progress not supported" }, 404);
+      try {
+        const body = await req.json().catch(() => ({}));
+        await source.updateProgress(userId, fictionRef, chapterRef, body);
+        return json({ success: true });
+      } catch (error: any) {
+        console.error(`Error updating progress ${sourceName}/${fictionRef}/${chapterRef}:`, error);
+        return json({ error: error.message || "Failed to update progress" }, 500);
+      }
     }
   }
 
-  // Mark chapter as read - POST
-  // This triggers authenticated request to Royal Road for reading progress
-  if (chapterApiMatch && method === "POST") {
-    const id = parseInt(chapterApiMatch[0], 10);
-
-    try {
-      await getChapter(id, userId);
-      return json({ success: true, chapterId: id });
-    } catch (error: any) {
-      console.error(`Error marking chapter ${id} as read:`, error);
-      return json({ error: error.message || "Failed to mark as read" }, 500);
-    }
-  }
-
-  // Cover image proxy
-  const coverMatch = matchPath(path, URL_PATTERNS.coverImage);
+  // ============ Unified cover proxy: /api/cover/:source/:ref ============
+  const coverMatch = path.match(/^\/api\/cover\/([\w-]+)\/([^/]+)$/);
   if (coverMatch && method === "GET") {
-    const fictionId = parseInt(coverMatch[0], 10);
-    const cacheKey = `cover:${fictionId}`;
+    const [, sourceName, ref] = coverMatch;
+    const source = getSource(userId, sourceName);
+    if (!source || !source.getFiction) {
+      return new Response("Cover not found", { status: 404 });
+    }
 
-    // Check cache
+    const cacheKey = `cover:${sourceName}:${ref}`;
     const cached = getImageCache(cacheKey);
     if (cached) {
       return new Response(new Uint8Array(cached.data), {
@@ -102,9 +80,8 @@ export async function handleApiRoute(
       });
     }
 
-    // Fetch from Royal Road
     try {
-      const fiction = await getFiction(fictionId);
+      const fiction = await source.getFiction(ref, userId);
       if (!fiction?.coverUrl) {
         return new Response("Cover not found", { status: 404 });
       }
@@ -122,7 +99,6 @@ export async function handleApiRoute(
       const contentType = imageResponse.headers.get("content-type") || "image/jpeg";
       const imageData = Buffer.from(await imageResponse.arrayBuffer());
 
-      // Cache for 30 days
       setImageCache(cacheKey, imageData, contentType);
 
       return new Response(new Uint8Array(imageData), {
@@ -132,7 +108,7 @@ export async function handleApiRoute(
         },
       });
     } catch (error: any) {
-      console.error(`Error fetching cover for fiction ${fictionId}:`, error);
+      console.error(`Error fetching cover for ${sourceName}/${ref}:`, error);
       return new Response("Error fetching cover", { status: 500 });
     }
   }
@@ -141,7 +117,7 @@ export async function handleApiRoute(
   if (path === "/api/ws-test/report" && method === "POST") {
     try {
       const report = await req.json();
-      
+
       console.log("\n[WS-TEST] ═══════════════════════════════════════");
       console.log("[WS-TEST] DIAGNOSTIC REPORT");
       console.log("[WS-TEST] ═══════════════════════════════════════");
@@ -157,7 +133,7 @@ export async function handleApiRoute(
         console.log("[WS-TEST] Connection time:", report.timing + "ms");
       }
       console.log("[WS-TEST] ═══════════════════════════════════════\n");
-      
+
       return json({ received: true });
     } catch (e: any) {
       console.error("[WS-TEST] Failed to parse report:", e.message);
@@ -165,11 +141,13 @@ export async function handleApiRoute(
     }
   }
 
+  // ============ Remote control (untouched) ============
+
   if (path === "/api/remote/create" && method === "POST") {
     const token = createRemoteSession();
     const protocol = req.headers.get("x-forwarded-proto") || "http";
     const host = req.headers.get("host") || "localhost:3000";
-    
+
     return json({
       token,
       remoteUrl: `${protocol}://${host}/remote/${token}`,
@@ -181,15 +159,15 @@ export async function handleApiRoute(
   const qrMatch = path.match(/^\/api\/remote\/qr\/([a-z0-9]+)$/);
   if (qrMatch && method === "GET") {
     const token = qrMatch[1];
-    
+
     if (!isValidToken(token)) {
       return new Response("Invalid token", { status: 404 });
     }
-    
+
     const protocol = req.headers.get("x-forwarded-proto") || "http";
     const host = req.headers.get("host") || "localhost:3000";
     const remoteUrl = `${protocol}://${host}/remote/${token}`;
-    
+
     try {
       const qrBuffer = await generateQRCode(remoteUrl);
       return new Response(new Uint8Array(qrBuffer), {
@@ -217,6 +195,8 @@ export async function handleApiRoute(
     return json({ success: true });
   }
 
+  // ============ Invitations (untouched) ============
+
   if (path === "/api/invitations" && method === "GET") {
     if (!isAdmin) {
       return json({ error: "Admin access required" }, 403);
@@ -229,20 +209,20 @@ export async function handleApiRoute(
     if (!isAdmin) {
       return json({ error: "Admin access required" }, 403);
     }
-    
+
     try {
       const body = await req.json();
       const email = body.email?.trim();
-      
+
       if (!email) {
         return json({ error: "Email is required" }, 400);
       }
-      
+
       const invitation = createInvitation(email, userId);
       const protocol = req.headers.get("x-forwarded-proto") || "http";
       const host = req.headers.get("host") || "localhost:3000";
       const inviteUrl = `${protocol}://${host}/invite/${invitation.token}`;
-      
+
       return json({
         invitation,
         inviteUrl,
@@ -259,10 +239,10 @@ export async function handleApiRoute(
     if (!isAdmin) {
       return json({ error: "Admin access required" }, 403);
     }
-    
+
     const invitationId = revokeMatch[1];
     const revoked = revokeInvitation(invitationId);
-    
+
     if (revoked) {
       return json({ success: true });
     } else {
@@ -276,7 +256,7 @@ export async function handleApiRoute(
     const protocol = req.headers.get("x-forwarded-proto") || "http";
     const host = req.headers.get("host") || "localhost:3000";
     const inviteUrl = `${protocol}://${host}/invite/${token}`;
-    
+
     try {
       const qrBuffer = await generateQRCode(inviteUrl);
       return new Response(new Uint8Array(qrBuffer), {
@@ -288,204 +268,6 @@ export async function handleApiRoute(
     } catch (e: any) {
       console.error("[INVITE] QR generation failed:", e.message);
       return new Response("QR generation failed", { status: 500 });
-    }
-  }
-
-  const epubFileMatch = path.match(/^\/api\/epub\/([a-f0-9-]+)\/file$/);
-  if (epubFileMatch && method === "GET") {
-    const bookId = epubFileMatch[1];
-    
-    if (!isSourceEnabled(userId, "epub")) {
-      return json({ error: "EPUB source not enabled" }, 403);
-    }
-    
-    const book = getBook(bookId, userId);
-    if (!book) {
-      return json({ error: "Book not found" }, 404);
-    }
-    
-    const filePath = getEpubFilePath(book.fileHash);
-    if (!filePath) {
-      return json({ error: "EPUB file not found" }, 404);
-    }
-    
-    const fileData = fs.readFileSync(filePath);
-    return new Response(new Uint8Array(fileData), {
-      headers: {
-        "Content-Type": "application/epub+zip",
-        "Content-Disposition": `inline; filename="${encodeURIComponent(book.title)}.epub"`,
-        "Cache-Control": "private, max-age=3600",
-      },
-    });
-  }
-
-  const epubProgressMatch = path.match(/^\/api\/epub\/([a-f0-9-]+)\/progress$/);
-  if (epubProgressMatch && method === "POST") {
-    const bookId = epubProgressMatch[1];
-    
-    if (!isSourceEnabled(userId, "epub")) {
-      return json({ error: "EPUB source not enabled" }, 403);
-    }
-    
-    try {
-      const body = await req.json();
-      const cfi = body.cfi;
-      const progress = typeof body.progress === "number" ? body.progress : 0;
-      
-      if (!cfi) {
-        return json({ error: "CFI is required" }, 400);
-      }
-      
-      updateProgress(bookId, userId, cfi, progress);
-      return json({ success: true });
-    } catch (error: any) {
-      console.error("Error saving EPUB progress:", error);
-      return json({ error: "Failed to save progress" }, 500);
-    }
-  }
-
-  const coverMatch2 = path.match(/^\/covers\/([a-f0-9-]+)$/);
-  if (coverMatch2 && method === "GET") {
-    const bookId = coverMatch2[1];
-    
-    const book = getBook(bookId, userId);
-    if (!book || !book.coverPath) {
-      return new Response("Cover not found", { status: 404 });
-    }
-    
-    const coverFullPath = getCoverPath(book.coverPath);
-    if (!coverFullPath) {
-      return new Response("Cover file not found", { status: 404 });
-    }
-    
-    const coverData = fs.readFileSync(coverFullPath);
-    const contentType = book.coverPath.endsWith(".png") ? "image/png" : "image/jpeg";
-    
-    return new Response(new Uint8Array(coverData), {
-      headers: {
-        "Content-Type": contentType,
-        "Cache-Control": "public, max-age=86400",
-      },
-    });
-  }
-
-  // ============ FreeWebNovel API Routes ============
-
-  // FWN Chapter API (JSON) for SPA navigation
-  const fwnChapterApiMatch = matchPath(path, URL_PATTERNS.fwnChapterApi);
-  if (fwnChapterApiMatch && method === "GET") {
-    const slug = fwnChapterApiMatch[0];
-    const chapterNum = parseInt(fwnChapterApiMatch[1], 10);
-
-    if (!isSourceEnabled(userId, "freewebnovel")) {
-      return json({ error: "FreeWebNovel source not enabled" }, 403);
-    }
-
-    try {
-      const chapter = await fwnGetChapter(slug, chapterNum);
-      if (!chapter) {
-        return json({ error: "Chapter not found" }, 404);
-      }
-
-      // Extract prev/next chapter numbers from URLs
-      const prevMatch = chapter.prevChapterUrl?.match(/\/fwn\/read\/[\w-]+\/(\d+)/);
-      const nextMatch = chapter.nextChapterUrl?.match(/\/fwn\/read\/[\w-]+\/(\d+)/);
-
-      return json({
-        id: chapter.id,
-        title: chapter.title,
-        content: chapter.content,
-        fictionSlug: chapter.fictionSlug,
-        fictionTitle: chapter.fictionTitle,
-        prevChapterNum: prevMatch ? parseInt(prevMatch[1], 10) : null,
-        nextChapterNum: nextMatch ? parseInt(nextMatch[1], 10) : null,
-        prevChapterUrl: chapter.prevChapterUrl || null,
-        nextChapterUrl: chapter.nextChapterUrl || null,
-      });
-    } catch (error: any) {
-      console.error(`Error fetching FWN chapter API ${slug}/${chapterNum}:`, error);
-      return json({ error: error.message || "Failed to load chapter" }, 500);
-    }
-  }
-
-  // FWN Reading progress update
-  const fwnProgressMatch = matchPath(path, URL_PATTERNS.fwnProgressApi);
-  if (fwnProgressMatch && method === "POST") {
-    const slug = fwnProgressMatch[0];
-
-    if (!isSourceEnabled(userId, "freewebnovel")) {
-      return json({ error: "FreeWebNovel source not enabled" }, 403);
-    }
-
-    try {
-      const body = await req.json();
-      const chapterNum = typeof body.chapter === "number" ? body.chapter : 0;
-
-      if (chapterNum <= 0) {
-        return json({ error: "Invalid chapter number" }, 400);
-      }
-
-      // Only update progress if the fiction is in the user's library
-      if (fwnIsInLibrary(userId, slug)) {
-        fwnUpdateProgress(userId, slug, chapterNum, `chapter-${chapterNum}`);
-      }
-
-      return json({ success: true, chapter: chapterNum });
-    } catch (error: any) {
-      console.error(`Error updating FWN progress for ${slug}:`, error);
-      return json({ error: "Failed to update progress" }, 500);
-    }
-  }
-
-  // FWN Cover image proxy
-  const fwnCoverMatch = matchPath(path, URL_PATTERNS.fwnCoverImage);
-  if (fwnCoverMatch && method === "GET") {
-    const slug = fwnCoverMatch[0];
-    const cacheKey = `fwn-cover:${slug}`;
-
-    // Check cache
-    const cached = getImageCache(cacheKey);
-    if (cached) {
-      return new Response(new Uint8Array(cached.data), {
-        headers: {
-          "Content-Type": cached.contentType,
-          "Cache-Control": "public, max-age=86400",
-        },
-      });
-    }
-
-    // Need to look up the cover URL from the fiction metadata
-    try {
-      const { getFiction: fwnGetFiction } = await import("../services/fwn-scraper");
-      const fiction = await fwnGetFiction(slug);
-      if (!fiction?.coverUrl) {
-        return new Response("Cover not found", { status: 404 });
-      }
-
-      const imageResponse = await fetch(fiction.coverUrl, {
-        headers: {
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-        },
-      });
-
-      if (!imageResponse.ok) {
-        return new Response("Failed to fetch cover", { status: 502 });
-      }
-
-      const contentType = imageResponse.headers.get("content-type") || "image/jpeg";
-      const imageData = Buffer.from(await imageResponse.arrayBuffer());
-
-      setImageCache(cacheKey, imageData, contentType);
-
-      return new Response(new Uint8Array(imageData), {
-        headers: {
-          "Content-Type": contentType,
-          "Cache-Control": "public, max-age=86400",
-        },
-      });
-    } catch (error: any) {
-      console.error(`Error fetching FWN cover for ${slug}:`, error);
-      return new Response("Error fetching cover", { status: 500 });
     }
   }
 

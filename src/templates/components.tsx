@@ -1,27 +1,55 @@
 /**
  * Reusable UI components using JSX
  */
-import { NAV_LINKS, ALL_NAV_LINKS, ITEMS_PER_PAGE } from "../config";
+import { ITEMS_PER_PAGE } from "../config";
 import type { Fiction, FollowedFiction } from "../types";
-import type { SourceType } from "../services/sources";
+import type { Source } from "../services/source-registry";
 
-export function Header({ 
+/**
+ * Build the internal URL for a fiction detail page under the unified scheme.
+ */
+export function fictionHref(sourceName: string, fiction: Fiction | FollowedFiction): string {
+  const ref = fiction.slug ?? String(fiction.id);
+  return `/read/${sourceName}/${ref}`;
+}
+
+/**
+ * Build the internal URL for a chapter page under the unified scheme.
+ */
+export function chapterHref(
+  sourceName: string,
+  fiction: Fiction | FollowedFiction,
+  chapterRef?: number | string
+): string {
+  if (chapterRef === undefined || chapterRef === null || chapterRef === "") {
+    return fictionHref(sourceName, fiction);
+  }
+  const ref = fiction.slug ?? String(fiction.id);
+  return `/read/${sourceName}/${ref}/${chapterRef}`;
+}
+
+/**
+ * Header: nav driven by the enabled sources' navLinks — no hardcoded source
+ * names (ADR-0001).
+ */
+export function Header({
   currentPath = "",
-  enabledSources = [],
-}: { 
+  sources = [],
+}: {
   currentPath?: string;
-  enabledSources?: SourceType[];
+  sources?: Source[];
 }): JSX.Element {
-  const visibleLinks = ALL_NAV_LINKS.filter(link => {
-    if (link.source === null) return true;
-    return enabledSources.includes(link.source as SourceType);
-  });
-  
+  const links: { href: string; label: string }[] = [
+    { href: "/", label: "Home" },
+    ...sources.flatMap((s) => s.navLinks),
+    { href: "/settings", label: "Settings" },
+  ];
+
   return (
     <header class="header">
       <a href="/" class="header-title">Tome</a>
       <nav class="nav">
-        {visibleLinks.map((l) => (
+        {links.map((l) => (
           <a
             href={l.href}
             class={`nav-link${currentPath === l.href ? " active" : ""}`}
@@ -171,6 +199,7 @@ function formatNumber(num: number): string {
  */
 export interface FictionCardProps {
   fiction: Fiction | FollowedFiction;
+  sourceName: string;
   rank?: number;
   showContinue?: boolean;
   showDescription?: boolean;
@@ -184,6 +213,7 @@ export interface FictionCardProps {
  */
 export function FictionCard({
   fiction,
+  sourceName,
   rank,
   showContinue = false,
   showDescription = false,
@@ -222,7 +252,7 @@ export function FictionCard({
       <div style="flex: 1; min-width: 0;">
         <div class="card-title">
           <span safe>{titlePrefix}</span>
-          <a href={`/fiction/${fiction.id}`} safe>
+          <a href={fictionHref(sourceName, fiction)} safe>
             {fiction.title}
           </a>
           {showUnread && f.hasUnread && <strong> [NEW]</strong>}
@@ -244,7 +274,7 @@ export function FictionCard({
           <div class="card-meta">
             <span safe>Latest: </span>
             {f.latestChapterId ? (
-              <a href={`/chapter/${f.latestChapterId}`} safe>
+              <a href={chapterHref(sourceName, fiction, f.latestChapterId)} safe>
                 {f.latestChapter}
               </a>
             ) : (
@@ -257,7 +287,7 @@ export function FictionCard({
           <div class="card-meta">
             <span safe>Last read: </span>
             {f.lastReadChapterId ? (
-              <a href={`/chapter/${f.lastReadChapterId}`} safe>
+              <a href={chapterHref(sourceName, fiction, f.lastReadChapterId)} safe>
                 {f.lastRead}
               </a>
             ) : (
@@ -269,15 +299,15 @@ export function FictionCard({
         {showContinue && (
           <div class="card-actions">
             {f.nextChapterId ? (
-              <a href={`/chapter/${f.nextChapterId}`} class="btn btn-small">
+              <a href={chapterHref(sourceName, fiction, f.nextChapterId)} class="btn btn-small">
                 Continue
               </a>
             ) : f.lastReadChapterId ? (
-              <a href={`/fiction/${fiction.id}`} class="btn btn-outline btn-small">
+              <a href={fictionHref(sourceName, fiction)} class="btn btn-outline btn-small">
                 View Chapters
               </a>
             ) : (
-              <a href={`/fiction/${fiction.id}`} class="btn btn-outline btn-small">
+              <a href={fictionHref(sourceName, fiction)} class="btn btn-outline btn-small">
                 Start Reading
               </a>
             )}
@@ -315,9 +345,11 @@ export function FictionCard({
  */
 export function FictionCardCompact({
   fiction,
+  sourceName,
   rank,
 }: {
   fiction: Fiction;
+  sourceName: string;
   rank?: number;
 }): JSX.Element {
   const titlePrefix = rank !== undefined ? `${rank}. ` : "";
@@ -338,7 +370,7 @@ export function FictionCardCompact({
       <div style="flex: 1; min-width: 0;">
         <div style="font-weight: bold; font-size: 14px;">
           <span safe>{titlePrefix}</span>
-          <a href={`/fiction/${fiction.id}`} safe>
+          <a href={fictionHref(sourceName, fiction)} safe>
             {fiction.title}
           </a>
         </div>

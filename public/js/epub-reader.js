@@ -488,7 +488,7 @@
     if (!S.bookId || !S.currentCfi) return;
 
     var xhr = new XMLHttpRequest();
-    xhr.open('POST', '/api/epub/' + S.bookId + '/progress', true);
+    xhr.open('POST', '/api/read/epub/' + S.bookId + '/progress', true);
     xhr.setRequestHeader('Content-Type', 'application/json');
     xhr.send(JSON.stringify({
       cfi: S.currentCfi,
@@ -670,7 +670,7 @@
   }
 
   function fetchAndCacheEpub(bookId, savedCfi, savedProgress) {
-    var epubUrl = '/api/epub/' + bookId + '/file';
+    var epubUrl = '/api/read/epub/' + bookId + '/file';
 
     showLoading('Downloading book...');
 

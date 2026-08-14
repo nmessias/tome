@@ -1,12 +1,13 @@
 /**
- * Settings page template
- * Combines cookie setup, cache management, dark mode toggle, and logout
+ * Settings page template — Phase 1: registry-driven.
+ * Source toggles list every registered source; credentials forms render from
+ * each enabled source's credentialFields (ADR-0001).
  */
 import { Layout } from "../layout";
 import { Alert, SectionTitle, formatBytes } from "../components";
 import type { CacheStats } from "../../services/cache";
 import type { ReaderSettings } from "../../config";
-import type { SourceType, UserSource } from "../../services/sources";
+import type { Source } from "../../services/source-registry";
 import { DEFAULT_READER_SETTINGS, AUTH_ENABLED } from "../../config";
 
 export interface Invitation {
@@ -17,12 +18,6 @@ export interface Invitation {
   inviteUrl: string;
 }
 
-export interface SourcesState {
-  royalroad: boolean;
-  epub: boolean;
-  freewebnovel: boolean;
-}
-
 export function SettingsPage({
   message,
   isError,
@@ -30,9 +25,8 @@ export function SettingsPage({
   stats,
   isAdmin = false,
   invitations = [],
-  sources = { royalroad: false, epub: false, freewebnovel: false },
+  allSources = [],
   enabledSources = [],
-  autoLoginEnabled = false,
 }: {
   message?: string;
   isError?: boolean;
@@ -40,61 +34,48 @@ export function SettingsPage({
   stats?: CacheStats;
   isAdmin?: boolean;
   invitations?: Invitation[];
-  sources?: SourcesState;
-  enabledSources?: SourceType[];
-  autoLoginEnabled?: boolean;
+  allSources?: Source[];
+  enabledSources?: Source[];
 }): JSX.Element {
   const totalSize = stats ? stats.totalSize + stats.imageSize : 0;
+  const enabledNames = new Set(enabledSources.map((s) => s.name));
+  const credentialSources = enabledSources.filter((s) => s.capabilities.credentials);
 
   return (
-    <Layout title="Settings" settings={settings} currentPath="/settings" enabledSources={enabledSources}>
+    <Layout title="Settings" settings={settings} currentPath="/settings" sources={enabledSources}>
       <h1>Settings</h1>
       {message && <Alert message={message} isError={isError} />}
 
       <SectionTitle>Reading Sources</SectionTitle>
       <div class="card">
-        <div style="margin-bottom: 16px;">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div>
-              <strong>Royal Road</strong>
-              <div style="font-size: 12px;">Web fiction from royalroad.com</div>
+        {allSources.map((s, i) => {
+          const enabled = enabledNames.has(s.name);
+          return (
+            <div
+              style={
+                i > 0
+                  ? "border-top: 1px solid #ccc; padding-top: 16px; margin-top: 16px;"
+                  : undefined
+              }
+            >
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <strong safe>{s.displayName}</strong>
+                  {s.description && (
+                    <div style="font-size: 12px;" safe>{s.description}</div>
+                  )}
+                </div>
+                <form method="POST" action="/settings/sources" style="margin: 0;">
+                  <input type="hidden" name="source" value={s.name} />
+                  <input type="hidden" name="enabled" value={enabled ? "0" : "1"} />
+                  <button type="submit" class="btn btn-small">
+                    {enabled ? "Disable" : "Enable"}
+                  </button>
+                </form>
+              </div>
             </div>
-            <form method="POST" action="/settings/sources/royalroad" style="margin: 0;">
-              <input type="hidden" name="enabled" value={sources.royalroad ? "0" : "1"} />
-              <button type="submit" class="btn btn-small">
-                {sources.royalroad ? "Disable" : "Enable"}
-              </button>
-            </form>
-          </div>
-        </div>
-        <div style="border-top: 1px solid #ccc; padding-top: 16px;">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div>
-              <strong>EPUB Library</strong>
-              <div style="font-size: 12px;">Upload and read your own EPUB files</div>
-            </div>
-            <form method="POST" action="/settings/sources/epub" style="margin: 0;">
-              <input type="hidden" name="enabled" value={sources.epub ? "0" : "1"} />
-              <button type="submit" class="btn btn-small">
-                {sources.epub ? "Disable" : "Enable"}
-              </button>
-            </form>
-          </div>
-        </div>
-        <div style="border-top: 1px solid #ccc; padding-top: 16px; margin-top: 16px;">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div>
-              <strong>FreeWebNovel</strong>
-              <div style="font-size: 12px;">Read novels from freewebnovel.com (no account needed)</div>
-            </div>
-            <form method="POST" action="/settings/sources/freewebnovel" style="margin: 0;">
-              <input type="hidden" name="enabled" value={sources.freewebnovel ? "0" : "1"} />
-              <button type="submit" class="btn btn-small">
-                {sources.freewebnovel ? "Disable" : "Enable"}
-              </button>
-            </form>
-          </div>
-        </div>
+          );
+        })}
       </div>
 
       <SectionTitle>Display</SectionTitle>
@@ -142,60 +123,66 @@ export function SettingsPage({
         )}
       </div>
 
-      {sources.royalroad && (
+      {/* Credentials forms — one per enabled source with capabilities.credentials */}
+      {credentialSources.map((s) => (
         <>
-          <SectionTitle>Royal Road Session</SectionTitle>
+          <SectionTitle>{`${s.displayName} Session`}</SectionTitle>
 
-          {autoLoginEnabled ? (
+          {s.autoLogin?.enabled ? (
             <div class="card" style="margin-bottom: 16px;">
               <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
                 <span style="color: #0a0; font-size: 18px;">✓</span>
                 <strong>Auto-login configured</strong>
               </div>
               <p style="font-size: 14px; margin: 0;">
-                Royal Road credentials are set via environment variables. The app will
+                {s.displayName} credentials are set via environment variables. The app will
                 automatically log in when your session expires.
               </p>
               <div class="form-actions" style="margin-top: 12px;">
-                <form method="POST" action="/settings/auto-login" style="margin: 0;">
+                <form method="POST" action={`/settings/sources/${s.name}/auto-login`} style="margin: 0;">
                   <button type="submit" class="btn">Refresh Session Now</button>
                 </form>
               </div>
             </div>
           ) : (
             <p style="font-size: 14px;">
-              Enter your Royal Road session cookies to access your follows and reading history.
+              Enter your {s.displayName} session credentials to access your account features.
               Find these in your browser's developer tools (F12 → Application → Cookies).
             </p>
           )}
 
-          <form method="POST" action="/settings/cookies">
-            <div class="form-group">
-              <label for="identity">.AspNetCore.Identity.Application</label>
-              <textarea
-                name="identity"
-                id="identity"
-                placeholder="Paste your auth cookie value here"
-              ></textarea>
-            </div>
-
-            <div class="form-group">
-              <label for="cfclearance">cf_clearance (optional)</label>
-              <textarea
-                name="cfclearance"
-                id="cfclearance"
-                placeholder="Paste if you get Cloudflare errors"
-              ></textarea>
-              <div class="hint">Only needed if you encounter Cloudflare blocking issues.</div>
-            </div>
+          <form method="POST" action={`/settings/sources/${s.name}/credentials`}>
+            {(s.credentialFields || []).map((field) => (
+              <div class="form-group">
+                <label for={field.name} safe>{field.label}</label>
+                {field.textarea ? (
+                  <textarea
+                    name={field.name}
+                    id={field.name}
+                    placeholder={field.placeholder}
+                    required={field.required}
+                  ></textarea>
+                ) : (
+                  <input
+                    type="text"
+                    name={field.name}
+                    id={field.name}
+                    placeholder={field.placeholder}
+                    required={field.required}
+                  />
+                )}
+                {field.hint && <div class="hint" safe>{field.hint}</div>}
+              </div>
+            ))}
 
             <div class="form-actions">
-              <button type="submit" class="btn">Save Cookies</button>
-              <a href="/settings/cookies/clear" class="btn btn-outline">Clear Cookies</a>
+              <button type="submit" class="btn">Save Credentials</button>
+              <a href={`/settings/sources/${s.name}/credentials/clear`} class="btn btn-outline">Clear</a>
             </div>
           </form>
         </>
-      )}
+      ))}
+
       {stats && (
         <>
           <SectionTitle>Cache</SectionTitle>

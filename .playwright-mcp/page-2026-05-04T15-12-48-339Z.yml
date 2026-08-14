@@ -1,0 +1,42 @@
+- generic [ref=e8]:
+  - link "royal-road-logo" [ref=e10] [cursor=pointer]:
+    - /url: /
+    - img "royal-road-logo" [ref=e11]
+  - heading "Sign In" [level=2] [ref=e12]
+  - generic [ref=e13]:
+    - button " with Google" [ref=e14] [cursor=pointer]:
+      - generic [ref=e15]: 
+      - text: with Google
+    - button " with Facebook" [ref=e16] [cursor=pointer]:
+      - generic [ref=e17]: 
+      - text: with Facebook
+    - button " with Microsoft" [ref=e18] [cursor=pointer]:
+      - generic [ref=e19]: 
+      - text: with Microsoft
+    - button " with Apple" [ref=e20] [cursor=pointer]:
+      - generic [ref=e21]: 
+      - text: with Apple
+  - generic [ref=e22]:
+    - generic [ref=e24]: or
+    - generic:
+      - list
+    - generic [ref=e25]:
+      - generic [ref=e26]: "Email Address:"
+      - textbox [ref=e27]
+    - generic [ref=e28]:
+      - generic [ref=e29]: "Password:"
+      - textbox "Password:" [ref=e30]
+    - generic [ref=e32] [cursor=pointer]:
+      - checkbox "Remember me" [ref=e33]
+      - text: Remember me
+    - button "Sign In" [ref=e35] [cursor=pointer]
+    - generic [ref=e36]:
+      - button " Sign in with a passkey" [ref=e37] [cursor=pointer]:
+        - generic [ref=e38]: 
+        - text: Sign in with a passkey
+      - generic [ref=e39]: Use a passkey saved on this device or in your password manager.
+    - generic [ref=e40]:
+      - link "Forgot your password?" [ref=e42] [cursor=pointer]:
+        - /url: /account/forgotpassword
+      - link "Create a new account" [ref=e44] [cursor=pointer]:
+        - /url: /account/register

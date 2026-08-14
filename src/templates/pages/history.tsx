@@ -3,25 +3,29 @@ import { Pagination, paginate } from "../components";
 import type { ReaderSettings } from "../../config";
 import { DEFAULT_READER_SETTINGS } from "../../config";
 import type { HistoryEntry } from "../../types";
-import type { SourceType } from "../../services/sources";
+import type { Source } from "../../services/source-registry";
 
 export function HistoryPage({
+  source,
   history,
   page = 1,
   settings = DEFAULT_READER_SETTINGS,
-  enabledSources = [],
+  sources = [],
 }: {
+  source: Source;
   history: HistoryEntry[];
   page?: number;
   settings?: ReaderSettings;
-  enabledSources?: SourceType[];
+  sources?: Source[];
 }): JSX.Element {
+  const historyHref = `/read/${source.name}/history`;
+
   if (history.length === 0) {
     return (
-      <Layout title="History" settings={settings} currentPath="/history" enabledSources={enabledSources}>
+      <Layout title="History" settings={settings} currentPath={historyHref} sources={sources}>
         <h1>History</h1>
         <p>
-          No reading history found. Make sure your cookies are configured in{" "}
+          No reading history found. Make sure your credentials are configured in{" "}
           <a href="/settings">Settings</a>.
         </p>
       </Layout>
@@ -31,17 +35,17 @@ export function HistoryPage({
   const paginatedHistory = paginate(history, page);
 
   return (
-    <Layout title="History" settings={settings} currentPath="/history" enabledSources={enabledSources}>
+    <Layout title="History" settings={settings} currentPath={historyHref} sources={sources}>
       <h1>History ({history.length})</h1>
       {paginatedHistory.map((h) => (
         <div class="card">
           <div class="card-title">
-            <a href={`/chapter/${h.chapterId}`} safe>
+            <a href={`/read/${source.name}/${h.fictionId}/${h.chapterId}`} safe>
               {h.chapterTitle}
             </a>
           </div>
           <div class="card-meta">
-            <a href={`/fiction/${h.fictionId}`} safe>
+            <a href={`/read/${source.name}/${h.fictionId}`} safe>
               {h.fictionTitle}
             </a>
           </div>
@@ -50,7 +54,7 @@ export function HistoryPage({
           </div>
         </div>
       ))}
-      <Pagination currentPage={page} totalItems={history.length} basePath="/history" />
+      <Pagination currentPage={page} totalItems={history.length} basePath={historyHref} />
     </Layout>
   );
 }

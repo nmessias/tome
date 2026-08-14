@@ -1,11 +1,12 @@
 /**
- * Chapter reader page template (Royal Road)
- * Uses SPA-style navigation with click-based pagination
+ * Unified chapter reader page (ADR-0002)
+ * Uses SPA-style navigation with click-based pagination.
  */
 import { ReaderLayout } from "../layout";
 import type { ChapterContent } from "../../types";
 import type { ReaderSettings } from "../../config";
 import { DEFAULT_READER_SETTINGS } from "../../config";
+import type { Source } from "../../services/source-registry";
 import {
   ReaderHeader,
   TapZones,
@@ -20,23 +21,28 @@ import {
  */
 export function ReaderPage({
   chapter,
+  source,
+  fictionRef,
   settings = DEFAULT_READER_SETTINGS,
   initialPage = 1,
+  trackProgress = false,
 }: {
   chapter: ChapterContent;
+  source: Source;
+  fictionRef: string;
   settings?: ReaderSettings;
   initialPage?: number;
+  trackProgress?: boolean;
 }): JSX.Element {
-  // Extract chapter IDs from URLs
-  const prevChapterId = chapter.prevChapterUrl
-    ? chapter.prevChapterUrl.replace("/chapter/", "")
-    : "";
-  const nextChapterId = chapter.nextChapterUrl
-    ? chapter.nextChapterUrl.replace("/chapter/", "")
-    : "";
-
+  const prevRef = chapter.prevRef || "";
+  const nextRef = chapter.nextRef || "";
   const readingWidth = settings.readingWidth || 650;
   const fontSizeStyle = `font-size: ${settings.font}px; line-height: ${settings.lineHeight || 1.6}; max-width: ${readingWidth}px;`;
+  const indexHref = `/read/${source.name}/${fictionRef}`;
+  const navLinks = [
+    { href: "/", label: "Home" },
+    ...source.navLinks,
+  ];
 
   return (
     <ReaderLayout title={chapter.title} settings={settings} initialPage={initialPage}>
@@ -45,22 +51,20 @@ export function ReaderPage({
         title={chapter.title}
         subtitle={
           chapter.fictionTitle ? (
-            <a href={`/fiction/${chapter.fictionId}`} class="fiction-link" safe>
+            <a href={indexHref} class="fiction-link" safe>
               {chapter.fictionTitle}
             </a>
           ) : undefined
         }
-        navLinks={[
-          { href: "/", label: "Home" },
-          { href: "/follows", label: "Follows" },
-          { href: "/history", label: "History" },
-        ]}
+        navLinks={navLinks}
       />
 
       <div
         class="reader-wrapper"
-        data-chapter-id={chapter.id}
-        data-fiction-id={chapter.fictionId}
+        data-source={source.name}
+        data-fiction-ref={fictionRef}
+        data-chapter-ref={chapter.ref ?? ""}
+        data-track-progress={trackProgress ? "1" : undefined}
       >
         <TapZones />
         <div class="reader-content" style={fontSizeStyle}>
@@ -72,14 +76,14 @@ export function ReaderPage({
 
       <ReaderNav
         indexLabel="Index"
-        indexHref={`/fiction/${chapter.fictionId}`}
+        indexHref={indexHref}
         prevAttrs={{
-          "data-chapter-id": prevChapterId || "",
-          disabled: !prevChapterId,
+          "data-ref": prevRef || "",
+          disabled: !prevRef,
         }}
         nextAttrs={{
-          "data-chapter-id": nextChapterId || "",
-          disabled: !nextChapterId,
+          "data-ref": nextRef || "",
+          disabled: !nextRef,
         }}
       />
 

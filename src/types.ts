@@ -26,6 +26,7 @@ export interface Fiction {
   chapters?: Chapter[];
   continueChapterId?: number; // Next chapter to read (from RR progress)
   continueChapterSlug?: string; // Next chapter slug (for FWN progress)
+  continueChapterLabel?: string; // Short label shown next to Continue (e.g. "Ch. 42")
   // Bookmark state (from Royal Road)
   isFollowing?: boolean;
   isFavorite?: boolean;
@@ -71,6 +72,11 @@ export interface ChapterContent {
   nextChapterUrl?: string;
   fictionTitle?: string;
   fictionUrl?: string;
+  // Unified-reader fields (set by Source adapters)
+  ref?: string;            // chapter ref as it appears in URLs
+  fictionRef?: string;     // fiction ref as it appears in URLs
+  prevRef?: string | null; // previous chapter ref (null = none)
+  nextRef?: string | null; // next chapter ref (null = none)
 }
 
 export interface FollowedFiction extends Fiction {
@@ -97,13 +103,6 @@ export interface ToplistType {
   url: string;
 }
 
-export const TOPLISTS: ToplistType[] = [
-  { slug: 'rising-stars', name: 'Rising Stars', url: 'https://www.royalroad.com/fictions/rising-stars' },
-  { slug: 'best-rated', name: 'Best Rated', url: 'https://www.royalroad.com/fictions/best-rated' },
-  { slug: 'weekly-popular', name: 'Weekly Popular', url: 'https://www.royalroad.com/fictions/weekly-popular' },
-  { slug: 'active-popular', name: 'Active Popular', url: 'https://www.royalroad.com/fictions/active-popular' },
-];
-
 // Reader settings stored in cookie
 export interface ReaderSettings {
   dark: boolean;  // dark mode enabled
@@ -114,3 +113,18 @@ export const DEFAULT_READER_SETTINGS: ReaderSettings = {
   dark: false,
   font: 18
 };
+
+// Unified library entry (normalized across sources; see Source.getLibrary)
+export interface LibraryEntry {
+  ref: string;
+  kind?: "series" | "book";
+  title: string;
+  author?: string;
+  coverUrl?: string;
+  description?: string;
+  totalChapters?: number;
+  lastChapterRead?: number;
+  progress?: number;
+  continueChapterRef?: string;
+  completed?: boolean;
+}

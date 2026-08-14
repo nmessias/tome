@@ -8,6 +8,9 @@ import { initBrowser, closeBrowser } from "./services/scraper";
 import { startJobs, stopJobs } from "./services/jobs";
 import { seedAdminUser } from "./lib/auth";
 import { runMigrations } from "./lib/migrate";
+// Side-effect: register the built-in sources (Phase 3 replaces this with
+// TOME_PLUGINS scanning). Must run before any request is handled.
+import "./sources";
 import {
   isValidToken,
   registerClient,

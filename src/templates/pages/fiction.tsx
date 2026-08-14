@@ -1,9 +1,13 @@
+/**
+ * Unified fiction detail page (ADR-0002)
+ * Parameterized by the Source object; ref formats are opaque.
+ */
 import { Layout } from "../layout";
-import { CoverImage, Pagination, SectionTitle } from "../components";
+import { CoverImage, Pagination, SectionTitle, fictionHref, chapterHref } from "../components";
 import type { ReaderSettings } from "../../config";
 import { DEFAULT_READER_SETTINGS, CHAPTERS_PER_PAGE } from "../../config";
 import type { Fiction } from "../../types";
-import type { SourceType } from "../../services/sources";
+import type { Source } from "../../services/source-registry";
 
 function formatNumber(num: number | undefined): string {
   if (num === undefined) return "—";
@@ -17,20 +21,23 @@ function formatRating(rating: number | undefined): string {
 
 export function FictionPage({
   fiction,
+  source,
   chapterPage = 1,
   settings = DEFAULT_READER_SETTINGS,
   error,
-  enabledSources = [],
+  sources = [],
   from,
 }: {
   fiction: Fiction;
+  source: Source;
   chapterPage?: number;
   settings?: ReaderSettings;
   error?: string;
-  enabledSources?: SourceType[];
+  sources?: Source[];
   from?: string;
 }): JSX.Element {
   const chapters = fiction.chapters || [];
+  const fictionRef = fiction.slug ?? String(fiction.id);
   const totalChapterPages = Math.ceil(chapters.length / CHAPTERS_PER_PAGE);
   const startIdx = (chapterPage - 1) * CHAPTERS_PER_PAGE;
   const paginatedChapters = chapters.slice(startIdx, startIdx + CHAPTERS_PER_PAGE);
@@ -46,11 +53,25 @@ export function FictionPage({
 
   const hasLongDesc = fiction.description && fiction.description.length > 300;
 
-  const backLabel = from === "follows" ? "Back to Follows" : from === "toplists" ? "Back to Top Lists" : from === "search" ? "Back to Search" : "Back to Follows";
-  const backUrl = from === "toplists" ? "/toplists" : from === "search" ? "/search" : "/follows";
+  // Continue/Start target
+  const continueHref = fiction.continueChapterId
+    ? chapterHref(source.name, fiction, fiction.continueChapterId)
+    : fiction.continueChapterSlug
+      ? chapterHref(source.name, fiction, fiction.continueChapterSlug)
+      : chapters.length > 0
+        ? chapterHref(source.name, fiction, chapters[0].slug ?? chapters[0].id)
+        : null;
+
+  const backLabel = from === "follows" ? "Back to Follows"
+    : from === "toplists" ? "Back to Top Lists"
+    : from === "search" ? "Back to Search"
+    : "Back to Follows";
+  const backUrl = from === "toplists" ? `/read/${source.name}/toplists`
+    : from === "search" ? `/read/${source.name}/search`
+    : `/read/${source.name}/follows`;
 
   return (
-    <Layout title={fiction.title} settings={settings} currentPath="/fiction" enabledSources={enabledSources}>
+    <Layout title={fiction.title} settings={settings} currentPath={fictionHref(source.name, fiction)} sources={sources}>
       {/* Fiction Header */}
       <div style="display: flex; gap: 16px; margin-bottom: 16px;">
         <CoverImage url={fiction.coverUrl} alt={fiction.title} size="large" />
@@ -66,24 +87,24 @@ export function FictionPage({
               {formatRating(stats?.rating)}
             </div>
           )}
+          {fiction.tags && fiction.tags.length > 0 && (
+            <div style="margin-top: 4px; font-size: 12px;" safe>
+              {fiction.tags.join(" · ")}
+            </div>
+          )}
         </div>
       </div>
 
       {/* Continue/Start Button */}
-      {fiction.continueChapterId ? (
-        <a href={`/chapter/${fiction.continueChapterId}`} class="btn" style="display: block; text-align: center; margin-bottom: 16px;">
-          Continue Reading
+      {continueHref ? (
+        <a href={continueHref} class="btn" style="display: block; text-align: center; margin-bottom: 16px;">
+          {fiction.continueChapterId || fiction.continueChapterSlug ? "Continue Reading" : "Start Reading"}
+          {fiction.continueChapterLabel ? ` (${fiction.continueChapterLabel})` : ""}
         </a>
-      ) : (
-        chapters.length > 0 && (
-          <a href={`/chapter/${chapters[0].id}`} class="btn btn-outline" style="display: block; text-align: center; margin-bottom: 16px;">
-            Start Reading
-          </a>
-        )
-      )}
+      ) : null}
 
-      {/* Bookmark Actions (Follow, Favorite, Read Later) */}
-      {fiction.csrfToken && (
+      {/* Bookmark Actions (Follow, Favorite, Read Later) — bookmarks capability */}
+      {source.capabilities.bookmarks && fiction.csrfToken && (
         <>
           {error && (
             <div class="card" style="background: #fee2e2; color: #991b1b; margin-bottom: 8px; padding: 8px 12px;">
@@ -91,7 +112,7 @@ export function FictionPage({
             </div>
           )}
           <div style="display: flex; gap: 8px; margin-bottom: 16px;">
-            <form method="POST" action={`/fiction/${fiction.id}/bookmark`} style="flex: 1;">
+            <form method="POST" action={`/read/${source.name}/${fictionRef}/bookmark`} style="flex: 1;">
               <input type="hidden" name="type" value="follow" />
               <input type="hidden" name="mark" value={fiction.isFollowing ? "false" : "true"} />
               <input type="hidden" name="csrf" value={fiction.csrfToken} />
@@ -100,7 +121,7 @@ export function FictionPage({
               </button>
             </form>
             
-            <form method="POST" action={`/fiction/${fiction.id}/bookmark`} style="flex: 1;">
+            <form method="POST" action={`/read/${source.name}/${fictionRef}/bookmark`} style="flex: 1;">
               <input type="hidden" name="type" value="favorite" />
               <input type="hidden" name="mark" value={fiction.isFavorite ? "false" : "true"} />
               <input type="hidden" name="csrf" value={fiction.csrfToken} />
@@ -109,7 +130,7 @@ export function FictionPage({
               </button>
             </form>
             
-            <form method="POST" action={`/fiction/${fiction.id}/bookmark`} style="flex: 1;">
+            <form method="POST" action={`/read/${source.name}/${fictionRef}/bookmark`} style="flex: 1;">
               <input type="hidden" name="type" value="ril" />
               <input type="hidden" name="mark" value={fiction.isReadLater ? "false" : "true"} />
               <input type="hidden" name="csrf" value={fiction.csrfToken} />
@@ -119,6 +140,18 @@ export function FictionPage({
             </form>
           </div>
         </>
+      )}
+
+      {/* Library toggle — library capability */}
+      {source.capabilities.library && fiction.isInLibrary !== undefined && (
+        <div style="margin-bottom: 16px;">
+          <form method="POST" action={`/read/${source.name}/${fictionRef}/library`}>
+            <input type="hidden" name="action" value={fiction.isInLibrary ? "remove" : "add"} />
+            <button type="submit" class={`btn ${fiction.isInLibrary ? "" : "btn-outline"}`} style="width: 100%;">
+              {fiction.isInLibrary ? "Remove from Library" : "Add to Library"}
+            </button>
+          </form>
+        </div>
       )}
 
       {/* Stats Section */}
@@ -134,6 +167,7 @@ export function FictionPage({
                   {stats?.storyScore !== undefined && <div style="font-size: 14px;">Story: {formatRating(stats.storyScore)}</div>}
                   {stats?.grammarScore !== undefined && <div style="font-size: 14px;">Grammar: {formatRating(stats.grammarScore)}</div>}
                   {stats?.characterScore !== undefined && <div style="font-size: 14px;">Character: {formatRating(stats.characterScore)}</div>}
+                  {chapters.length > 0 && <div style="font-size: 14px;"><strong>{chapters.length}</strong> chapters</div>}
                 </div>
               )}
               {hasDetailedStats && (
@@ -182,14 +216,15 @@ export function FictionPage({
       {paginatedChapters.length > 0 ? (
         paginatedChapters.map((c, i) => {
           const isRead = c.isRead === true;
-          const isNextToRead = !isRead && c.id === fiction.continueChapterId;
+          const chapterRef = c.slug ?? c.id;
+          const isNextToRead = !isRead && (chapterRef === fiction.continueChapterId || chapterRef === fiction.continueChapterSlug);
           const prefix = isNextToRead ? "→ " : isRead ? "✓ " : "";
           const style = isNextToRead ? "font-weight: bold;" : isRead ? "opacity: 0.6;" : "";
 
           return (
             <div class="card" style={`padding: 8px 12px; ${style}`}>
               <span safe>{prefix}</span>
-              <a href={`/chapter/${c.id}`} safe>
+              <a href={chapterHref(source.name, fiction, chapterRef)} safe>
                 {c.title || `Chapter ${startIdx + i + 1}`}
               </a>
               {c.date && <span style="font-size: 12px;"> · <span safe>{c.date}</span></span>}
@@ -204,7 +239,7 @@ export function FictionPage({
         <Pagination
           currentPage={chapterPage}
           totalItems={chapters.length}
-          basePath={`/fiction/${fiction.id}`}
+          basePath={`/read/${source.name}/${fictionRef}`}
           itemsPerPage={CHAPTERS_PER_PAGE}
         />
       )}

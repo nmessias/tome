@@ -7,6 +7,7 @@ import { handleApiRoute } from "./api";
 import { ErrorPage, LoginPage, InvitePage, InviteExpiredPage } from "../templates";
 import { auth, getSession, AUTH_ENABLED } from "../lib/auth";
 import type { ThemeName } from "../config";
+import { getEnabledSources } from "../services/source-registry";
 import {
   getInvitationByToken,
   isInvitationValid,
@@ -137,6 +138,18 @@ export async function handleRequest(req: Request): Promise<Response> {
       const response = await serveStatic(`/fonts/${fontFile}`);
       if (response) return response;
       return new Response("Font not found", { status: 404 });
+    }
+
+    // Source extraRoutes (ADR-0001 escape hatch) — matched BEFORE the generic
+    // source routes so a source can claim exact paths (e.g. EPUB's reader,
+    // delete, file-download, and cover routes).
+    for (const s of getEnabledSources(userId)) {
+      for (const extra of s.extraRoutes || []) {
+        const params = extra.match(path, method);
+        if (!params) continue;
+        const res = await extra.handle(params, { req, path, url, settings, userId, isAdmin });
+        if (res) return res;
+      }
     }
 
     // Try API routes

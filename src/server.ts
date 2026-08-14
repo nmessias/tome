@@ -41,8 +41,7 @@ export function redirect(url: string): Response {
 
 /**
  * Parse form data from POST body
- */
-export async function parseFormData(req: Request): Promise<Record<string, string>> {
+ */export async function parseFormData(req: Request): Promise<Record<string, string>> {
   const contentType = req.headers.get("content-type") || "";
   
   if (contentType.includes("application/x-www-form-urlencoded")) {
@@ -130,28 +129,5 @@ export async function serveStatic(path: string): Promise<Response | null> {
   });
 }
 
-// ============ URL Pattern Helpers ============
-
-export const URL_PATTERNS = {
-  fiction: /^\/fiction\/(\d+)$/,
-  chapter: /^\/chapter\/(\d+)$/,
-  chapterApi: /^\/api\/chapter\/(\d+)$/,
-  toplist: /^\/toplist\/([\w-]+)$/,
-  coverImage: /^\/img\/cover\/(\d+)$/,
-  cacheType: /^\/cache\/clear\/(.+)$/,
-  // FreeWebNovel patterns (slug-based)
-  fwnFiction: /^\/fwn\/fiction\/([\w-]+)$/,
-  fwnFictionLibrary: /^\/fwn\/fiction\/([\w-]+)\/library$/,
-  fwnRead: /^\/fwn\/read\/([\w-]+)\/(\d+)$/,
-  fwnChapterApi: /^\/api\/fwn\/chapter\/([\w-]+)\/(\d+)$/,
-  fwnProgressApi: /^\/api\/fwn\/progress\/([\w-]+)$/,
-  fwnCoverImage: /^\/img\/fwn-cover\/([\w-]+)$/,
-} as const;
-
-/**
- * Match a URL path against a pattern and return captured groups
- */
-export function matchPath(path: string, pattern: RegExp): string[] | null {
-  const match = path.match(pattern);
-  return match ? match.slice(1) : null;
-}
+// (Legacy URL_PATTERNS and matchPath were removed in Phase 1 — routes match
+// their own unified /read/:source/... patterns inline.)
