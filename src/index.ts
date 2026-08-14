@@ -1,6 +1,8 @@
 /**
  * Tome - Web Fiction Proxy for E-ink Devices
- * Main entry point
+ * Main entry point — app shell only. No feature-specific logic here (Phase 2):
+ * sources and features register in ./registration; WS paths come from
+ * registered features.
  */
 import { PORT, ENABLE_BROWSER } from "./config";
 import { handleRequest } from "./routes";
@@ -8,17 +10,15 @@ import { initBrowser, closeBrowser } from "./services/scraper";
 import { startJobs, stopJobs } from "./services/jobs";
 import { seedAdminUser } from "./lib/auth";
 import { runMigrations } from "./lib/migrate";
-// Side-effect: register the built-in sources (Phase 3 replaces this with
-// TOME_PLUGINS scanning). Must run before any request is handled.
-import "./sources";
 import {
-  isValidToken,
-  registerClient,
-  unregisterClient,
-  broadcastToReaders,
-  type RemoteWsData,
-  type RemoteClientRole,
-} from "./services/remote";
+  getFeatures,
+  type FeatureWsData,
+  type FeatureWsPath,
+} from "./services/feature-registry";
+import type { ServerWebSocket } from "bun";
+// Side-effect: register the built-in sources and features (Phase 3 replaces
+// this with TOME_PLUGINS scanning). Must run before any request is handled.
+import "./registration";
 
 console.log("Starting Tome...");
 
@@ -32,95 +32,39 @@ seedAdminUser()
   })
   .catch(console.error);
 
-type WsData = 
-  | { type: "test"; connectedAt: number; userAgent: string }
-  | { type: "remote"; token: string; role: RemoteClientRole; connectedAt: number };
+/** The feature WS path handler that owns a connection, by its data payload. */
+function wsPathFor(ws: ServerWebSocket<FeatureWsData>): FeatureWsPath | null {
+  const feature = getFeatures()[ws.data.featureIndex];
+  return feature?.wsPaths?.[ws.data.pathIndex] ?? null;
+}
 
-const server = Bun.serve<WsData>({
+const server = Bun.serve<FeatureWsData>({
   port: PORT,
   fetch(req, server) {
     const url = new URL(req.url);
-    
-    if (url.pathname === "/ws/test") {
-      const userAgent = req.headers.get("user-agent") || "unknown";
-      const upgraded = server.upgrade(req, {
-        data: { type: "test" as const, connectedAt: Date.now(), userAgent },
-      });
-      if (upgraded) return;
-      return new Response("WebSocket upgrade failed", { status: 500 });
-    }
-    
-    const remoteMatch = url.pathname.match(/^\/ws\/remote\/([a-z0-9]+)$/);
-    if (remoteMatch) {
-      const token = remoteMatch[1];
-      const role = url.searchParams.get("role") as RemoteClientRole;
-      
-      if (!role || (role !== "reader" && role !== "controller")) {
-        return new Response("Missing or invalid role parameter", { status: 400 });
+
+    // Feature WebSocket paths (claimed before the HTTP router)
+    for (const feature of getFeatures()) {
+      for (const [pathIndex, wsPath] of (feature.wsPaths || []).entries()) {
+        const params = wsPath.match(url.pathname, url);
+        if (params === null) continue;
+        const res = wsPath.upgrade(req, server, params);
+        if (res) return res;
+        return; // upgraded
       }
-      
-      if (!isValidToken(token)) {
-        return new Response("Invalid token", { status: 404 });
-      }
-      
-      const upgraded = server.upgrade(req, {
-        data: { type: "remote" as const, token, role, connectedAt: Date.now() },
-      });
-      if (upgraded) return;
-      return new Response("WebSocket upgrade failed", { status: 500 });
     }
-    
+
     return handleRequest(req);
   },
   websocket: {
     open(ws) {
-      if (ws.data.type === "test") {
-        console.log("[WS-TEST] Connection opened");
-        ws.send("connected");
-        return;
-      }
-      
-      if (ws.data.type === "remote") {
-        const { token, role } = ws.data;
-        const registered = registerClient(ws as any, token, role);
-        if (!registered) {
-          ws.close(1008, "Invalid session");
-          return;
-        }
-        console.log(`[REMOTE] ${role} connected to session ${token.slice(0, 6)}...`);
-        ws.send(JSON.stringify({ type: "connected", role }));
-      }
+      wsPathFor(ws)?.open?.(ws, ws.data.params);
     },
     message(ws, message) {
-      if (ws.data.type === "test") {
-        const msg = String(message);
-        if (msg === "ping") {
-          ws.send("pong");
-        } else {
-          ws.send("echo:" + msg);
-        }
-        return;
-      }
-      
-      if (ws.data.type === "remote" && ws.data.role === "controller") {
-        try {
-          const data = JSON.parse(String(message));
-          if (data.action === "next" || data.action === "prev") {
-            broadcastToReaders(ws.data.token, { action: data.action });
-          }
-        } catch {}
-      }
+      wsPathFor(ws)?.message?.(ws, message, ws.data.params);
     },
     close(ws, code, reason) {
-      if (ws.data.type === "test") {
-        console.log("[WS-TEST] Connection closed");
-        return;
-      }
-      
-      if (ws.data.type === "remote") {
-        unregisterClient(ws as any);
-        console.log(`[REMOTE] ${ws.data.role} disconnected from session ${ws.data.token.slice(0, 6)}...`);
-      }
+      wsPathFor(ws)?.close?.(ws, code, reason, ws.data.params);
     },
   },
   idleTimeout: 120,

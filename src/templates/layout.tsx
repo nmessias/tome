@@ -108,6 +108,7 @@ export function ReaderLayout({
         </head>
         <body class={bodyClass || undefined}>
           {children}
+          <script src={`/public/js/remote-client.js?v=${APP_VERSION}`}></script>
           <script src={`/public/js/reader.js?v=${APP_VERSION}`}></script>
         </body>
       </html>

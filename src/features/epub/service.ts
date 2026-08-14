@@ -3,7 +3,7 @@ import JSZip from "jszip";
 import * as fs from "fs";
 import * as path from "path";
 import * as crypto from "crypto";
-import { DB_PATH } from "../config";
+import { DB_PATH } from "../../config";
 
 const EPUB_DIR = "./data/epubs";
 const COVER_DIR = "./data/covers";

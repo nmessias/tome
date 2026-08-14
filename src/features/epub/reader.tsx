@@ -1,12 +1,12 @@
 import type { ReaderSettings } from "../../config";
-import type { EpubBook } from "../../services/epub";
+import type { EpubBook } from "./service";
 import { DEFAULT_READER_SETTINGS, APP_VERSION } from "../../config";
 import {
   TapZones,
   PageIndicator,
   ReaderNav,
   SettingsModal,
-} from "../reader-components";
+} from "../../templates/reader-components";
 
 export function EpubReaderPage({
   book,
@@ -109,6 +109,7 @@ export function EpubReaderPage({
 
           <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
           <script src="https://cdn.jsdelivr.net/npm/epubjs@0.3.93/dist/epub.min.js"></script>
+          <script src={`/public/js/remote-client.js?v=${APP_VERSION}`}></script>
           <script src={`/public/js/epub-reader.js?v=${APP_VERSION}`}></script>
         </body>
       </html>

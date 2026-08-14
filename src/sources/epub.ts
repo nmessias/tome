@@ -16,8 +16,8 @@ import {
   updateProgress,
   getEpubFilePath,
   getCoverPath,
-} from "../services/epub";
-import { EpubReaderPage } from "../templates/pages/epub-reader";
+} from "../features/epub/service";
+import { EpubReaderPage } from "../features/epub/reader";
 import { json, redirect } from "../server";
 
 const EPUB = "epub";

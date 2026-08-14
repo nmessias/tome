@@ -8,6 +8,7 @@ import { ErrorPage, LoginPage, InvitePage, InviteExpiredPage } from "../template
 import { auth, getSession, AUTH_ENABLED } from "../lib/auth";
 import type { ThemeName } from "../config";
 import { getEnabledSources } from "../services/source-registry";
+import { getFeatures } from "../services/feature-registry";
 import {
   getInvitationByToken,
   isInvitationValid,
@@ -140,6 +141,12 @@ export async function handleRequest(req: Request): Promise<Response> {
       return new Response("Font not found", { status: 404 });
     }
 
+    // Feature API routes (before source extraRoutes and core API)
+    for (const feature of getFeatures()) {
+      const res = feature.apiRoutes ? await feature.apiRoutes({ req, path, url, settings, userId, isAdmin }) : null;
+      if (res) return res;
+    }
+
     // Source extraRoutes (ADR-0001 escape hatch) — matched BEFORE the generic
     // source routes so a source can claim exact paths (e.g. EPUB's reader,
     // delete, file-download, and cover routes).
@@ -155,6 +162,12 @@ export async function handleRequest(req: Request): Promise<Response> {
     // Try API routes
     const apiResponse = await handleApiRoute(req, path, userId, isAdmin);
     if (apiResponse) return apiResponse;
+
+    // Feature page routes
+    for (const feature of getFeatures()) {
+      const res = feature.pageRoutes ? await feature.pageRoutes({ req, path, url, settings, userId, isAdmin }) : null;
+      if (res) return res;
+    }
 
     // Try page routes
     const pageResponse = await handlePageRoute(req, path, url, settings, userId, isAdmin);
