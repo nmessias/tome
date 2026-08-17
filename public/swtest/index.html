@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tome — Service Worker Test</title>
+<style>
+  body { font-family: sans-serif; max-width: 40em; margin: 1em auto; padding: 0 1em; color: #111; font-size: 18px; }
+  h1 { font-size: 1.4em; }
+  ul { list-style: none; padding: 0; }
+  li { padding: .4em 0; border-bottom: 1px solid #ccc; }
+  .ok { color: #0a0; } .bad { color: #a00; font-weight: bold; }
+  code { background: #eee; padding: 0 .3em; }
+</style>
+</head>
+<body>
+<h1>Tome — Service Worker test</h1>
+<p>This page checks whether the Kindle browser supports service workers (offline reading).
+<strong>Requires HTTPS.</strong> Open this page on the Kindle, wait ~15s, then turn Wi-Fi off and reload.</p>
+<ul id="results"></ul>
+<p id="verdict"></p>
+<script>
+// ES5-only probe code so old Kindle engines can still report.
+var results = document.getElementById('results');
+function report(name, val, ok) {
+  var li = document.createElement('li');
+  li.textContent = name + ': ' + val;
+  var mark = document.createElement('span');
+  mark.textContent = ok === true ? ' [OK]' : ok === false ? ' [FAIL]' : '';
+  if (ok === true) mark.className = 'ok';
+  if (ok === false) mark.className = 'bad';
+  li.appendChild(mark);
+  results.appendChild(li);
+  return li;
+}
+
+report('User-Agent', navigator.userAgent, null);
+report('onLine', navigator.onLine, null);
+report('isSecureContext (HTTPS)', window.isSecureContext === true ? 'yes' : 'NO — SW will not register', window.isSecureContext === true);
+report('navigator.serviceWorker exists', typeof navigator.serviceWorker === 'object' ? 'yes' : 'NO', typeof navigator.serviceWorker === 'object');
+report('Cache Storage API (caches)', typeof caches === 'object' ? 'yes' : 'NO', typeof caches === 'object');
+report('localStorage', (function(){ try { localStorage.setItem('t','1'); return localStorage.getItem('t') === '1' ? 'yes' : 'read-back failed'; } catch(e){ return 'NO (' + e.name + ')'; } })(), null);
+report('indexedDB', typeof indexedDB === 'object' ? 'yes' : 'NO', typeof indexedDB === 'object');
+report('ES6 (Promise/let/template)', (function(){ try { new Promise(function(r){ r(1); }); var a = 1; return 'yes'; } catch(e){ return 'NO (' + e.message + ')'; } })(), null);
+
+// Attempt SW registration. Timeout guards browsers that hang.
+var done = false;
+function deadline(label, secs) {
+  setTimeout(function(){ if (!done) { done = true; report('SW register — ' + label, 'no answer after ' + secs + 's (hung or blocked)', false); verdict(false); } }, secs * 1000);
+}
+function verdict(ok) {
+  var p = document.getElementById('verdict');
+  p.textContent = ok ? 'VERDICT: Service worker works on this device.'
+                     : 'VERDICT: Service worker does NOT work on this device (flight mode reload will fail).';
+  p.className = ok ? 'ok' : 'bad';
+}
+if (typeof navigator.serviceWorker === 'object') {
+  deadline('register()', 15);
+  navigator.serviceWorker.register('/sw-test/sw.js', { scope: '/sw-test/' }).then(function(reg) {
+    if (done) return;
+    report('SW register()', 'resolved (installing=' + reg.installing + ', active=' + reg.active + ')', true);
+    // Give it a moment to install+activate+claim, then report controller state.
+    setTimeout(function() {
+      if (done) return;
+      done = true;
+      var msg = navigator.serviceWorker.controller
+        ? 'controlled by SW — offline reload should work'
+        : 'registered but not controlling yet — reload once, then try flight mode';
+      report('SW controller', msg, !!navigator.serviceWorker.controller);
+      verdict(!!navigator.serviceWorker.controller);
+    }, 4000);
+  }).catch(function(err) {
+    if (done) return;
+    done = true;
+    report('SW register()', 'FAILED: ' + (err && err.message) + ' (name=' + (err && err.name) + ')', false);
+    verdict(false);
+  });
+} else {
+  deadline('(no SW API)', 0);
+  verdict(false);
+}
+</script>
+<noscript><p><strong>JS did not run</strong> — this browser has JavaScript disabled or too old. Service workers are impossible here; server-side caching is the only offline story.</p></noscript>
+</body>
+</html>
