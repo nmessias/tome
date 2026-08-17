@@ -85,7 +85,8 @@ export function ReaderLayout({
 }: PropsWithChildren<ReaderLayoutProps>): JSX.Element {
   const themeClass = settings.theme === 'sepia' ? 'sepia-mode' : (settings.dark ? "dark-mode" : "");
   const kindleClass = settings.isKindle ? "kindle" : "";
-  const bodyClass = [themeClass, kindleClass].filter(Boolean).join(" ");
+  const modeClass = settings.mode === 'scrolled' ? 'scrolled-mode' : "";
+  const bodyClass = [themeClass, kindleClass, modeClass].filter(Boolean).join(" ");
   
   // Inline script to disable browser scroll restoration and set initial page
   // Must run before any content renders to prevent flash

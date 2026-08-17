@@ -5,6 +5,7 @@
  * are automatically available to all sources.
  */
 import type { PropsWithChildren } from "@kitajs/html";
+import type { ReaderMode } from "../config";
 
 /**
  * Tap and click zones for page navigation
@@ -120,6 +121,22 @@ export function WidthSelector({ display = "650px" }: { display?: string }): JSX.
         <button class="width-decrease">-</button>
         <span class="width-display" safe>{display}</span>
         <button class="width-increase">+</button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * View mode toggle — paginated (column-flip) or scrolled (continuous).
+ * Wired by reader.js (mode-btn / data-mode); reuses theme-btn styling.
+ */
+export function ModeSelector({ mode = "paged" }: { mode?: ReaderMode }): JSX.Element {
+  return (
+    <div class="settings-row">
+      <label>View Mode</label>
+      <div class="mode-controls">
+        <button class={"theme-btn mode-btn" + (mode === "paged" ? " active" : "")} data-mode="paged">Page</button>
+        <button class={"theme-btn mode-btn" + (mode === "scrolled" ? " active" : "")} data-mode="scrolled">Scroll</button>
       </div>
     </div>
   );

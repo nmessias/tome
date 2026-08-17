@@ -509,6 +509,12 @@ body.kindle .line-controls button {
   gap: 8px;
 }
 
+/* View mode controls */
+.mode-controls {
+  display: flex;
+  gap: 8px;
+}
+
 /* Width controls */
 .width-controls {
   display: flex;
@@ -647,6 +653,60 @@ body.kindle .theme-btn.active {
   .reader-header .header-nav {
     font-size: 12px;
   }
+}
+
+/* ==================== */
+/* Scrolled View Mode    */
+/* ==================== */
+
+/* Continuous scroll layout — same rules the desktop media query uses,
+   scoped to a body class so it also works on small screens (Kindle). */
+
+body.scrolled-mode {
+  overflow-y: auto;
+  height: auto;
+}
+
+body.scrolled-mode .reader-header {
+  display: flex;
+  position: static;
+  border-bottom: 1px solid #ddd;
+}
+
+body.scrolled-mode .reader-wrapper {
+  position: static;
+  overflow: visible;
+  display: block;
+}
+
+body.scrolled-mode .reader-content {
+  column-width: auto;
+  column-gap: 0;
+  overflow: visible;
+  width: 100%;
+  max-width: 650px;
+  margin: 0 auto;
+  height: auto;
+  padding: 16px 16px 60px;
+  visibility: visible;
+}
+
+body.scrolled-mode .tap-zone-top,
+body.scrolled-mode .tap-zone-bottom,
+body.scrolled-mode .click-zone-left,
+body.scrolled-mode .click-zone-right {
+  display: none;
+}
+
+body.scrolled-mode .page-indicator {
+  display: none;
+}
+
+body.scrolled-mode .nav-fixed {
+  display: flex;
+  position: static;
+  border-top: 1px solid #ccc;
+  margin-top: 8px;
 }
 
 /* ==================== */

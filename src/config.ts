@@ -38,6 +38,7 @@ export const DB_PATH = "./data/sessions.db";
 
 // Reader settings
 export type ThemeName = 'light' | 'dark' | 'sepia';
+export type ReaderMode = 'paged' | 'scrolled';
 
 export interface ReaderSettings {
   dark: boolean;
@@ -46,6 +47,7 @@ export interface ReaderSettings {
   lineHeight?: number;
   readingWidth?: number;
   isKindle?: boolean;
+  mode?: ReaderMode;
 }
 
 export const DEFAULT_READER_SETTINGS: ReaderSettings = {
@@ -55,6 +57,7 @@ export const DEFAULT_READER_SETTINGS: ReaderSettings = {
   lineHeight: 1.6,
   readingWidth: 650,
   isKindle: false,
+  mode: 'paged',
 };
 
 // App version for cache busting

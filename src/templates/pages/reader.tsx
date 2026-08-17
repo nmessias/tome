@@ -14,6 +14,7 @@ import {
   ReaderNav,
   SettingsModal,
   ProgressBar,
+  ModeSelector,
 } from "../reader-components";
 
 /**
@@ -94,7 +95,9 @@ export function ReaderPage({
         theme={settings.theme}
         isKindle={settings.isKindle}
         readingWidth={settings.readingWidth || 650}
-      />
+      >
+        <ModeSelector mode={settings.mode ?? "paged"} />
+      </SettingsModal>
     </ReaderLayout>
   );
 }

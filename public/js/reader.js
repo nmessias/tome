@@ -31,6 +31,8 @@
     lineHeightIndex: 2,
     // Desktop mode
     isDesktop: false,
+    // View mode: 'paged' (column-flip) or 'scrolled' (continuous)
+    mode: 'paged',
     // SPA navigation (unified scheme)
     cache: {},
     source: null,       // source machine name from the wrapper's data-source
@@ -60,7 +62,8 @@
       lineHeight: S.lineHeights[S.lineHeightIndex],
       dark: theme === 'dark',
       theme: theme,
-      readingWidth: S.widths[S.widthIndex]
+      readingWidth: S.widths[S.widthIndex],
+      mode: S.mode
     });
     setCookie('reader_settings', settings);
     try {
@@ -274,7 +277,7 @@
     if (S.els.modal && S.els.modal.classList.contains('open')) return;
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
 
-    if (S.isDesktop) {
+    if (S.isDesktop || S.mode === 'scrolled') {
       switch (e.key) {
         case 'ArrowLeft': {
           e.preventDefault();
@@ -332,11 +335,48 @@
   }
 
   // ============================================================
+  // VIEW MODE (paginated vs scrolled)
+  // ============================================================
+
+  function detectMode() {
+    S.mode = document.body.classList.contains('scrolled-mode') ? 'scrolled' : 'paged';
+  }
+
+  function applyMode() {
+    var scrolled = S.mode === 'scrolled';
+    document.body.classList.toggle('scrolled-mode', scrolled);
+    if (scrolled) {
+      // Drop the paged-geometry pin so the scrolled CSS rules take over
+      var style = S.els.content.style;
+      style.width = '';
+      style.columnWidth = '';
+      style.columnGap = '';
+      S.els.content.classList.add('ready');
+      window.addEventListener('scroll', function() { updateDesktopProgress(); }, { passive: true });
+      updateDesktopProgress();
+    } else {
+      updatePages();
+      goToPage(S.page);
+    }
+    var btns = document.querySelectorAll('.mode-btn');
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].classList.toggle('active', btns[i].getAttribute('data-mode') === S.mode);
+    }
+    saveSettings();
+  }
+
+  function changeMode(mode) {
+    if (mode === S.mode) return;
+    S.mode = mode;
+    applyMode();
+  }
+
+  // ============================================================
   // PAGINATION
   // ============================================================
 
   function updatePages() {
-    if (S.isDesktop) {
+    if (S.isDesktop || S.mode === 'scrolled') {
       updateDesktopProgress();
       return;
     }
@@ -424,6 +464,10 @@
   }
 
   function nextPage() {
+    if (S.mode === 'scrolled') {
+      window.scrollBy({ top: window.innerHeight * 0.85, behavior: 'instant' });
+      return;
+    }
     if (S.page < S.totalPages - 1) {
       goToPageFast(S.page + 1);
     } else {
@@ -440,6 +484,10 @@
   }
 
   function prevPage() {
+    if (S.mode === 'scrolled') {
+      window.scrollBy({ top: -window.innerHeight * 0.85, behavior: 'instant' });
+      return;
+    }
     if (S.page > 0) {
       goToPageFast(S.page - 1);
     } else {
@@ -526,7 +574,7 @@
     updateNavButtons(chapter.prevRef, chapter.nextRef);
     
     S.page = 0;
-    if (S.isDesktop) {
+    if (S.isDesktop || S.mode === 'scrolled') {
       window.scrollTo(0, 0);
     } else {
       S.els.content.scrollLeft = 0;
@@ -662,6 +710,15 @@
       })(themeBtns[i]);
     }
     
+    var modeBtns = document.querySelectorAll('.mode-btn');
+    for (var i = 0; i < modeBtns.length; i++) {
+      (function(btn) {
+        btn.onclick = function() {
+          changeMode(btn.getAttribute('data-mode'));
+        };
+      })(modeBtns[i]);
+    }
+    
     var widthDecrease = document.querySelector('.width-decrease');
     var widthIncrease = document.querySelector('.width-increase');
     if (widthDecrease) widthDecrease.onclick = function() { changeReadingWidth(-1); };
@@ -708,7 +765,7 @@
       }, 150);
     };
     
-    if (S.isDesktop) {
+    if (S.isDesktop || S.mode === 'scrolled') {
       window.addEventListener('scroll', function() {
         updateDesktopProgress();
       }, { passive: true });
@@ -721,6 +778,7 @@
     detectReadingWidth();
     
     S.isDesktop = checkDesktop();
+    detectMode();
     
     attachHandlers();
     
@@ -738,6 +796,11 @@
       updateDesktopProgress();
       preloadChapters();
       return;
+    }
+    
+    if (S.mode === 'scrolled') {
+      S.els.content.classList.add('ready');
+      updateDesktopProgress();
     }
     
     updatePages();
