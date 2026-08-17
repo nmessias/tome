@@ -88,7 +88,6 @@ export function parseReaderSettings(cookieHeader: string | null): ReaderSettings
 const MIME_TYPES: Record<string, string> = {
   ".css": "text/css",
   ".js": "application/javascript",
-  ".html": "text/html",
   ".ttf": "font/ttf",
   ".woff": "font/woff",
   ".woff2": "font/woff2",

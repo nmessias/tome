@@ -24,8 +24,6 @@ const PUBLIC_PATHS = [
   "/fonts",
   "/ws-test",
   "/api/ws-test",
-  "/sw-test",
-  "/sw-test/sw.js", // temp: service-worker capability probe (see public/swtest/)
   "/remote",
   "/api/remote",
   "/invite",
@@ -50,13 +48,6 @@ export async function handleRequest(req: Request): Promise<Response> {
   // Health check endpoint (always public)
   if (path === "/health") {
     return new Response("OK", { status: 200 });
-  }
-
-  // Temp: service worker capability probe on the Kindle browser
-  if (path === "/sw-test" || path === "/sw-test/sw.js") {
-    const file = path === "/sw-test" ? "/public/swtest/index.html" : "/public/swtest/sw.js";
-    const res = await serveStatic(file);
-    if (res) return res;
   }
 
   // Block direct signup - only allow via invite tokens
