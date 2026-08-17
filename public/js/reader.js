@@ -343,6 +343,16 @@
     var columnWidth = S.els.content.offsetWidth;
     var columnGap = window.innerWidth * 0.05;
     S.stepSize = columnWidth + columnGap;
+
+    // Pin the multicol geometry to the exact px values we paginate by. If left
+    // as vw (95vw/5vw), the used columns are fractional (e.g. 729.6px on a
+    // 768px viewport) while offsetWidth rounds to 730 — scrollLeft then drifts
+    // a fraction of a px per page turn and the next column creeps in on the
+    // right edge after ~15 pages.
+    var style = S.els.content.style;
+    style.width = columnWidth + 'px';
+    style.columnWidth = columnWidth + 'px';
+    style.columnGap = columnGap + 'px';
     
     var scrollW = S.els.content.scrollWidth;
     S.totalPages = Math.max(1, Math.round(scrollW / S.stepSize));
