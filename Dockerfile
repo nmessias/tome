@@ -2,12 +2,13 @@ FROM oven/bun:1-debian
 
 WORKDIR /app
 
-COPY package.json bun.lockb* ./
+COPY package.json bun.lock ./
 
-RUN bun install --frozen-lockfile || bun install
-
-# Source plugins (TOME_PLUGINS). Uncomment and adjust per deployment:
-# RUN bun add tome-source-royalroad tome-source-freewebnovel
+# Frozen lockfile makes the build deterministic (git deps pinned to exact
+# commits). Plugins are devDependencies — installed because NODE_ENV is not
+# set during build (ENV NODE_ENV=production below is runtime-only). --dev
+# keeps them present even if a builder injects NODE_ENV=production.
+RUN bun install --frozen-lockfile --dev
 
 # Install Playwright system dependencies and Firefox browser
 # (used by the royalroad plugin for Cloudflare bypass and auto-login)

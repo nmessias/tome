@@ -1,6 +1,7 @@
 /**
  * Better Auth CLI configuration
- * This file uses better-sqlite3 which works with the Node.js-based CLI
+ * This file uses better-sqlite3 (Node.js CLI only). It is NOT a dependency:
+ * run `bun add -d better-sqlite3` first if you need the @better-auth/cli migrations
  * The main auth.ts uses bun:sqlite which works at runtime
  */
 import { betterAuth } from "better-auth";
