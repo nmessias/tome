@@ -192,6 +192,37 @@ body.kindle .reader-header .settings-btn {
   margin: 0 0 1em 0;
 }
 
+/* Tables (RoyalRoad chapters ship many): keep them inside the page column —
+   a content-sized table in multicol bleeds over the next page on e-ink. */
+.reader-content table {
+  border-collapse: collapse;
+  width: 100%;
+  max-width: 100%;
+  /* Fixed layout: tables render at exactly their width and cells wrap instead
+     of expanding to content — a content-sized table in multicol bleeds over
+     the next page on e-ink. Colgroup (from the source) sets the proportions. */
+  table-layout: fixed;
+  margin: 0 0 1.2em 0;
+}
+
+.reader-content th,
+.reader-content td {
+  border: 1px solid #999;
+  padding: 4px 8px;
+  vertical-align: top;
+  word-break: break-word; /* older WebKit (Kindle) */
+  overflow-wrap: anywhere;
+}
+
+.reader-content tr {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.reader-content table p {
+  margin: 0;
+}
+
 .reader-content .chapter-title-prepended {
   font-size: 1.4em;
   font-weight: 600;
