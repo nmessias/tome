@@ -218,6 +218,24 @@ body.kindle .reader-header .settings-btn {
    needs the full column or labels become one character per line. */
 .reader-content table.responsive-table {
   width: 100% !important;
+  table-layout: auto;
+}
+
+.reader-content table.large-table {
+  font-size: 0.8em;
+  line-height: 1.3;
+}
+
+@media (max-width: 900px) {
+  .reader-content table.large-table {
+    font-size: 16px;
+    table-layout: auto;
+  }
+
+  .reader-content table.large-table td,
+  .reader-content table.large-table th {
+    overflow-wrap: anywhere;
+  }
 }
 
 .reader-content tr {
@@ -680,7 +698,7 @@ body.kindle .theme-btn.active {
   }
 
   .reader-header h1 {
-    font-size: 16px;
+    font-size: 16px; table-layout: fixed;
   }
 
   .reader-header .fiction-link {
