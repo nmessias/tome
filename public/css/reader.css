@@ -210,8 +210,14 @@ body.kindle .reader-header .settings-btn {
   border: 1px solid #999;
   padding: 4px 8px;
   vertical-align: top;
-  word-break: break-word; /* older WebKit (Kindle) */
-  overflow-wrap: anywhere;
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+
+/* RR's authored widths target desktop pages. On e-ink, a large reader font
+   needs the full column or labels become one character per line. */
+.reader-content table.responsive-table {
+  width: 100% !important;
 }
 
 .reader-content tr {
