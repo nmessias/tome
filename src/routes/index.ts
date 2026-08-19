@@ -1,7 +1,7 @@
 /**
  * Routes index - main request router
  */
-import { html, serveStatic, parseReaderSettings, redirect, parseFormData } from "../server";
+import { html, serveStatic, parseReaderSettings, redirect, parseFormData, compressIfPossible } from "../server";
 import { handlePageRoute } from "./pages";
 import { handleApiRoute } from "./api";
 import { ErrorPage, LoginPage, InvitePage, InviteExpiredPage } from "../templates";
@@ -41,6 +41,11 @@ function isPublicPath(path: string): boolean {
  * Main request handler
  */
 export async function handleRequest(req: Request): Promise<Response> {
+  const response = await routeRequest(req);
+  return compressIfPossible(req, response);
+}
+
+async function routeRequest(req: Request): Promise<Response> {
   const url = new URL(req.url);
   const path = url.pathname;
   const method = req.method;

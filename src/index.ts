@@ -9,6 +9,7 @@ import { PORT } from "./config";
 import { handleRequest } from "./routes";
 import { seedAdminUser } from "./lib/auth";
 import { runMigrations } from "./lib/migrate";
+import { clearExpiredCache } from "./services/cache";
 import {
   getFeatures,
   type FeatureWsData,
@@ -24,6 +25,11 @@ await loadPlugins();
 
 // Run migrations first (core + plugin migrations), then seed admin user
 runMigrations();
+
+// Expired cache rows are never auto-pruned (only the manual "Clear expired"
+// settings action deletes them); without this the SQLite file only grows.
+clearExpiredCache();
+setInterval(clearExpiredCache, 6 * 60 * 60 * 1000); // every 6h
 
 seedAdminUser()
   .then(() => {

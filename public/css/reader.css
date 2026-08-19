@@ -9,7 +9,7 @@
        url('/public/fonts/Literata-Variable.ttf') format('truetype');
   font-weight: 200 900;
   font-style: normal;
-  font-display: swap;
+  font-display: optional;
 }
 
 @font-face {
@@ -18,7 +18,7 @@
        url('/public/fonts/Literata-Variable.ttf') format('truetype');
   font-weight: 700;
   font-style: normal;
-  font-display: swap;
+  font-display: optional;
 }
 
 @font-face {
@@ -27,7 +27,7 @@
        url('/public/fonts/Literata-Italic-Variable.ttf') format('truetype');
   font-weight: 200 900;
   font-style: italic;
-  font-display: swap;
+  font-display: optional;
 }
 
 * {
@@ -178,6 +178,14 @@ body.kindle .reader-header .settings-btn {
   scrollbar-width: none;
   -ms-overflow-style: none;
   visibility: hidden;
+}
+
+/* Kindle has Bookerly locally: skip the Literata webfont entirely (avoids the
+   multi-hundred-KB ttf download on e-ink Wi-Fi and a second 150-column
+   re-fragmentation when metrics swap in). Likewise font-display: optional above
+   keeps non-Kindle from swapping post-paint. */
+body.kindle .reader-content {
+  font-family: "Bookerly", Georgia, serif;
 }
 
 .reader-content.ready {
@@ -526,6 +534,12 @@ body.kindle .remote-btn {
   width: 0%;
   transition: width 0.1s linear;
   pointer-events: none;
+}
+
+/* e-ink can't animate: the 0.1s transition repaints ~150 frames per chapter on
+   a device that treats each as a full refresh. Snap the width instead. */
+body.kindle .progress-bar {
+  transition: none;
 }
 
 body.kindle .progress-bar {

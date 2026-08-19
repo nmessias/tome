@@ -352,7 +352,6 @@
       style.columnWidth = '';
       style.columnGap = '';
       S.els.content.classList.add('ready');
-      window.addEventListener('scroll', function() { updateDesktopProgress(); }, { passive: true });
       updateDesktopProgress();
     } else {
       updatePages();
@@ -397,6 +396,7 @@
     var scrollW = S.els.content.scrollWidth;
     S.totalPages = Math.max(1, Math.round(scrollW / S.stepSize));
     S.totalPagesStr = ' / ' + S.totalPages;
+    S.lastGeomW = window.innerWidth;
     
     updateIndicator();
     updateProgressBar();
@@ -513,8 +513,39 @@
   // SPA NAVIGATION (unified scheme)
   // ============================================================
 
+  // Bounded SPA chapter cache. Every visited chapter's full HTML used to be
+  // held forever (fetchChapter stores, never evicts), and preloadChapters adds
+  // prev+next on every chapter — on a long read that is MBs of raw strings
+  // piling up in RAM on the Kindle's small heap, which is exactly what turns
+  // page flips progressively slower (leak). The SPA only ever renders the
+  // current chapter plus its prev/next, so keep a tiny LRU window; anything
+  // evicted just falls back to a full page load (navigateToChapter already
+  // does that for any ref not in cache).
+  var CACHE_LIMIT = 5;
+  var CACHE_ORDER = [];
+
+  function rememberChapter(ref, data) {
+    S.cache[ref] = data;
+    var i = CACHE_ORDER.indexOf(ref);
+    if (i !== -1) CACHE_ORDER.splice(i, 1);
+    CACHE_ORDER.push(ref);
+    while (CACHE_ORDER.length > CACHE_LIMIT) {
+      var oldest = CACHE_ORDER.shift();
+      delete S.cache[oldest];
+    }
+  }
+
+  function touchChapter(ref) {
+    var i = CACHE_ORDER.indexOf(ref);
+    if (i !== -1) {
+      CACHE_ORDER.splice(i, 1);
+      CACHE_ORDER.push(ref);
+    }
+  }
+
   function fetchChapter(chapterRef, callback) {
     if (S.cache[chapterRef]) {
+      touchChapter(chapterRef);
       callback(S.cache[chapterRef]);
       return;
     }
@@ -525,7 +556,7 @@
       if (xhr.readyState === 4 && xhr.status === 200) {
         try {
           var data = JSON.parse(xhr.responseText);
-          S.cache[chapterRef] = data;
+          rememberChapter(chapterRef, data);
           callback(data);
         } catch (e) {
           callback(null);
@@ -535,11 +566,12 @@
     xhr.send();
   }
 
+  // Preload only the NEXT chapter, and only after first paint (see renderChapter
+  // / init). Fetching prev too doubles the payload (~190KB) on every chapter nav
+  // for a chapter that's normally already sitting in the LRU after a forward
+  // flip — and the very first load was racing the 150-column layout with it.
   function preloadChapters() {
-    var prevRef = S.els.navPrev && S.els.navPrev.getAttribute('data-ref');
     var nextRef = S.els.navNext && S.els.navNext.getAttribute('data-ref');
-    
-    if (prevRef && !S.cache[prevRef]) fetchChapter(prevRef, function() {});
     if (nextRef && !S.cache[nextRef]) fetchChapter(nextRef, function() {});
   }
 
@@ -564,6 +596,11 @@
   }
 
   function renderChapter(chapter, goToLastPage) {
+    // Hide the content until the new chapter is laid out — without this the
+    // partially-laid-out multicol block (old geometry, new content) is visible
+    // during the swap and the Kindle repaints the whole fragment 2-3 times.
+    S.els.content.classList.remove('ready');
+
     S.els.content.innerHTML = chapter.content;
     
     if (S.els.titleEl) S.els.titleEl.textContent = chapter.title;
@@ -585,6 +622,7 @@
       if (!S.isDesktop && goToLastPage && S.totalPages > 1) {
         goToPage(S.totalPages - 1);
       }
+      S.els.content.classList.add('ready');
       preloadChapters();
     }, 100);
   }
@@ -603,10 +641,13 @@
     // Render chapter
     renderChapter(chapter, goToLastPage);
     
-    // Update URL with pushState
-    if (window.history && window.history.pushState) {
+    // Update URL with replaceState. Chapter content is re-rendered in place and
+    // page position is replaceState'd on every turn, so pushState per chapter
+    // only piles up an unbounded history stack (N back-presses to leave the
+    // book) that can keep stale render trees alive on a small heap.
+    if (window.history && window.history.replaceState) {
       try {
-        window.history.pushState({ source: S.source, fictionRef: S.fictionRef, chapterRef: S.chapterRef, page: 0 }, '', chapterUrl(S.chapterRef));
+        window.history.replaceState({ source: S.source, fictionRef: S.fictionRef, chapterRef: S.chapterRef, page: 0 }, '', chapterUrl(S.chapterRef));
       } catch (e) {}
     }
   }
@@ -666,6 +707,11 @@
         S.chapterRef = S.chapterRef || urlMatch[3];
       }
     }
+  }
+
+  function onScroll() {
+    if (!S.isDesktop && S.mode !== 'scrolled') return;
+    updateDesktopProgress();
   }
 
   function attachHandlers() {
@@ -757,7 +803,10 @@
             updatePages();
             goToPage(0);
           }
-        } else if (!S.isDesktop) {
+        } else if (!S.isDesktop && window.innerWidth !== S.lastGeomW) {
+          // Re-paginate only on a real width change (innerWidth drives columnGap).
+          // Height-only shifts (toolbar/keyboard chrome) don't change the 150-column
+          // layout — re-fragmenting for them is the most expensive no-op the page runs.
           updatePages();
           goToPage(S.page);
         }
@@ -765,11 +814,9 @@
       }, 150);
     };
     
-    if (S.isDesktop || S.mode === 'scrolled') {
-      window.addEventListener('scroll', function() {
-        updateDesktopProgress();
-      }, { passive: true });
-    }
+    // One named scroll handler for desktop/scrolled progress tracking; it no-ops
+    // in paged mode. Registered once — applyMode must not add more.
+    window.addEventListener('scroll', onScroll, { passive: true });
   }
 
   function init() {
@@ -813,15 +860,16 @@
       requestAnimationFrame(function() {
         requestAnimationFrame(function() {
           S.els.content.classList.add('ready');
+          preloadChapters();
         });
       });
     } else {
       setTimeout(function() {
         S.els.content.classList.add('ready');
+        preloadChapters();
       }, 50);
     }
     
-    preloadChapters();
     TomeRemote.init({
       indicator: function() { return S.els.indicator; },
       nextPage: nextPage,

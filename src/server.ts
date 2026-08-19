@@ -6,6 +6,34 @@ import { DEFAULT_READER_SETTINGS, type ReaderSettings, type ThemeName } from "./
 // ============ Response Helpers ============
 
 /**
+ * gzip text/json responses when the client advertises support. Prose HTML/JSON
+ * is ~70-75% compressible — the ~95KB chapter page becomes ~25-30KB — and the
+ * Kindle's WebKit negotiates gzip fine. Binary bodies (images, fonts) are
+ * skipped. Spinning at handleRequest covers html/json/serveStatic in one place.
+ */
+export async function compressIfPossible(req: Request, res: Response): Promise<Response> {
+  const type = res.headers.get("content-type") || "";
+  // Only compress text-ish payloads; leave images/fonts/audio/video alone.
+  const compressible = !/^(image|font|audio|video)\//.test(type);
+  if (compressible) {
+    res.headers.set("Vary", "Accept-Encoding");
+  } else {
+    return res;
+  }
+  if (!/\bgzip\b/.test(req.headers.get("accept-encoding") || "")) return res;
+  if (res.headers.has("Content-Encoding")) return res;
+  if (!res.body) return res; // redirects & co.
+  const body = Buffer.from(await new Response(res.body).arrayBuffer());
+  const gz = Bun.gzipSync(body);
+  if (gz.length >= body.length) return res; // already tiny/incompressible
+  const headers = new Headers(res.headers);
+  headers.set("Vary", "Accept-Encoding"); // .set overwrites, so no dupes
+  headers.set("Content-Encoding", "gzip");
+  return new Response(gz, { status: res.status, headers });
+}
+
+
+/**
  * Create HTML response from JSX element or string
  */
 export function html(content: JSX.Element, status: number = 200): Response {
