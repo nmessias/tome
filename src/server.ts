@@ -10,26 +10,39 @@ import { DEFAULT_READER_SETTINGS, type ReaderSettings, type ThemeName } from "./
  * is ~70-75% compressible — the ~95KB chapter page becomes ~25-30KB — and the
  * Kindle's WebKit negotiates gzip fine. Binary bodies (images, fonts) are
  * skipped. Spinning at handleRequest covers html/json/serveStatic in one place.
+ *
+ * Deliberately crash-proof: this is a pure optimization, so any failure (a
+ * locked/stream body, an odd content-type) must degrade to the untouched
+ * response, never take the server down.
  */
 export async function compressIfPossible(req: Request, res: Response): Promise<Response> {
-  const type = res.headers.get("content-type") || "";
-  // Only compress text-ish payloads; leave images/fonts/audio/video alone.
-  const compressible = !/^(image|font|audio|video)\//.test(type);
-  if (compressible) {
+  try {
+    const type = res.headers.get("content-type") || "";
+    // Only compress text-ish payloads; leave images/fonts/audio/video alone.
+    if (/^(image|font|audio|video)\//.test(type)) return res;
+    if (res.body === null) return res; // redirects & co.
+
     res.headers.set("Vary", "Accept-Encoding");
-  } else {
+    if (!/\bgzip\b/.test(req.headers.get("accept-encoding") || "")) return res;
+    if (res.headers.has("Content-Encoding")) return res;
+
+    // Read the body directly — never re-wrap res.body into a new Response or
+    // the stream is handed to the reader already locked and Bun throws
+    // "ReadableStream is locked". Always hand back a fresh Response so the
+    // original (possibly consumed) one is never returned.
+    const bytes = await res.arrayBuffer();
+    const gz = Bun.gzipSync(bytes);
+    const headers = new Headers(res.headers);
+    headers.set("Vary", "Accept-Encoding");
+    if (gz.length < bytes.byteLength) {
+      headers.set("Content-Encoding", "gzip");
+      return new Response(gz, { status: res.status, headers });
+    }
+    return new Response(bytes, { status: res.status, headers });
+  } catch {
+    // Optimization only — never let compression take down the server.
     return res;
   }
-  if (!/\bgzip\b/.test(req.headers.get("accept-encoding") || "")) return res;
-  if (res.headers.has("Content-Encoding")) return res;
-  if (!res.body) return res; // redirects & co.
-  const body = Buffer.from(await new Response(res.body).arrayBuffer());
-  const gz = Bun.gzipSync(body);
-  if (gz.length >= body.length) return res; // already tiny/incompressible
-  const headers = new Headers(res.headers);
-  headers.set("Vary", "Accept-Encoding"); // .set overwrites, so no dupes
-  headers.set("Content-Encoding", "gzip");
-  return new Response(gz, { status: res.status, headers });
 }
 
 
