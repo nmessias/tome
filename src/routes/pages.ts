@@ -357,8 +357,11 @@ export async function handlePageRoute(
 
     try {
       const page = parseInt(url.searchParams.get("page") || "1", 10);
+      const unreadOnly = url.searchParams.get("new") === "1";
       const fictions = await source.getFollows(userId);
-      return html(FollowsPage({ source, fictions, page, settings, sources: getEnabledSources(userId) }));
+      return html(
+        FollowsPage({ source, fictions, page, unreadOnly, settings, sources: getEnabledSources(userId) })
+      );
     } catch (error: any) {
       console.error(`Error fetching follows for ${source.name}:`, error);
       return html(

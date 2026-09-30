@@ -200,9 +200,13 @@ body.kindle .btn-outline:visited {
   color: #000;
 }
 
+/* Sized for a thumb on a 6" e-ink screen, where 6px/12px text was well under
+   a reliable tap target and every mis-tap costs a full page refresh. */
 .btn-small {
-  padding: 6px 10px;
-  font-size: 12px;
+  padding: 10px 14px;
+  font-size: 14px;
+  display: inline-block;
+  margin: 0 6px 6px 0;
 }
 
 /* Cards */
@@ -227,8 +231,52 @@ body.kindle .card {
   margin-bottom: 8px;
 }
 
+/* Recency sits quieter than the chapter name it qualifies. */
+.card-ago {
+  color: #555;
+}
+
+body.kindle .card-ago {
+  color: #666;
+}
+
 .card-actions {
   margin-top: 8px;
+}
+
+/* Unread rows carry a rule down the edge plus a leading badge. Both are
+   weight and position, never colour: the target screen is grayscale. */
+.card-unread {
+  border-left: 4px solid #212427;
+  padding-left: 8px;
+}
+
+body.kindle .card-unread {
+  border-left-color: #000;
+}
+
+.badge-new {
+  font-size: 12px;
+  letter-spacing: 1px;
+  padding: 2px 6px;
+  margin-right: 6px;
+  border: 1px solid #212427;
+  white-space: nowrap;
+  vertical-align: 2px;
+}
+
+body.kindle .badge-new {
+  border-color: #000;
+}
+
+/* Filter controls above a list */
+.filter-bar {
+  margin-bottom: 12px;
+}
+
+.filter-note {
+  font-size: 14px;
+  font-weight: normal;
 }
 
 /* Lists */

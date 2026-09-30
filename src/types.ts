@@ -87,6 +87,11 @@ export interface FollowedFiction extends Fiction {
   hasUnread?: boolean;
   nextChapterId?: number; // Next chapter to read (after lastRead, or first chapter)
   nextChapterTitle?: string;
+  // Human-readable recency of each row, as the source words it
+  // ("32 minutes ago"). Pre-formatted: sources render their own relative
+  // times and no client-side clock is involved.
+  lastUpdateAgo?: string;
+  lastReadAgo?: string;
 }
 
 export interface HistoryEntry {

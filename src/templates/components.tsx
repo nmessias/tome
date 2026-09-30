@@ -45,11 +45,24 @@ export function Header({
     { href: "/settings", label: "Settings" },
   ];
 
+  // Every source contributes its own links, so the same labels repeat once per
+  // source — "Search · Library · Search · Library" — and the bar wraps over
+  // three rows above every list page. Keep the first link per label: with
+  // several sources enabled the rest are siblings behind the same word, and a
+  // mis-tap on a duplicate is worse than one extra tap to reach the source home.
+  const seenLabels = new Set<string>();
+  const uniqueLinks = links.filter((l) => {
+    const key = l.label.toLowerCase();
+    if (seenLabels.has(key)) return false;
+    seenLabels.add(key);
+    return true;
+  });
+
   return (
     <header class="header">
       <a href="/" class="header-title">Tome</a>
       <nav class="nav">
-        {links.map((l) => (
+        {uniqueLinks.map((l) => (
           <a
             href={l.href}
             class={`nav-link${currentPath === l.href ? " active" : ""}`}
@@ -246,16 +259,25 @@ export function FictionCard({
   const truncatedDesc = fiction.description ? truncateText(fiction.description, 150) : "";
   const hasMoreDesc = fiction.description && fiction.description.length > 150;
 
+  // Nothing new when the source says so, or when the latest chapter is the one
+  // already read. Either signal alone is enough; treating them as OR keeps a
+  // stale badge from ever pointing at an up-to-date row.
+  const isUnread = !!f.hasUnread;
+  const isCaughtUp = showUnread && !isUnread;
+
   return (
-    <div class="card" style="display: flex; gap: 12px;">
+    <div class={`card${isUnread ? " card-unread" : ""}`} style="display: flex; gap: 12px;">
       <CoverImage url={fiction.coverUrl} alt={fiction.title} />
       <div style="flex: 1; min-width: 0;">
         <div class="card-title">
           <span safe>{titlePrefix}</span>
+          {/* Leads the title rather than trailing it: long fiction titles wrap,
+              and a marker parked at the end lands on line 2 where a scanning
+              eye never lands. */}
+          {showUnread && isUnread && <strong class="badge-new" safe> NEW </strong>}
           <a href={fictionHref(sourceName, fiction)} safe>
             {fiction.title}
           </a>
-          {showUnread && f.hasUnread && <strong> [NEW]</strong>}
         </div>
         
         {tagsLine && (
@@ -280,6 +302,7 @@ export function FictionCard({
             ) : (
               <span safe>{f.latestChapter}</span>
             )}
+            {f.lastUpdateAgo && <span class="card-ago" safe>{`  ·  ${f.lastUpdateAgo}`}</span>}
           </div>
         )}
 
@@ -293,22 +316,30 @@ export function FictionCard({
             ) : (
               <span safe>{f.lastRead}</span>
             )}
+            {f.lastReadAgo && <span class="card-ago" safe>{`  ·  ${f.lastReadAgo}`}</span>}
           </div>
         )}
 
         {showContinue && (
           <div class="card-actions">
-            {f.nextChapterId ? (
+            {/* The action states whether there is anything to read, because on a
+                list of 50 the button is the only thing that differs between a
+                row with 30 new chapters and one you already finished. */}
+            {f.nextChapterId && !isCaughtUp ? (
               <a href={chapterHref(sourceName, fiction, f.nextChapterId)} class="btn btn-small">
                 Continue
               </a>
-            ) : f.lastReadChapterId ? (
-              <a href={fictionHref(sourceName, fiction)} class="btn btn-outline btn-small">
-                View Chapters
-              </a>
             ) : (
               <a href={fictionHref(sourceName, fiction)} class="btn btn-outline btn-small">
-                Start Reading
+                {isCaughtUp ? "Up to date" : f.lastReadChapterId ? "Chapters" : "Start Reading"}
+              </a>
+            )}
+            {/* Always a second target: reaching the chapter list otherwise means
+                guessing that the title is a link, and there is no hover on an
+                e-ink screen to reveal it. */}
+            {f.nextChapterId && !isCaughtUp && (
+              <a href={fictionHref(sourceName, fiction)} class="btn btn-outline btn-small">
+                Chapters
               </a>
             )}
           </div>
