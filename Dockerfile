@@ -10,15 +10,19 @@ COPY package.json bun.lock ./
 # keeps them present even if a builder injects NODE_ENV=production.
 RUN bun install --frozen-lockfile --dev
 
-# Install Playwright system dependencies and browsers
+# Install Playwright system dependencies and Chromium
 # (used by the royalroad plugin for Cloudflare bypass and auto-login).
-# Chromium is the engine Cloudflare tolerates: headless Chromium and Firefox
-# both get the login POST rejected. Firefox stays installed as a fallback
-# (ROYAL_ROAD_BROWSER=firefox). xvfb comes from apt - it is not a Playwright
-# install-deps target.
-RUN bunx playwright install-deps chromium firefox \
-    && bunx playwright install chromium firefox \
-    && apt-get update && apt-get install -y --no-install-recommends xvfb \
+#
+# Chromium only, and headful: Cloudflare rejects the Royal Road login POST for
+# both Firefox and headless Chromium, so auto-login needs a real Chromium
+# window against an Xvfb display (scripts/start.sh starts it). Firefox was
+# dropped because it cannot log in at all - it only ever cost image size and
+# build time. Set ROYAL_ROAD_BROWSER=firefox to re-add it via a custom image.
+#
+# xvfb comes from apt; it is not a Playwright install-deps target.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends xvfb \
+    && bunx playwright install --with-deps chromium \
     && rm -rf /var/lib/apt/lists/*
 
 COPY . .
