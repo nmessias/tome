@@ -14,8 +14,9 @@ RUN bun install --frozen-lockfile --dev
 # (used by the royalroad plugin for Cloudflare bypass and auto-login).
 # Chromium is the engine Cloudflare tolerates: headless Chromium and Firefox
 # both get the login POST rejected. Firefox stays installed as a fallback
-# (ROYAL_ROAD_BROWSER=firefox).
-RUN bunx playwright install-deps chromium firefox xvfb \
+# (ROYAL_ROAD_BROWSER=firefox). xvfb comes from apt - it is not a Playwright
+# install-deps target.
+RUN bunx playwright install-deps chromium firefox \
     && bunx playwright install chromium firefox \
     && apt-get update && apt-get install -y --no-install-recommends xvfb \
     && rm -rf /var/lib/apt/lists/*
