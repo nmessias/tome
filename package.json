@@ -28,7 +28,9 @@
   "scripts": {
     "start": "bun run src/index.ts",
     "dev": "bun --watch run src/index.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "rr:login": "bun run scripts/rr-login.ts",
+    "rr:check": "bun run scripts/rr-login.ts --check"
   },
   "dependencies": {
     "@kitajs/html": "^4.2.11",
