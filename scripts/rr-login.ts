@@ -212,8 +212,13 @@ async function verifyFollows(cookie: string): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  ensureDisplay();
-
+  // A check is two HTTP requests - no browser, so no display needed.
+  //
+  // Note what --check can and cannot tell you: the follows page is served from
+  // the server's cache, so a check passes even when the Royal Road session has
+  // expired. It verifies that Tome is up, that our cookie authenticates, and
+  // that the page renders - not that the session is still valid upstream. Use
+  // the full login when you need certainty.
   const cookie = await loginToTome();
 
   if (CHECK_ONLY) {
@@ -221,6 +226,7 @@ async function main(): Promise<void> {
     return;
   }
 
+  ensureDisplay();
   const values = await loginToRoyalRoad();
   await pushCredentials(cookie, values);
   await verifyFollows(cookie);
