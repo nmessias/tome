@@ -7,8 +7,14 @@ dockerfile = "Dockerfile"
 [env]
 NODE_ENV = "production"
 PORT = "3000"
-# Enable Playwright Firefox fallback for Cloudflare-challenged sources (RoyalRoad)
+# Enable Playwright browser fallback for Cloudflare-challenged sources (RoyalRoad)
 ENABLE_BROWSER = "true"
+# Cloudflare rejects the login POST when the browser runs headless, so the
+# plugin drives a real Chromium window against an Xvfb display (see
+# scripts/start.sh). Set to "true" only when debugging locally.
+ROYAL_ROAD_HEADLESS = "false"
+# "chromium" is the engine Cloudflare tolerates; "firefox" cannot log in.
+ROYAL_ROAD_BROWSER = "chromium"
 # Source plugins to load at startup (must also be installed in the image)
 TOME_PLUGINS = "tome-source-royalroad,tome-source-freewebnovel,tome-feature-watch,tome-source-asura"
 

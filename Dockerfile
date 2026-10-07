@@ -10,9 +10,15 @@ COPY package.json bun.lock ./
 # keeps them present even if a builder injects NODE_ENV=production.
 RUN bun install --frozen-lockfile --dev
 
-# Install Playwright system dependencies and Firefox browser
-# (used by the royalroad plugin for Cloudflare bypass and auto-login)
-RUN bunx playwright install-deps firefox && bunx playwright install firefox
+# Install Playwright system dependencies and browsers
+# (used by the royalroad plugin for Cloudflare bypass and auto-login).
+# Chromium is the engine Cloudflare tolerates: headless Chromium and Firefox
+# both get the login POST rejected. Firefox stays installed as a fallback
+# (ROYAL_ROAD_BROWSER=firefox).
+RUN bunx playwright install-deps chromium firefox xvfb \
+    && bunx playwright install chromium firefox \
+    && apt-get update && apt-get install -y --no-install-recommends xvfb \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY . .
 
