@@ -7,6 +7,8 @@ dockerfile = "Dockerfile"
 [env]
 NODE_ENV = "production"
 PORT = "3000"
+# Enable Playwright Firefox fallback for Cloudflare-challenged sources (RoyalRoad)
+ENABLE_BROWSER = "true"
 # Source plugins to load at startup (must also be installed in the image)
 TOME_PLUGINS = "tome-source-royalroad,tome-source-freewebnovel,tome-feature-watch,tome-source-asura"
 
