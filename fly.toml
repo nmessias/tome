@@ -20,11 +20,13 @@ internal_port = 3_000
 min_machines_running = 1
 
   [[http_service.checks]]
-  grace_period = "10s"
+  # Firefox solving a Cloudflare challenge saturates this machine; a short
+  # grace period was failing checks mid-fetch and interrupting responses.
+  grace_period = "60s"
   interval = "30s"
   method = "GET"
   path = "/health"
-  timeout = "5s"
+  timeout = "15s"
 
   [http_service.concurrency]
   hard_limit = 50
@@ -36,6 +38,10 @@ destination = "/app/data"
 source = "tome_data"
 
 [[vm]]
-cpus = 1
-memory = "512mb"
-memory_mb = 512
+# The RoyalRoad scraper falls back to headless Firefox whenever Cloudflare
+# challenges a request. On shared-cpu-1x/512mb Firefox thrashed (9s launch,
+# 58s context creation, 60s navigation timeouts) and the machine ran out of
+# breathing room for the rest of the app.
+cpus = 2
+memory = "2gb"
+memory_mb = 2048
