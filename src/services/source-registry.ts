@@ -213,9 +213,10 @@ export function getEnabledSources(userId: string): Source[] {
  * The returned source patches stale chapter nav: chapter rows cache their
  * prev/next for 30 days, so a cached "latest chapter" keeps nextRef=null
  * after a new chapter releases. Fiction rows refresh hourly, so when a
- * chapter claims an edge (null prev/next) its nav is reconciled against the
- * fiction's chapter list (usually a cheap cache hit). Only fills null refs —
- * never overwrites real nav — and degrades to the chapter as-is on failure.
+ * chapter claims an edge (null next) its nav is reconciled against the
+ * fiction's chapter list (usually a cheap cache hit). Only a null *next* is
+ * reconciled (a null prev is the real first chapter), it never overwrites real
+ * nav, and it degrades to the chapter as-is on failure or after a short wait.
  */
 export function getSource(userId: string, name: string): Source | null {
   const source = getSourceByName(name);
@@ -232,6 +233,9 @@ export function getSource(userId: string, name: string): Source | null {
   };
 }
 
+/** How long a chapter view may wait on the fiction lookup before showing the chapter as-is. */
+const EDGE_NAV_WAIT_MS = 4000;
+
 async function patchEdgeNav(
   source: Source,
   userId: string,
@@ -239,10 +243,20 @@ async function patchEdgeNav(
   chapterRef: string,
   chapter: ChapterContent
 ): Promise<ChapterContent> {
-  if (chapter.prevRef && chapter.nextRef) return chapter;
+  // Only a missing *next* can be stale (a new chapter released). A missing prev
+  // is just the real first chapter; looking the fiction up to learn that put a
+  // live scrape - ~40s when the upstream blocks it - in front of every
+  // first-chapter view.
+  if (chapter.nextRef) return chapter;
   let chapters: Fiction["chapters"];
   try {
-    chapters = (await source.getFiction!(fictionRef, userId))?.chapters;
+    // Bounded: this is a nicety and never worth holding the page for.
+    chapters = (
+      await Promise.race([
+        source.getFiction!(fictionRef, userId),
+        new Promise<undefined>((resolve) => setTimeout(resolve, EDGE_NAV_WAIT_MS)),
+      ])
+    )?.chapters;
   } catch {
     return chapter;
   }
@@ -255,8 +269,7 @@ async function patchEdgeNav(
   // Stay in the same ref space the URL used (numeric id vs slug).
   const bySlug = chapters[idx].slug != null && keys.has(chapters[idx].slug as string);
   const refOf = (c: { id: number; slug?: string }) => (bySlug && c.slug ? c.slug : String(c.id));
-  if (!chapter.prevRef && idx > 0) chapter.prevRef = refOf(chapters[idx - 1]);
-  if (!chapter.nextRef && idx < chapters.length - 1) chapter.nextRef = refOf(chapters[idx + 1]);
+  if (idx < chapters.length - 1) chapter.nextRef = refOf(chapters[idx + 1]);
   return chapter;
 }
 
