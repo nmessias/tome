@@ -15,6 +15,12 @@ ENABLE_BROWSER = "true"
 ROYAL_ROAD_HEADLESS = "false"
 # "chromium" is the engine Cloudflare tolerates; "firefox" cannot log in.
 ROYAL_ROAD_BROWSER = "chromium"
+# Royal Road's Cloudflare challenges Fly's datacenter IP forever, so the scraper
+# browser leaves through a tailnet exit node on a residential/mobile IP (the
+# phone, moto-g75-5g). Needs the TS_AUTHKEY secret (reusable + ephemeral key):
+#   fly secrets set TS_AUTHKEY=tskey-auth-... -a tome-in
+# Unset, scripts/start.sh skips Tailscale and the browser goes out direct.
+TS_EXIT_NODE = "100.115.240.61"
 # Source plugins to load at startup (must also be installed in the image)
 TOME_PLUGINS = "tome-source-royalroad,tome-source-freewebnovel,tome-feature-watch,tome-source-asura"
 

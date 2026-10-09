@@ -25,6 +25,14 @@ RUN apt-get update \
     && bunx playwright install --with-deps chromium \
     && rm -rf /var/lib/apt/lists/*
 
+# Tailscale, userspace mode: scripts/start.sh joins the tailnet and sends the
+# Royal Road browser out through an exit node (see the TS_* notes in fly.toml).
+# Static Go binaries, so they run fine on this Debian base. Pinned for the same
+# reason bun.lock is frozen.
+COPY --from=docker.io/tailscale/tailscale:v1.102.5 /usr/local/bin/tailscaled /app/tailscaled
+COPY --from=docker.io/tailscale/tailscale:v1.102.5 /usr/local/bin/tailscale /app/tailscale
+RUN mkdir -p /var/run/tailscale /var/cache/tailscale /var/lib/tailscale
+
 COPY . .
 
 RUN mkdir -p /app/data
