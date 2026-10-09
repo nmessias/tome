@@ -48,7 +48,7 @@
     "@types/bun": "latest",
     "@types/qrcode": "^1.5.6",
     "tome-source-freewebnovel": "github:nmessias/tome-source-freewebnovel",
-    "tome-source-royalroad": "github:nmessias/tome-source-royalroad#9a8923e3bcd17bb1f3a612b2a3ebf82cc02f8979",
+    "tome-source-royalroad": "github:nmessias/tome-source-royalroad#8acc66fa3253c007ce370bc84cd67f05ebf65525",
     "typescript": "^5.0.0"
   }
 }
