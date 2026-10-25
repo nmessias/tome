@@ -8,7 +8,13 @@ COPY package.json bun.lock ./
 # commits). Plugins are devDependencies — installed because NODE_ENV is not
 # set during build (ENV NODE_ENV=production below is runtime-only). --dev
 # keeps them present even if a builder injects NODE_ENV=production.
-RUN bun install --frozen-lockfile --dev
+#
+# --ignore-scripts: `better-sqlite3` arrives transitively through the plugin's
+# `tome` package, but the server uses bun:sqlite at runtime (only the Node CLI
+# auth helper imports better-sqlite3). Its install script tries to compile
+# against Bun's Node ABI and fails in this image without a Python toolchain.
+# impit and Playwright ship prebuilt binaries, so no lifecycle script is needed.
+RUN bun install --frozen-lockfile --dev --ignore-scripts
 
 # Install Playwright system dependencies and Chromium
 # (used by the royalroad plugin for Cloudflare bypass and auto-login).
