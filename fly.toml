@@ -15,13 +15,12 @@ ENABLE_BROWSER = "true"
 ROYAL_ROAD_HEADLESS = "false"
 # "chromium" is the engine Cloudflare tolerates; "firefox" cannot log in.
 ROYAL_ROAD_BROWSER = "chromium"
-# Royal Road's Cloudflare challenges Fly's datacenter IP forever, so the scraper
-# browser leaves through a tailnet exit node on a residential/mobile IP (the
-# phone, moto-g75-5g). Needs the TS_AUTHKEY secret (reusable + ephemeral key):
-#   fly secrets set TS_AUTHKEY=tskey-auth-... -a tome-in
-# Unset, scripts/start.sh skips Tailscale and the browser goes out direct.
-TS_EXIT_NODE = "100.115.240.61"
-# Source plugins to load at startup (must also be installed in the image)
+# Royal Road's HTML pages are fetched directly with Chrome TLS impersonation
+# (the plugin uses impit). Playwright is only the JavaScript-challenge fallback.
+# The old automatic Tailscale exit-node path is gone: it bricked every request
+# when the phone went offline. To opt back in deliberately, set
+# ROYAL_ROAD_USE_TAILSCALE=true plus TS_AUTHKEY (a reusable + ephemeral key)
+# and TS_EXIT_NODE as fly secrets - see scripts/start.sh.
 TOME_PLUGINS = "tome-source-royalroad,tome-source-freewebnovel,tome-feature-watch,tome-source-asura"
 
 [http_service]
@@ -50,10 +49,10 @@ destination = "/app/data"
 source = "tome_data"
 
 [[vm]]
-# The RoyalRoad scraper falls back to headless Firefox whenever Cloudflare
-# challenges a request. On shared-cpu-1x/512mb Firefox thrashed (9s launch,
-# 58s context creation, 60s navigation timeouts) and the machine ran out of
-# breathing room for the rest of the app.
+# The RoyalRoad plugin's Playwright fallback launches a headful Chromium when a
+# JavaScript challenge needs solving. On shared-cpu-1x/512mb it thrashed (9s
+# launch, 58s context creation, 60s navigation timeouts) and left no room for
+# the rest of the app.
 cpus = 2
 memory = "2gb"
 memory_mb = 2048

@@ -47,7 +47,7 @@ Restart the server; the source appears in Settings and under `/read/royalroad/..
 ## Requirements
 
 - [Bun](https://bun.sh) runtime (v1.0+)
-- Chromium (installed automatically by Playwright)
+- Chromium (optional Playwright fallback; installed in the Docker image)
 
 ## Installation
 
@@ -96,11 +96,24 @@ http://<your-server-ip>:3000
 1. Navigate to `/setup` on Tome
 2. Copy your session cookies from your browser:
    - For Royal Road: `.AspNetCore.Identity.Application`
-   - Optional: `cf_clearance` (for Cloudflare)
+   - `cf_clearance` is not needed: it is bound to the machine that earned it,
+     so the scraper deliberately drops it and impersonates Chrome instead
 3. Paste them into the setup form
 4. Click "Save Cookies"
 
 Your reading progress will now sync with the source.
+
+### Royal Road networking
+
+Royal Road's HTML pages are fetched directly with Chrome TLS impersonation
+(`impit`), including authenticated `/my/follows`, `/my/readlater` and
+`/my/history` when a session cookie is stored. This works from Fly and other
+datacenter hosts, so no Tailscale exit node or residential proxy is required.
+
+Playwright Chromium is only a fallback for a JavaScript challenge or an
+interactive login. `ROYAL_ROAD_PROXY` remains available as an optional manual
+egress proxy for both paths. The old automatic Tailscale setup is gated behind
+`ROYAL_ROAD_USE_TAILSCALE=true`; leave it unset unless you deliberately need it.
 
 ## Deployment
 

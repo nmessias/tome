@@ -2,12 +2,12 @@
 /**
  * Refresh the Royal Road session on a remote Tome server.
  *
- * Why this exists: Royal Road sits behind Cloudflare, which challenges *login
- * submissions* from datacenter IPs. A Tome server on Fly can therefore read
- * public pages fine but can never log in - `auto-login` fails there even with a
- * real headful Chromium. Run this from a machine on a network Cloudflare trusts
- * (your laptop) and it logs in for real, then hands the fresh session cookie to
- * the server through Tome's own settings endpoint.
+ * Why this exists: Cloudflare can challenge Royal Road *login submissions*
+ * from datacenter IPs, even though the Chrome-impersonating HTTP scraper can
+ * read normal pages. The plugin tries that HTTP login first and falls back to
+ * a browser; if both are challenged, run this from a machine on a trusted
+ * network (your laptop). It logs in for real, then hands the fresh session
+ * cookie to the server through Tome's own settings endpoint.
  *
  *   bun run scripts/rr-login.ts              # login + push cookie + verify
  *   bun run scripts/rr-login.ts --check      # only report server-side health
