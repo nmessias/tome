@@ -17,10 +17,12 @@ ROYAL_ROAD_HEADLESS = "false"
 ROYAL_ROAD_BROWSER = "chromium"
 # Royal Road's HTML pages are fetched directly with Chrome TLS impersonation
 # (the plugin uses impit). Playwright is only the JavaScript-challenge fallback.
-# The old automatic Tailscale exit-node path is gone: it bricked every request
-# when the phone went offline. To opt back in deliberately, set
-# ROYAL_ROAD_USE_TAILSCALE=true plus TS_AUTHKEY (a reusable + ephemeral key)
-# and TS_EXIT_NODE as fly secrets - see scripts/start.sh.
+# The Royal Road browser now routes through the tailnet exit node (the Moto G75),
+# so it leaves from a residential/mobile IP instead of Fly's blocked datacenter IP.
+# start.sh joins the tailnet and exports ROYAL_ROAD_PROXY when both variables
+# are set; TS_AUTHKEY stays a fly secret (reusable + ephemeral key).
+ROYAL_ROAD_USE_TAILSCALE = "true"
+TS_EXIT_NODE = "100.115.240.61"
 TOME_PLUGINS = "tome-source-royalroad,tome-source-freewebnovel,tome-feature-watch,tome-source-asura"
 
 [http_service]
