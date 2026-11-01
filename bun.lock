@@ -17,7 +17,7 @@
         "@types/bun": "latest",
         "@types/qrcode": "^1.5.6",
         "tome-source-freewebnovel": "github:nmessias/tome-source-freewebnovel",
-        "tome-source-royalroad": "github:nmessias/tome-source-royalroad#8dc10e9beae435688509927a872e834175fdcd07",
+        "tome-source-royalroad": "github:nmessias/tome-source-royalroad#92c3732f41ef1aad709b2d77504a42359a494406",
         "typescript": "^5.0.0",
       },
       "optionalDependencies": {
@@ -280,7 +280,7 @@
 
     "tome-source-freewebnovel": ["tome-source-freewebnovel@github:nmessias/tome-source-freewebnovel#30151d3", { "dependencies": { "linkedom": "^0.16.0", "tome": "github:nmessias/tome" } }, "nmessias-tome-source-freewebnovel-30151d3", "sha512-NXA9SPJ3iF44HjN9avBQeUs/ay8Qa5DJioOu7pBQZqcxsTOWxjrgHXKsJT+9TuE36pgXzR9BFrRXtSV69iXVBg=="],
 
-    "tome-source-royalroad": ["tome-source-royalroad@github:nmessias/tome-source-royalroad#8dc10e9", { "dependencies": { "impit": "^0.14.7", "linkedom": "^0.16.0", "tome": "github:nmessias/tome#810ca18a985e57bdf4ca35cab3314dde9706c303" }, "optionalDependencies": { "playwright": "^1.40.0" } }, "nmessias-tome-source-royalroad-8dc10e9", "sha512-UJuJTz+HZ33Un8+fPc4bsJbfPjW6e5GK6MnshhRCB+xraGHF6IdSS1nbBW+zyjFKL7bwRynDTvneBRbRyOC2Zw=="],
+    "tome-source-royalroad": ["tome-source-royalroad@github:nmessias/tome-source-royalroad#92c3732", { "dependencies": { "impit": "^0.14.7", "linkedom": "^0.16.0", "tome": "github:nmessias/tome#810ca18a985e57bdf4ca35cab3314dde9706c303" }, "optionalDependencies": { "playwright": "^1.40.0" } }, "nmessias-tome-source-royalroad-92c3732", "sha512-B1SwpdCIzyBuHaQshiYe5/A8QVio1wYS5Y2wvi5XOtSODv64pmmw61ymi8a9z4WTEE4vi+DNAR3Kqhw8hM/T6A=="],
 
     "tslib": ["tslib@2.8.1", "", {}, "sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w=="],
 
