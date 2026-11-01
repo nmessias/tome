@@ -23,6 +23,9 @@ ROYAL_ROAD_BROWSER = "chromium"
 # are set; TS_AUTHKEY stays a fly secret (reusable + ephemeral key).
 ROYAL_ROAD_USE_TAILSCALE = "true"
 TS_EXIT_NODE = "100.115.240.61"
+# Local SOCKS5 endpoint the Fly-side tailscaled serves after `tailscale up`
+# joins the Moto G75 as the exit node (see scripts/start.sh).
+ROYAL_ROAD_PROXY = "socks5://127.0.0.1:1055"
 TOME_PLUGINS = "tome-source-royalroad,tome-source-freewebnovel,tome-feature-watch,tome-source-asura"
 
 [http_service]
