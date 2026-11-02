@@ -37,7 +37,9 @@ export function Layout({
     ? `/public/css/reader.css?v=${ASSET_VERSION}` 
     : `/public/css/base.css?v=${ASSET_VERSION}`;
   
-  const defaultScripts = css === "base" ? [`/public/js/toggle.js?v=${ASSET_VERSION}`] : [];
+  const defaultScripts = css === "base"
+    ? [`/public/js/toggle.js?v=${ASSET_VERSION}`, `/public/js/loading.js?v=${ASSET_VERSION}`]
+    : [];
   const allScripts = [...defaultScripts, ...scripts];
 
   return (
@@ -111,6 +113,7 @@ export function ReaderLayout({
           {children}
           <script src={`/public/js/remote-client.js?v=${ASSET_VERSION}`}></script>
           <script src={`/public/js/reader.js?v=${ASSET_VERSION}`}></script>
+          <script src={`/public/js/loading.js?v=${ASSET_VERSION}`}></script>
         </body>
       </html>
     </>

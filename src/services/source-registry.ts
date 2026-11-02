@@ -233,9 +233,32 @@ export function getSource(userId: string, name: string): Source | null {
     ...source,
     getChapter: (ref, chapterRef, uid, options) =>
       getChapter(ref, chapterRef, uid, options).then((chapter) =>
-        chapter ? patchEdgeNav(source, uid ?? userId, ref, chapterRef, chapter) : chapter
+        chapter
+          ? patchEdgeNav(source, uid ?? userId, ref, chapterRef, chapter).then((c) =>
+              withPosition(source, uid ?? userId, ref, chapterRef, c)
+            )
+          : chapter
       ),
   };
+}
+
+/**
+ * "Chapter 216 of 218" for the reader header, from the cached chapter list
+ * only: a position is never worth a scrape, so it is simply absent on a miss.
+ */
+function withPosition(
+  source: Source,
+  userId: string,
+  fictionRef: string,
+  chapterRef: string,
+  chapter: ChapterContent
+): ChapterContent {
+  const chapters = source.getFictionCached?.(fictionRef, userId)?.chapters;
+  if (!chapters?.length) return chapter;
+  const keys = new Set([chapterRef, chapter.ref, String(chapter.id), chapter.chapterSlug].filter(Boolean) as string[]);
+  const idx = chapters.findIndex((c) => keys.has(String(c.id)) || (c.slug != null && keys.has(c.slug)));
+  if (idx < 0) return chapter;
+  return { ...chapter, chapterNumber: idx + 1, chapterCount: chapters.length };
 }
 
 /** How long a chapter view may wait on the fiction lookup before showing the chapter as-is. */

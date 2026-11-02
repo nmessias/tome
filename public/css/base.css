@@ -1131,3 +1131,20 @@ body.sepia-mode .book-cover-placeholder {
 body.sepia-mode .book-progress-bar {
   background: #5F4B32;
 }
+
+
+/* Full page load in flight (public/js/loading.js). Static, high-contrast
+   and on top of everything: e-ink cannot animate a spinner. */
+body.is-loading::before {
+  content: "Loading\2026";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  padding: 10px 16px;
+  background: #000;
+  color: #fff;
+  font: bold 15px system-ui, -apple-system, sans-serif;
+  text-align: center;
+}

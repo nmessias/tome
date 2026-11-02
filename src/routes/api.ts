@@ -46,6 +46,8 @@ export async function handleApiRoute(
           prevRef: chapter.prevRef ?? null,
           nextRef: chapter.nextRef ?? null,
           cacheStale: chapter.cacheStale === true,
+          chapterNumber: chapter.chapterNumber ?? null,
+          chapterCount: chapter.chapterCount ?? null,
         });
       } catch (error: any) {
         console.error(`Error fetching chapter API ${sourceName}/${fictionRef}/${chapterRef}:`, error);

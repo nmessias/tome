@@ -1,5 +1,5 @@
 import { Layout } from "../layout";
-import { FictionCard, Pagination, paginate, hasNewChapters } from "../components";
+import { FictionCard, Pagination, SectionTitle, paginate, hasNewChapters } from "../components";
 import type { ReaderSettings } from "../../config";
 import { DEFAULT_READER_SETTINGS } from "../../config";
 import type { FollowedFiction } from "../../types";
@@ -72,16 +72,28 @@ export function FollowsPage({
       {visible.length === 0 ? (
         <p>Nothing new. You are caught up on every followed fiction.</p>
       ) : (
-        paginate(visible, page).map((f) => (
-          <FictionCard
-            fiction={f}
-            sourceName={source.name}
-            showContinue={true}
-            showUnread={true}
-            showLatestChapter={true}
-            showLastRead={true}
-          />
-        ))
+        // Rows arrive new-first, so a page splits into at most two runs; each
+        // gets a heading so the boundary is visible without reading badges.
+        [
+          { title: `New chapters (${unreadCount})`, rows: paginate(visible, page).filter(hasNewChapters) },
+          { title: `Up to date (${fictions.length - unreadCount})`, rows: paginate(visible, page).filter((f) => !hasNewChapters(f)) },
+        ]
+          .filter((g) => g.rows.length > 0)
+          .map((g) => (
+            <>
+              <SectionTitle>{g.title}</SectionTitle>
+              {g.rows.map((f) => (
+                <FictionCard
+                  fiction={f}
+                  sourceName={source.name}
+                  showContinue={true}
+                  showUnread={true}
+                  showLatestChapter={true}
+                  showLastRead={true}
+                />
+              ))}
+            </>
+          ))
       )}
 
       <Pagination currentPage={page} totalItems={visible.length} basePath={basePath} />

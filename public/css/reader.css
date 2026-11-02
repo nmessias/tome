@@ -142,6 +142,28 @@ body.kindle .reader-header .header-nav a {
   white-space: nowrap;
 }
 
+/* Fiction link and "Chapter 216 of 218" share one line; the link truncates. */
+.header-sub {
+  display: flex;
+  align-items: baseline;
+  min-width: 0;
+}
+
+.header-sub .fiction-link {
+  min-width: 0;
+}
+
+.chapter-position {
+  flex-shrink: 0;
+  font-size: 12px;
+  opacity: 0.75;
+  white-space: nowrap;
+}
+
+.chapter-position:not(:empty) {
+  margin-left: 8px;
+}
+
 .reader-header .settings-btn {
   background: #F8F9FA;
   border: 1px solid #212427;
@@ -352,6 +374,10 @@ body.kindle .menu-btn {
   color: #666;
   font-size: 13px;
   z-index: 4;
+  max-width: 60%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 body.kindle .page-indicator {
@@ -1178,4 +1204,21 @@ body.sepia-mode .remote-status {
   body.sepia-mode .nav-fixed {
     border-color: #D4C4A8;
   }
+}
+
+
+/* Full page load in flight (public/js/loading.js). Static, high-contrast
+   and on top of everything: e-ink cannot animate a spinner. */
+body.is-loading::before {
+  content: "Loading\2026";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  padding: 10px 16px;
+  background: #000;
+  color: #fff;
+  font: bold 15px system-ui, -apple-system, sans-serif;
+  text-align: center;
 }

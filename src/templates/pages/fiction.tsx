@@ -9,6 +9,14 @@ import { DEFAULT_READER_SETTINGS, CHAPTERS_PER_PAGE } from "../../config";
 import type { Fiction } from "../../types";
 import type { Source } from "../../services/source-registry";
 
+// Royal Road's chapter data carries ISO timestamps ("2023-09-15T15:45:15Z");
+// show "Sep 15, 2023". Anything else (a source's own wording) passes through.
+function formatChapterDate(date: string): string {
+  if (!/^\d{4}-\d{2}-\d{2}T/.test(date)) return date;
+  const d = new Date(date);
+  return isNaN(d.getTime()) ? date : d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+}
+
 export function FictionPage({
   fiction,
   source,
@@ -201,7 +209,7 @@ export function FictionPage({
                 <a href={chapterHref(source.name, fiction, chapterRef)} safe>
                   {c.title || `Chapter ${startIdx + i + 1}`}
                 </a>
-                {c.date && <span class="card-ago" safe>{` · ${c.date}`}</span>}
+                {c.date && <span class="card-ago" safe>{` · ${formatChapterDate(c.date)}`}</span>}
               </li>
             );
           })}

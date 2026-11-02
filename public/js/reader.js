@@ -611,8 +611,22 @@
     updateProgressBar();
   }
 
+  // Kindle-style "3 pages left" rather than "5 / 8": what a reader wants to
+  // know is how much of the chapter remains. The last page names the next
+  // chapter when it is already preloaded.
   function updateIndicator() {
-    S.els.indicator.textContent = (S.page + 1) + S.totalPagesStr;
+    var left = S.totalPages - S.page - 1;
+    var text;
+    if (left > 1) {
+      text = left + ' pages left';
+    } else if (left === 1) {
+      text = '1 page left';
+    } else {
+      var nextRef = S.els.navNext && S.els.navNext.getAttribute('data-ref');
+      var next = nextRef && S.cache[nextRef];
+      text = next ? 'Next: ' + next.title : (nextRef ? 'Last page' : 'End of story so far');
+    }
+    S.els.indicator.textContent = text;
     updateProgressBar();
   }
 
@@ -837,6 +851,7 @@
   }
 
   function renderChapter(chapter, goToLastPage) {
+    document.body.classList.remove('is-loading');
     // Hide the content until the new chapter is laid out — without this the
     // partially-laid-out multicol block (old geometry, new content) is visible
     // during the swap and the Kindle repaints the whole fragment 2-3 times.
@@ -846,6 +861,12 @@
     
     if (S.els.titleEl) S.els.titleEl.textContent = chapter.title;
     document.title = chapter.title + ' - Tome';
+    var position = document.querySelector('.chapter-position');
+    if (position) {
+      position.textContent = chapter.chapterNumber && chapter.chapterCount
+        ? 'Chapter ' + chapter.chapterNumber + ' of ' + chapter.chapterCount
+        : '';
+    }
     
     S.chapterRef = chapter.ref || S.chapterRef;
     var staleNotice = document.getElementById('chapter-stale-notice');
@@ -883,6 +904,7 @@
           if (sequence !== navigationSequence) return;
           navigationSequence++;
           S.els.content.removeAttribute('aria-busy');
+          document.body.classList.add('is-loading');
           window.location.href = chapterUrl(chapterRef);
         }, 15000);
         fetchChapter(chapterRef, function(data) {
@@ -890,11 +912,17 @@
           if (sequence !== navigationSequence) return;
           S.els.content.removeAttribute('aria-busy');
           if (data) navigateToChapter(chapterRef, goToLastPage);
-          else window.location.href = chapterUrl(chapterRef);
+          else {
+            document.body.classList.add('is-loading');
+            window.location.href = chapterUrl(chapterRef);
+          }
         });
+        // A preload is already in flight: say so while it finishes.
+        document.body.classList.add('is-loading');
         return;
       }
       // Not cached — full page load
+      document.body.classList.add('is-loading');
       window.location.href = chapterUrl(chapterRef);
       return;
     }

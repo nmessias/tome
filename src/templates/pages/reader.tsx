@@ -55,11 +55,19 @@ export function ReaderPage({
       <ReaderHeader
         title={chapter.title}
         subtitle={
-          chapter.fictionTitle ? (
-            <a href={indexHref} class="fiction-link" safe>
-              {chapter.fictionTitle}
-            </a>
-          ) : undefined
+          <div class="header-sub">
+            {chapter.fictionTitle && (
+              <a href={indexHref} class="fiction-link" safe>
+                {chapter.fictionTitle}
+              </a>
+            )}
+            {/* Updated by reader.js on in-page chapter turns. */}
+            <span class="chapter-position" safe>
+              {chapter.chapterNumber && chapter.chapterCount
+                ? `Chapter ${chapter.chapterNumber} of ${chapter.chapterCount}`
+                : ""}
+            </span>
+          </div>
         }
         navLinks={navLinks}
       />
