@@ -38,6 +38,7 @@ export function SettingsPage({
   enabledSources?: Source[];
 }): JSX.Element {
   const totalSize = stats ? stats.totalSize + stats.imageSize : 0;
+  const canManageCache = isAdmin || !AUTH_ENABLED;
   const enabledNames = new Set(enabledSources.map((s) => s.name));
   const credentialSources = enabledSources.filter((s) => s.capabilities.credentials);
 
@@ -187,10 +188,22 @@ export function SettingsPage({
         <>
           <SectionTitle>Cache</SectionTitle>
           <div class="card">
+            <form method="post" action="/settings/cache/read-ahead" style="margin-bottom: 12px;">
+              <label for="read-ahead-depth">Chapters to prepare ahead on this device</label>
+              <select id="read-ahead-depth" name="depth" style="min-height: 40px;">
+                <option value="" selected={settings.readAheadDepth === undefined}>Server default</option>
+                {Array.from({ length: 11 }, (_, depth) => (
+                  <option value={String(depth)} selected={settings.readAheadDepth === depth}>{depth}</option>
+                ))}
+              </select>
+              <button type="submit" class="btn btn-outline btn-small">Save</button>
+            </form>
             <div style="margin-bottom: 12px;">
               <div><strong>Text entries:</strong> <span safe>{stats.totalEntries}</span> (<span safe>{formatBytes(stats.totalSize)}</span>)</div>
               <div><strong>Images:</strong> <span safe>{stats.imageCount}</span> (<span safe>{formatBytes(stats.imageSize)}</span>)</div>
               <div><strong>Total:</strong> <span safe>{formatBytes(totalSize)}</span></div>
+              {stats.databaseSize !== undefined && <div><strong>Database on disk:</strong> <span safe>{formatBytes(stats.databaseSize)}</span></div>}
+              {stats.volumeAvailable !== undefined && <div><strong>Volume available:</strong> <span safe>{formatBytes(stats.volumeAvailable)}</span></div>}
             </div>
 
             {stats.byType.length > 0 && (
@@ -210,9 +223,11 @@ export function SettingsPage({
                       <td style="text-align: right;">{t.count}</td>
                       <td style="text-align: right;"><span safe>{formatBytes(t.size)}</span></td>
                       <td style="text-align: right;">
-                        <a href={`/settings/cache/clear/${t.type}`} class="btn btn-outline btn-small">
-                          Clear
-                        </a>
+                        {canManageCache && (
+                          <form method="post" action={`/settings/cache/clear/${t.type}`} onsubmit="return confirm('Clear this cache type?')">
+                            <button type="submit" class="btn btn-outline btn-small">Clear</button>
+                          </form>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -220,20 +235,48 @@ export function SettingsPage({
               </table>
             )}
 
+            {stats.chapterBooks && stats.chapterBooks.length > 0 && (
+              <>
+                <h3>Cached chapters by novel</h3>
+                <p>Sizes include fresh and retained copies. Older entries without novel metadata are included in the totals above.</p>
+                <table style="margin-bottom: 12px;">
+                  <thead><tr><th>Novel</th><th>Chapters</th><th>Text size</th><th></th></tr></thead>
+                  <tbody>
+                    {stats.chapterBooks.map((book) => (
+                      <tr>
+                        <td><span safe>{book.title}</span>{book.lastAccessedAt && <small> (read {new Date(book.lastAccessedAt).toLocaleDateString()})</small>}</td>
+                        <td safe>{book.chapterCount}</td>
+                        <td safe>{formatBytes(book.size)}</td>
+                        <td>
+                          <form method="post" action="/settings/cache/novel/clear" onsubmit="return confirm('Clear cached chapters for this novel?')">
+                            <input type="hidden" name="source" value={book.source} />
+                            <input type="hidden" name="fictionRef" value={book.fictionRef} />
+                            <button type="submit" class="btn btn-outline btn-small">Clear</button>
+                          </form>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </>
+            )}
+
             <div class="form-actions">
-              {stats.expiredCount > 0 && (
-                <a href="/settings/cache/clear/expired" class="btn btn-outline btn-small">
-                  Clear Expired ({stats.expiredCount})
-                </a>
+              {canManageCache && stats.expiredCount > 0 && (
+                <form method="post" action="/settings/cache/clear/expired" onsubmit="return confirm('Clear expired cache entries?')">
+                  <button type="submit" class="btn btn-outline btn-small">Clear Expired ({stats.expiredCount})</button>
+                </form>
               )}
-              {stats.imageCount > 0 && (
-                <a href="/settings/cache/clear/images" class="btn btn-outline btn-small">
-                  Clear Images
-                </a>
+              {canManageCache && stats.imageCount > 0 && (
+                <form method="post" action="/settings/cache/clear/images" onsubmit="return confirm('Clear cached images?')">
+                  <button type="submit" class="btn btn-outline btn-small">Clear Images</button>
+                </form>
               )}
-              <a href="/settings/cache/clear/all" class="btn btn-small">
-                Clear All
-              </a>
+              {canManageCache && (
+                <form method="post" action="/settings/cache/clear/all" onsubmit="return confirm('Clear all cached content?')">
+                  <button type="submit" class="btn btn-small">Clear All</button>
+                </form>
+              )}
             </div>
           </div>
         </>

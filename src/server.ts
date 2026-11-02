@@ -117,6 +117,8 @@ export function parseReaderSettings(cookieHeader: string | null): ReaderSettings
       font: typeof parsed.font === "number" ? parsed.font : 18,
       lineHeight: parsed.lineHeight,
       readingWidth: parsed.readingWidth,
+      readAheadDepth: Number.isInteger(parsed.readAheadDepth) && parsed.readAheadDepth >= 0 && parsed.readAheadDepth <= 10
+        ? parsed.readAheadDepth : undefined,
       // Absent mode stays undefined so the route can apply a device default
       // (scrolled on phones, paged on e-ink) instead of forcing paged.
       mode: parsed.mode === 'scrolled' ? 'scrolled' : parsed.mode === 'paged' ? 'paged' : undefined,

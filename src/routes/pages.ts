@@ -27,7 +27,9 @@ import {
   clearImageCache,
   clearExpiredCache,
   getCacheStats,
+  clearChapterCacheBook,
 } from "../services/cache";
+import { hasSameOrigin, mayManageCache } from "../services/cache-access";
 import {
   getAllSources,
   getSource,
@@ -39,7 +41,7 @@ import {
   type Source,
   type SourceRouteContext,
 } from "../services/source-registry";
-import type { ReaderSettings } from "../config";
+import { AUTH_ENABLED, type ReaderSettings } from "../config";
 import type { Fiction } from "../types";
 import {
   createInvitation,
@@ -85,7 +87,7 @@ function renderSettings(
     isError?: boolean;
   } = {}
 ): Response {
-  const stats = getCacheStats();
+  const stats = getCacheStats(isAdmin || !AUTH_ENABLED);
   const invitations: Invitation[] = isAdmin
     ? getPendingInvitations().map((inv) => ({
         id: inv.id,
@@ -256,9 +258,35 @@ export async function handlePageRoute(
     return redirect("/settings");
   }
 
+  if (path === "/settings/cache/read-ahead" && method === "POST") {
+    if (!hasSameOrigin(req)) return new Response("Forbidden", { status: 403 });
+    const form = await parseFormData(req);
+    const depth = form.depth === "" ? undefined : Number(form.depth);
+    if (depth !== undefined && (!Number.isInteger(depth) || depth < 0 || depth > 10)) {
+      return new Response("Invalid read-ahead depth", { status: 400 });
+    }
+    const saved = { ...settings, readAheadDepth: depth };
+    delete saved.isKindle;
+    const response = redirect("/settings");
+    response.headers.set("Set-Cookie", `reader_settings=${encodeURIComponent(JSON.stringify(saved))}; Path=/; SameSite=Lax; Max-Age=31536000`);
+    return response;
+  }
+
+  if (path === "/settings/cache/novel/clear" && method === "POST") {
+    if (!mayManageCache(req, isAdmin, AUTH_ENABLED)) return new Response("Forbidden", { status: 403 });
+    const form = await parseFormData(req);
+    if (!/^[a-z0-9-]+$/.test(form.source || "") || !/^[1-9]\d*$/.test(form.fictionRef || "")) {
+      return new Response("Invalid novel", { status: 400 });
+    }
+    const deleted = clearChapterCacheBook(form.source, form.fictionRef);
+    return renderSettings(req, userId, isAdmin, settings, { message: `Cleared ${deleted} cached chapters.` });
+  }
+
   const settingsCacheMatch = path.match(/^\/settings\/cache\/clear\/(.+)$/);
-  if (settingsCacheMatch && method === "GET") {
+  if (settingsCacheMatch && method === "POST") {
+    if (!mayManageCache(req, isAdmin, AUTH_ENABLED)) return new Response("Forbidden", { status: 403 });
     const type = settingsCacheMatch[1];
+    if (!/^[a-z]+$/.test(type)) return new Response("Invalid cache type", { status: 400 });
     let message: string;
 
     if (type === "images") {
@@ -626,7 +654,7 @@ export async function handlePageRoute(
     const initialPage = Math.max(1, parseInt(url.searchParams.get("p") || "1", 10));
 
     try {
-      const chapter = await source.getChapter(fictionRef, chapterRef, userId);
+      const chapter = await source.getChapter(fictionRef, chapterRef, userId, { readAheadDepth: settings.readAheadDepth });
       if (!chapter) {
         return notFound(settings, `Chapter "${chapterRef}" not found.`);
       }

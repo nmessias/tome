@@ -98,10 +98,13 @@ export interface Source {
   // e.g. EPUB whose reader is a source-specific page)
   search?(query: string, userId?: string): Promise<Fiction[]>;
   getFiction?(ref: string, userId?: string): Promise<Fiction | null>;
+  /** Read cached fiction metadata without starting network work. */
+  getFictionCached?(ref: string, userId?: string): Fiction | null;
   getChapter?(
     ref: string,
     chapterRef: string,
-    userId?: string
+    userId?: string,
+    options?: { readAheadDepth?: number }
   ): Promise<ChapterContent | null>;
 
   // Capability operations (only meaningful when the matching flag is set)
@@ -228,8 +231,8 @@ export function getSource(userId: string, name: string): Source | null {
   const getChapter = source.getChapter.bind(source);
   return {
     ...source,
-    getChapter: (ref, chapterRef, uid) =>
-      getChapter(ref, chapterRef, uid).then((chapter) =>
+    getChapter: (ref, chapterRef, uid, options) =>
+      getChapter(ref, chapterRef, uid, options).then((chapter) =>
         chapter ? patchEdgeNav(source, uid ?? userId, ref, chapterRef, chapter) : chapter
       ),
   };
@@ -238,7 +241,7 @@ export function getSource(userId: string, name: string): Source | null {
 /** How long a chapter view may wait on the fiction lookup before showing the chapter as-is. */
 const EDGE_NAV_WAIT_MS = 4000;
 
-async function patchEdgeNav(
+export async function patchEdgeNav(
   source: Source,
   userId: string,
   fictionRef: string,
@@ -252,13 +255,18 @@ async function patchEdgeNav(
   if (chapter.nextRef) return chapter;
   let chapters: Fiction["chapters"];
   try {
-    // Bounded: this is a nicety and never worth holding the page for.
-    chapters = (
-      await Promise.race([
-        source.getFiction!(fictionRef, userId),
-        new Promise<undefined>((resolve) => setTimeout(resolve, EDGE_NAV_WAIT_MS)),
-      ])
-    )?.chapters;
+    if (source.getFictionCached) {
+      // Cache-only metadata avoids starting a scrape that outlives the page.
+      chapters = source.getFictionCached(fictionRef, userId)?.chapters;
+    } else {
+      // Legacy sources retain their existing bounded lookup behavior.
+      chapters = (
+        await Promise.race([
+          source.getFiction!(fictionRef, userId),
+          new Promise<undefined>((resolve) => setTimeout(resolve, EDGE_NAV_WAIT_MS)),
+        ])
+      )?.chapters;
+    }
   } catch {
     return chapter;
   }

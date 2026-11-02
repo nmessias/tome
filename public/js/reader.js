@@ -57,15 +57,24 @@
     if (document.body.classList.contains('dark-mode')) theme = 'dark';
     else if (document.body.classList.contains('sepia-mode')) theme = 'sepia';
     
-    var settings = JSON.stringify({
+    var settings = {
       font: S.fontSizes[S.fontIndex],
       lineHeight: S.lineHeights[S.lineHeightIndex],
       dark: theme === 'dark',
       theme: theme,
       readingWidth: S.widths[S.widthIndex],
       mode: S.mode
-    });
-    setCookie('reader_settings', settings);
+    };
+    // Keep the server-side read-ahead setting when reader controls save their cookie.
+    try {
+      var match = document.cookie.match(/(?:^|;\s*)reader_settings=([^;]+)/);
+      var previous = match ? JSON.parse(decodeURIComponent(match[1])) : {};
+      if (typeof previous.readAheadDepth === 'number' && previous.readAheadDepth % 1 === 0 &&
+          previous.readAheadDepth >= 0 && previous.readAheadDepth <= 10) {
+        settings.readAheadDepth = previous.readAheadDepth;
+      }
+    } catch (e) {}
+    setCookie('reader_settings', JSON.stringify(settings));
     try {
       localStorage.setItem('readerFontSize', S.fontSizes[S.fontIndex]);
     } catch (e) {}
@@ -733,6 +742,8 @@
   // does that for any ref not in cache).
   var CACHE_LIMIT = 5;
   var CACHE_ORDER = [];
+  var CHAPTER_REQUESTS = {};
+  var navigationSequence = 0;
 
   function rememberChapter(ref, data) {
     S.cache[ref] = data;
@@ -760,20 +771,40 @@
       return;
     }
 
+    if (CHAPTER_REQUESTS[chapterRef]) {
+      CHAPTER_REQUESTS[chapterRef].push(callback);
+      return;
+    }
+
+    CHAPTER_REQUESTS[chapterRef] = [callback];
     var xhr = new XMLHttpRequest();
+    var finished = false;
+    function finish(data) {
+      if (finished) return;
+      finished = true;
+      var callbacks = CHAPTER_REQUESTS[chapterRef] || [];
+      delete CHAPTER_REQUESTS[chapterRef];
+      for (var i = 0; i < callbacks.length; i++) {
+        try { callbacks[i](data); } catch (e) { console.error('Chapter callback failed:', e); }
+      }
+    }
     xhr.open('GET', chapterApiUrl(chapterRef), true);
     xhr.onreadystatechange = function() {
-      if (xhr.readyState === 4 && xhr.status === 200) {
+      if (xhr.readyState === 4) {
+        if (xhr.status !== 200) return finish(null);
         try {
           var data = JSON.parse(xhr.responseText);
           rememberChapter(chapterRef, data);
-          callback(data);
+          finish(data);
         } catch (e) {
-          callback(null);
+          finish(null);
         }
       }
     };
-    xhr.send();
+    xhr.onerror = function() { finish(null); };
+    xhr.ontimeout = function() { finish(null); };
+    xhr.timeout = 30000;
+    try { xhr.send(); } catch (e) { finish(null); }
   }
 
   // Preload only the NEXT chapter, and only after first paint (see renderChapter
@@ -817,6 +848,8 @@
     document.title = chapter.title + ' - Tome';
     
     S.chapterRef = chapter.ref || S.chapterRef;
+    var staleNotice = document.getElementById('chapter-stale-notice');
+    if (staleNotice) staleNotice.style.display = chapter.cacheStale ? 'block' : 'none';
     
     updateNavButtons(chapter.prevRef, chapter.nextRef);
     
@@ -840,9 +873,27 @@
   }
 
   function navigateToChapter(chapterRef, goToLastPage) {
+    var sequence = ++navigationSequence;
     var chapter = S.cache[chapterRef];
     
     if (!chapter) {
+      if (CHAPTER_REQUESTS[chapterRef]) {
+        S.els.content.setAttribute('aria-busy', 'true');
+        var timer = setTimeout(function() {
+          if (sequence !== navigationSequence) return;
+          navigationSequence++;
+          S.els.content.removeAttribute('aria-busy');
+          window.location.href = chapterUrl(chapterRef);
+        }, 15000);
+        fetchChapter(chapterRef, function(data) {
+          clearTimeout(timer);
+          if (sequence !== navigationSequence) return;
+          S.els.content.removeAttribute('aria-busy');
+          if (data) navigateToChapter(chapterRef, goToLastPage);
+          else window.location.href = chapterUrl(chapterRef);
+        });
+        return;
+      }
       // Not cached — full page load
       window.location.href = chapterUrl(chapterRef);
       return;
@@ -865,6 +916,8 @@
   }
 
   function onPopState(e) {
+    navigationSequence++;
+    if (S.els.content) S.els.content.removeAttribute('aria-busy');
     if (!e.state) return;
     
     var chapterRef = e.state.chapterRef;
@@ -1049,6 +1102,11 @@
 
   function init() {
     cacheElements();
+    // A direct page load is a real chapter entry too, even on a cache hit.
+    var initialChapterRef = S.chapterRef;
+    if (initialChapterRef) setTimeout(function() {
+      if (S.chapterRef === initialChapterRef) reportProgress(initialChapterRef);
+    }, 1000);
     detectFontSize();
     detectReadingWidth();
     

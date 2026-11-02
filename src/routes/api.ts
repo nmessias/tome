@@ -1,7 +1,7 @@
 /**
  * API routes (JSON responses) — Phase 1: unified /api/read/:source/... (ADR-0002).
  */
-import { json } from "../server";
+import { json, parseReaderSettings } from "../server";
 import { getImageCache, setImageCache } from "../services/cache";
 import { getSource } from "../services/source-registry";
 import {
@@ -45,6 +45,7 @@ export async function handleApiRoute(
           fictionRef: chapter.fictionRef || fictionRef,
           prevRef: chapter.prevRef ?? null,
           nextRef: chapter.nextRef ?? null,
+          cacheStale: chapter.cacheStale === true,
         });
       } catch (error: any) {
         console.error(`Error fetching chapter API ${sourceName}/${fictionRef}/${chapterRef}:`, error);
@@ -56,7 +57,9 @@ export async function handleApiRoute(
       if (!source.updateProgress) return json({ error: "Progress not supported" }, 404);
       try {
         const body = await req.json().catch(() => ({}));
-        await source.updateProgress(userId, fictionRef, chapterRef, body);
+        const payload = body && typeof body === "object" && !Array.isArray(body) ? body : {};
+        const readAheadDepth = parseReaderSettings(req.headers.get("cookie")).readAheadDepth;
+        await source.updateProgress(userId, fictionRef, chapterRef, { ...payload, readAheadDepth });
         return json({ success: true });
       } catch (error: any) {
         console.error(`Error updating progress ${sourceName}/${fictionRef}/${chapterRef}:`, error);

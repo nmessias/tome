@@ -64,6 +64,10 @@ export function ReaderPage({
         navLinks={navLinks}
       />
 
+      <div id="chapter-stale-notice" role="status" style={chapter.cacheStale ? "padding: 8px;" : "display: none; padding: 8px;"}>
+        Showing a saved copy; the source could not be reached.
+      </div>
+
       <div
         class="reader-wrapper"
         data-source={source.name}

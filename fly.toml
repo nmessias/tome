@@ -16,6 +16,8 @@ ROYAL_ROAD_BROWSER = "chromium"
 # Keep background work from competing with interactive requests on the 512 MB VM.
 ROYAL_ROAD_MAX_BROWSER_FETCHES = "1"
 ROYAL_ROAD_FICTION_WARMS_PER_CYCLE = "0"
+# Chapters to warm for the novel currently being read; set to 0 to disable.
+ROYAL_ROAD_READ_AHEAD = "3"
 # The browser routes through the tailnet exit node (the Moto G75), so it leaves
 # from a residential/mobile IP instead of Fly's blocked datacenter IP: the same
 # headless browser is challenged on Fly's own IP. start.sh joins the tailnet and

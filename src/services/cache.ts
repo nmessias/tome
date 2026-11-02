@@ -3,8 +3,9 @@
  * Using Bun's built-in SQLite
  */
 import { Database } from "bun:sqlite";
-import { mkdirSync, existsSync } from "fs";
+import { mkdirSync, existsSync, statSync, statfsSync } from "fs";
 import { CACHE_TTL } from "../config";
+import { deleteChapterCacheBook, listChapterCacheBooks, type ChapterCacheBook } from "./chapter-cache";
 
 const DATA_DIR = "./data";
 const DB_PATH = `${DATA_DIR}/sessions.db`;
@@ -87,8 +88,16 @@ export function clearExpiredCache(): void {
 
 // Clear cache by type (e.g., "chapter", "fiction", "toplist")
 export function clearCacheByType(type: string): number {
+  if (type === "chapter") {
+    const result = db.run("DELETE FROM cache WHERE url LIKE 'chapter:%' OR url LIKE 'stale:chapter:%' OR url LIKE 'chapter-meta:%'");
+    return result.changes;
+  }
   const result = db.run(`DELETE FROM cache WHERE url LIKE ?`, [`${type}:%`]);
   return result.changes;
+}
+
+export function clearChapterCacheBook(source: string, fictionRef: string): number {
+  return deleteChapterCacheBook(db, source, fictionRef);
 }
 
 // ============ Image Cache Operations ============
@@ -135,14 +144,17 @@ export interface CacheStats {
   expiredCount: number;
   imageCount: number;
   imageSize: number;
+  chapterBooks?: ChapterCacheBook[];
+  databaseSize?: number;
+  volumeAvailable?: number;
 }
 
-export function getCacheStats(): CacheStats {
+export function getCacheStats(includeChapterBooks = false): CacheStats {
   const now = Math.floor(Date.now() / 1000);
   
   // Get all cache entries with their types
   const entries = db.query(`
-    SELECT url, length(content) as size, expires_at
+    SELECT url, length(CAST(content AS BLOB)) as size, expires_at
     FROM cache
   `).all() as { url: string; size: number; expires_at: number }[];
   
@@ -151,6 +163,11 @@ export function getCacheStats(): CacheStats {
   let expiredCount = 0;
   
   for (const entry of entries) {
+    if (entry.expires_at <= now) {
+      expiredCount++;
+    }
+    // Metadata contributes to total bytes but is cleared with its chapters.
+    if (entry.url.startsWith("chapter-meta:")) continue;
     const typeMatch = entry.url.match(/^([a-z]+):/);
     const type = typeMatch ? typeMatch[1] : "other";
     
@@ -160,9 +177,6 @@ export function getCacheStats(): CacheStats {
     byTypeMap[type].count++;
     byTypeMap[type].size += entry.size;
     
-    if (entry.expires_at <= now) {
-      expiredCount++;
-    }
   }
   
   const byType = Object.entries(byTypeMap)
@@ -178,6 +192,17 @@ export function getCacheStats(): CacheStats {
     SELECT COUNT(*) as count, COALESCE(SUM(length(data)), 0) as size
     FROM image_cache
   `).get() as { count: number; size: number };
+
+  let databaseSize: number | undefined;
+  let volumeAvailable: number | undefined;
+  try {
+    databaseSize = statSync(DB_PATH).size;
+    if (existsSync(DB_PATH + "-wal")) databaseSize += statSync(DB_PATH + "-wal").size;
+  } catch { /* File sizes may be unavailable on some hosts. */ }
+  try {
+    const volume = statfsSync(DATA_DIR);
+    volumeAvailable = Number(volume.bavail) * Number(volume.bsize);
+  } catch { /* Filesystem statistics are optional. */ }
   
   return {
     totalEntries: entries.length,
@@ -186,6 +211,9 @@ export function getCacheStats(): CacheStats {
     expiredCount,
     imageCount: imageStats.count,
     imageSize: imageStats.size,
+    databaseSize,
+    volumeAvailable,
+    ...(includeChapterBooks ? { chapterBooks: listChapterCacheBooks(db, now) } : {}),
   };
 }
 

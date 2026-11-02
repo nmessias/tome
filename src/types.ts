@@ -77,6 +77,7 @@ export interface ChapterContent {
   fictionRef?: string;     // fiction ref as it appears in URLs
   prevRef?: string | null; // previous chapter ref (null = none)
   nextRef?: string | null; // next chapter ref (null = none)
+  cacheStale?: boolean;    // retained copy served after an upstream failure
 }
 
 export interface FollowedFiction extends Fiction {
