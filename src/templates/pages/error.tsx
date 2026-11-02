@@ -25,7 +25,7 @@ export function ErrorPage({
       <div class="error">
         <span safe>{message}</span>
       </div>
-      <div class="mt-16" style="display: flex; gap: 8px;">
+      <div class="mt-16 btn-row">
         {retryUrl && (
           <a href={retryUrl} class="btn">
             Retry

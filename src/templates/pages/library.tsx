@@ -17,7 +17,7 @@ function SeriesCard({ entry, sourceName }: { entry: LibraryEntry; sourceName: st
   const canContinue = !entry.completed && !!entry.continueChapterRef;
 
   return (
-    <div class="card" style="display: flex; gap: 12px;">
+    <div class="card" style="display: flex;">
       <CoverImage url={entry.coverUrl} alt={entry.title} size="small" />
       <div style="flex: 1; min-width: 0;">
         <div class="card-title">

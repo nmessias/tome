@@ -129,6 +129,20 @@ body.kindle .nav-link {
   padding: 8px;
 }
 
+/* Kindle ignores flex gap (see .cover-img); space these rows with margins. */
+body.kindle .header-title {
+  margin-bottom: 8px;
+}
+
+body.kindle .nav-link {
+  margin: 0 4px 4px 0;
+}
+
+body.kindle .pagination > * + *,
+body.kindle .form-actions > * + * {
+  margin-left: 12px;
+}
+
 /* Phones: one row, title then a sideways-scrolling nav. Wrapped, the nav
    took a sixth of the screen on every page. */
 @media (max-width: 800px) {
@@ -380,6 +394,24 @@ body.kindle .fiction-description {
   border: 1px solid #212427;
   flex-shrink: 0;
   object-fit: cover;
+}
+
+/* Spacing from the text beside it is a margin, not flex `gap`: the Kindle's
+   WebKit lays out flexbox but ignores gap, so covers touched the text. */
+.cover-img,
+.cover-placeholder {
+  margin-right: 12px;
+}
+
+.cover-large { margin-right: 16px; }
+
+/* A row of buttons or a field plus button, spaced without flex gap. */
+.btn-row {
+  display: flex;
+}
+
+.btn-row > * + * {
+  margin-left: 8px;
 }
 
 .cover-small { width: 50px; height: 70px; }

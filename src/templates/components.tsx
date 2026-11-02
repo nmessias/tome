@@ -262,7 +262,7 @@ export function FictionCard({
   const hideLatest = isCaughtUp && f.latestChapterId === f.lastReadChapterId;
 
   return (
-    <div class={`card${isUnread ? " card-unread" : ""}`} style="display: flex; gap: 12px;">
+    <div class={`card${isUnread ? " card-unread" : ""}`} style="display: flex;">
       {/* The cover is the biggest tap target on the card; on e-ink it beats
           aiming for a wrapped, underlined title. */}
       <a href={fictionHref(sourceName, fiction)} class="card-cover">
@@ -336,11 +336,17 @@ export function FictionCard({
                 </a>
               </>
             ) : (
-              // No resolved next chapter: the fiction page leads with its own
-              // "Continue Reading" button, one tap on.
-              <a href={fictionHref(sourceName, fiction)} class="btn btn-small">
-                {f.lastReadChapterId ? "Continue" : "Start Reading"}
-              </a>
+              // No resolved next chapter: ?next= has the fiction route open the
+              // chapter after the last-read one, straight into the reader.
+              f.lastReadChapterId ? (
+                <a href={`${fictionHref(sourceName, fiction)}?next=${f.lastReadChapterId}`} class="btn btn-small">
+                  Continue
+                </a>
+              ) : (
+                <a href={fictionHref(sourceName, fiction)} class="btn btn-small">
+                  Start Reading
+                </a>
+              )
             )}
           </div>
         )}
@@ -396,7 +402,7 @@ export function FictionCardCompact({
   const statsLine = statsItems.join(" · ");
 
   return (
-    <div class="card" style="display: flex; gap: 10px; padding: 10px;">
+    <div class="card" style="display: flex; padding: 10px;">
       <CoverImage url={fiction.coverUrl} alt={fiction.title} size="small" />
       <div style="flex: 1; min-width: 0;">
         <div style="font-weight: bold; font-size: 14px;">

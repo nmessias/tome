@@ -27,7 +27,7 @@ export function SearchPage({
   const searchForm = (
     <form method="GET" action={searchHref} style="margin-bottom: 20px;">
       <label for="q">{`Search ${source.displayName}:`}</label>
-      <div style="display: flex; gap: 8px; margin-top: 8px;">
+      <div class="btn-row" style="margin-top: 8px;">
         <input
           type="text"
           name="q"

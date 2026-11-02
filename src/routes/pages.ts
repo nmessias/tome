@@ -581,6 +581,16 @@ export async function handlePageRoute(
       if (!fiction) {
         return notFound(settings, `Fiction "${fictionRef}" not found.`);
       }
+      // ?next=<chapterRef>: open the chapter after it. A follows row only
+      // knows the last-read chapter, so its Continue comes through here instead
+      // of stopping on the chapter list. The last chapter opens itself.
+      const after = url.searchParams.get("next");
+      if (after) {
+        const chapters = fiction.chapters || [];
+        const idx = chapters.findIndex((c) => String(c.slug ?? c.id) === after);
+        const target = idx >= 0 ? chapters[idx + 1] ?? chapters[idx] : undefined;
+        if (target) return redirect(`/read/${source.name}/${fictionRef}/${target.slug ?? target.id}`);
+      }
       return html(
         FictionPage({
           fiction,

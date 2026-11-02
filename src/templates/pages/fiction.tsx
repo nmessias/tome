@@ -74,7 +74,7 @@ export function FictionPage({
   return (
     <Layout title={fiction.title} settings={settings} currentPath={fictionHref(source.name, fiction)} sources={sources}>
       {/* Fiction Header */}
-      <div style="display: flex; gap: 16px; margin-bottom: 16px;">
+      <div style="display: flex; margin-bottom: 16px;">
         <CoverImage url={fiction.coverUrl} alt={fiction.title} size="large" />
         <div style="flex: 1;">
           <h1 style="margin: 0 0 8px 0; border: none; padding: 0;" safe>
@@ -112,7 +112,7 @@ export function FictionPage({
               {error}
             </div>
           )}
-          <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+          <div class="btn-row" style="margin-bottom: 16px;">
             <form method="POST" action={`/read/${source.name}/${fictionRef}/bookmark`} style="flex: 1;">
               <input type="hidden" name="type" value="follow" />
               <input type="hidden" name="mark" value={fiction.isFollowing ? "false" : "true"} />
@@ -159,7 +159,7 @@ export function FictionPage({
       {fiction.description && (
         <>
           <SectionTitle>Description</SectionTitle>
-          <div class="card">
+          <div class="card" style="white-space: pre-line;">
             {hasLongDesc ? (
               <>
                 <div id="desc-short">
