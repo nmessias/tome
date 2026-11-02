@@ -11,6 +11,7 @@ function makeReader() {
   const progress: string[] = [];
   const renders: unknown[] = [];
   const attributes: Record<string, string> = {};
+  const bodyClasses = new Set<string>();
   const timers = new Map<number, () => void>();
   let nextTimer = 0;
   class Xhr {
@@ -37,31 +38,37 @@ function makeReader() {
       removeAttribute: (key: string) => { delete attributes[key]; },
     } }, source: "royalroad", fictionRef: "1", chapterRef: "1" },
     XMLHttpRequest: Xhr,
+    document: { body: { classList: {
+      add: (name: string) => bodyClasses.add(name),
+      remove: (name: string) => bodyClasses.delete(name),
+    } } },
     chapterApiUrl: (ref: string) => "/api/" + ref,
     chapterUrl: (ref: string) => "/chapter/" + ref,
     reportProgress: (ref: string) => progress.push(ref),
-    renderChapter: (chapter: unknown) => renders.push(chapter),
+    renderChapter: (chapter: unknown) => { bodyClasses.delete("is-loading"); renders.push(chapter); },
     window: { location: { href: "" }, history: { replaceState() {} } },
     setTimeout: (callback: () => void) => { const id = ++nextTimer; timers.set(id, callback); return id; },
     clearTimeout: (id: number) => { timers.delete(id); },
     console,
   };
   runInNewContext(cache + "\n" + navigation, context);
-  return { context, requests, progress, renders, attributes, timers };
+  return { context, requests, progress, renders, attributes, timers, bodyClasses };
 }
 
 describe("reader chapter preload", () => {
   test("joins an in-flight preload and reports progress only on navigation", () => {
-    const { context, requests, progress, renders, attributes } = makeReader();
+    const { context, requests, progress, renders, attributes, bodyClasses } = makeReader();
     context.fetchChapter("2", () => {});
     context.navigateToChapter("2", false);
     expect(requests).toHaveLength(1);
     expect(attributes["aria-busy"]).toBe("true");
+    expect(bodyClasses.has("is-loading")).toBe(true);
     expect(progress).toEqual([]);
     requests[0].complete(200, JSON.stringify({ ref: "2", content: "chapter" }));
     expect(progress).toEqual(["2"]);
     expect(renders).toHaveLength(1);
     expect(attributes["aria-busy"]).toBeUndefined();
+    expect(bodyClasses.has("is-loading")).toBe(false);
   });
 
   test("failed preload falls back to a chapter page", () => {
