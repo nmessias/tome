@@ -45,7 +45,7 @@ if [ "$ROYAL_ROAD_USE_TAILSCALE" = "true" ]; then
     if /app/tailscale up --auth-key="$TS_AUTHKEY" --hostname=tome-in \
         --exit-node="$TS_EXIT_NODE" --accept-dns=false --timeout=30s; then
       echo "Starting Royal Road DNS-aware SOCKS bridge..."
-      bun run scripts/tailscale-socks5-bridge.ts >/tmp/tailscale-socks5-bridge.log 2>&1 &
+      bun --smol run scripts/tailscale-socks5-bridge.ts >/tmp/tailscale-socks5-bridge.log 2>&1 &
       SOCKS_BRIDGE_PID=$!
       SOCKS_BRIDGE_READY=false
       for _ in $(seq 20); do
@@ -79,4 +79,4 @@ fi
 bun run src/lib/migrate.ts
 
 echo "Starting Tome server..."
-exec bun run src/index.ts
+exec bun --smol run src/index.ts
