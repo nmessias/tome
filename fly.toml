@@ -7,20 +7,17 @@ dockerfile = "Dockerfile"
 [env]
 NODE_ENV = "production"
 PORT = "3000"
-# Enable Playwright browser fallback for Cloudflare-challenged sources (RoyalRoad)
+# The browser is Royal Road's only transport (Cloudflare dropped impit). It runs
+# headless: Cloudflare only objects to the "HeadlessChrome" UA token, which the
+# plugin overrides with the real Chrome version. No Xvfb, no window.
 ENABLE_BROWSER = "true"
-# Cloudflare rejects the login POST when the browser runs headless, so the
-# plugin drives a real Chromium window against an Xvfb display (see
-# scripts/start.sh). Set to "true" only when debugging locally.
-ROYAL_ROAD_HEADLESS = "false"
-# "chromium" is the engine Cloudflare tolerates; "firefox" cannot log in.
+ROYAL_ROAD_HEADLESS = "true"
 ROYAL_ROAD_BROWSER = "chromium"
-# Royal Road's HTML pages are fetched directly with Chrome TLS impersonation
-# (the plugin uses impit). Playwright is only the JavaScript-challenge fallback.
-# The Royal Road browser now routes through the tailnet exit node (the Moto G75),
-# so it leaves from a residential/mobile IP instead of Fly's blocked datacenter IP.
-# start.sh joins the tailnet and exports ROYAL_ROAD_PROXY when both variables
-# are set; TS_AUTHKEY stays a fly secret (reusable + ephemeral key).
+# The browser routes through the tailnet exit node (the Moto G75), so it leaves
+# from a residential/mobile IP instead of Fly's blocked datacenter IP: the same
+# headless browser is challenged on Fly's own IP. start.sh joins the tailnet and
+# exports ROYAL_ROAD_PROXY when both variables are set; TS_AUTHKEY stays a fly
+# secret (reusable + ephemeral key).
 ROYAL_ROAD_USE_TAILSCALE = "true"
 TS_EXIT_NODE = "100.115.240.61"
 # Local SOCKS5 endpoint the Fly-side tailscaled serves after `tailscale up`
@@ -54,10 +51,10 @@ destination = "/app/data"
 source = "tome_data"
 
 [[vm]]
-# The RoyalRoad plugin's Playwright fallback launches a headful Chromium when a
-# JavaScript challenge needs solving. On shared-cpu-1x/512mb it thrashed (9s
-# launch, 58s context creation, 60s navigation timeouts) and left no room for
-# the rest of the app.
-cpus = 2
-memory = "2gb"
-memory_mb = 2048
+# 1 vCPU / 512MB: about $3.69/month, the cheapest size that has a chance of
+# fitting the app (~185MB: Bun, tailscaled, hallpass) plus one warm headless
+# Chromium. Fly only sells RAM in 256MB steps, so the next option is 768MB at
+# about $5.19. Chrome needs vm.overcommit_memory=1 here (see scripts/start.sh).
+cpus = 1
+memory = "512mb"
+memory_mb = 512

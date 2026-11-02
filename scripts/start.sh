@@ -6,6 +6,19 @@ echo "=== Tome Startup ==="
 # Ensure data directory exists
 mkdir -p /app/data
 
+# Chrome reserves 512MB of *virtual* address space per renderer for V8's code
+# range. Fly's kernel uses heuristic overcommit, and on a small machine that
+# reservation is refused with "V8 process OOM (Failed to reserve virtual memory
+# for CodeRange)" - the browser starts but every page target dies, which looks
+# exactly like a Cloudflare block. Overcommit accounting is not what protects
+# this VM (its size is), so let the mapping through. Not fatal if the container
+# cannot write the sysctl (it is also set on headful/dev machines).
+if [ -w /proc/sys/vm/overcommit_memory ]; then
+  echo 1 > /proc/sys/vm/overcommit_memory 2>/dev/null \
+    && echo "vm.overcommit_memory=1 (Chrome V8 code range reservations)" \
+    || echo "could not set vm.overcommit_memory - Chrome may fail to start on small machines"
+fi
+
 # Cloudflare rejects the scraper's browser when it runs headless, so the Royal
 # Road plugin drives a real Chromium window (ROYAL_ROAD_HEADLESS defaults to
 # false). In a container that requires a virtual display.
