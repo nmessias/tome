@@ -7,7 +7,7 @@ import { CoverImage, Pagination, SectionTitle, fictionHref, chapterHref } from "
 import type { ReaderSettings } from "../../config";
 import { DEFAULT_READER_SETTINGS, CHAPTERS_PER_PAGE } from "../../config";
 import type { Fiction } from "../../types";
-import type { Source } from "../../services/source-registry";
+import type { OfflineStatus, Source } from "../../services/source-registry";
 
 // Royal Road's chapter data carries ISO timestamps ("2023-09-15T15:45:15Z");
 // show "Sep 15, 2023". Anything else (a source's own wording) passes through.
@@ -25,6 +25,7 @@ export function FictionPage({
   error,
   sources = [],
   from,
+  offline,
 }: {
   fiction: Fiction;
   source: Source;
@@ -33,6 +34,7 @@ export function FictionPage({
   error?: string;
   sources?: Source[];
   from?: string;
+  offline?: OfflineStatus;
 }): JSX.Element {
   const chapters = fiction.chapters || [];
   const fictionRef = fiction.slug ?? String(fiction.id);
@@ -49,6 +51,7 @@ export function FictionPage({
   const totalChapterPages = Math.ceil(chapters.length / CHAPTERS_PER_PAGE);
   const startIdx = (chapterPage - 1) * CHAPTERS_PER_PAGE;
   const paginatedChapters = chapters.slice(startIdx, startIdx + CHAPTERS_PER_PAGE);
+  const savedRefs = new Set(offline?.savedRefs);
 
   // One line under the title instead of a Statistics box between the
   // Continue button and the chapter list.
@@ -116,6 +119,25 @@ export function FictionPage({
           {fiction.continueChapterLabel ? ` (${fiction.continueChapterLabel})` : ""}
         </a>
       ) : null}
+
+      {/* Offline reading: one tap saves what is left to read. */}
+      {offline && offline.unread > 0 && (
+        offline.saved >= offline.unread ? (
+          <p style="margin: 0 0 16px 0; font-size: 14px;" safe>
+            {`All ${offline.unread} unread chapters are saved for offline reading.`}
+          </p>
+        ) : offline.pending > 0 ? (
+          <p style="margin: 0 0 16px 0; font-size: 14px;" safe>
+            {`Saving for offline: ${offline.saved} of ${offline.unread} unread chapters saved, ${offline.pending} queued.`}
+          </p>
+        ) : (
+          <form method="POST" action={`/read/${source.name}/${fictionRef}/offline`} style="margin-bottom: 16px;">
+            <button type="submit" class="btn btn-outline" style="width: 100%;" safe>
+              {`Save unread chapters for offline (${offline.saved} of ${offline.unread} saved)`}
+            </button>
+          </form>
+        )
+      )}
 
       {/* Bookmark Actions (Follow, Favorite, Read Later) — bookmarks capability */}
       {source.capabilities.bookmarks && fiction.csrfToken && (
@@ -215,6 +237,7 @@ export function FictionPage({
                   {c.title || `Chapter ${startIdx + i + 1}`}
                 </a>
                 {c.date && <span class="card-ago" safe>{` · ${formatChapterDate(c.date)}`}</span>}
+                {!isRead && savedRefs.has(String(c.id)) && <span class="card-ago"> · saved</span>}
               </li>
             );
           })}

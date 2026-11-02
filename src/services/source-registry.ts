@@ -75,6 +75,17 @@ export interface SourceAutoLogin {
   refresh(userId: string): Promise<boolean>;
 }
 
+export interface OfflineStatus {
+  /** Chapters from the first unread one to the end. */
+  unread: number;
+  /** How many of those are saved. */
+  saved: number;
+  /** Still waiting in the save queue. */
+  pending: number;
+  /** Every saved chapter of the fiction, read or not. */
+  savedRefs: string[];
+}
+
 export interface Source {
   /** Machine name; appears in URLs (/read/:source/...). */
   name: string;
@@ -132,6 +143,11 @@ export interface Source {
     chapterRef: string,
     body?: unknown
   ): Promise<unknown> | unknown;
+  /** Offline reading: queue a fiction's unread chapters to save; returns how many were queued. */
+  saveForOffline?(userId: string, fictionRef: string): Promise<number>;
+  offlineStatus?(userId: string, fictionRef: string): OfflineStatus | null;
+  /** True while the source is unreachable and pages come from saved copies. */
+  isOffline?(): boolean;
   canUpload?: boolean;
   upload?(
     userId: string,

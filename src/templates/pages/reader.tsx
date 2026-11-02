@@ -18,6 +18,12 @@ import {
   ScrollSmoothSelector,
 } from "../reader-components";
 
+const SAVE_IN_BACKGROUND =
+  "var x=new XMLHttpRequest();x.open('POST',this.action,true);" +
+  "x.setRequestHeader('Content-Type','application/x-www-form-urlencoded');" +
+  "x.setRequestHeader('X-Requested-With','XMLHttpRequest');x.send('');" +
+  "var b=this.getElementsByTagName('button')[0];b.disabled=true;b.innerHTML='Saving in the background';return false";
+
 /**
  * Chapter reader page - paginated for e-ink (SPA-style navigation)
  */
@@ -114,6 +120,21 @@ export function ReaderPage({
       >
         <ModeSelector mode={settings.mode ?? "paged"} />
         <ScrollSmoothSelector />
+        {source.saveForOffline && (
+          <div class="settings-row">
+            <label>Offline</label>
+            {/* Saves in the background so the reader keeps its page; without
+                JS the form posts and comes back to this chapter. */}
+            <form
+              method="POST"
+              action={`/read/${source.name}/${fictionRef}/offline`}
+              onsubmit={SAVE_IN_BACKGROUND}
+            >
+              <input type="hidden" name="back" value={`/read/${source.name}/${fictionRef}/${chapter.ref ?? ""}`} />
+              <button type="submit" class="remote-btn">Save unread chapters</button>
+            </form>
+          </div>
+        )}
       </SettingsModal>
     </ReaderLayout>
   );

@@ -59,6 +59,11 @@ export function Layout({
         <body class={fullBodyClass || undefined}>
           <Header currentPath={currentPath} sources={sources} />
           <main class="main">
+            {sources.filter((s) => s.isOffline?.()).map((s) => (
+              <div class="card" role="status" style="margin-bottom: 16px;" safe>
+                {`${s.displayName} can't be reached right now. Showing saved copies; reading progress is sent when it is back.`}
+              </div>
+            ))}
             {children}
           </main>
           {allScripts.map((src) => (

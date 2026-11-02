@@ -575,6 +575,25 @@ export async function handlePageRoute(
     }
   }
 
+  // ---- /read/:source/:fictionRef/offline (POST) ----
+  const offlineMatch = rest.match(/^\/([^/]+)\/offline$/);
+  if (offlineMatch && method === "POST") {
+    const fictionRef = offlineMatch[1];
+    if (!source.saveForOffline) return notFound(settings, `${source.displayName} cannot save chapters.`);
+    const form = await parseFormData(req);
+    // Only back into the reader or fiction page, never off-site.
+    const back = form.back?.startsWith(`/read/${source.name}/`) ? form.back : `/read/${source.name}/${fictionRef}`;
+    try {
+      await source.saveForOffline(userId, fictionRef);
+      // The reader saves in the background and stays on its page.
+      if (req.headers.get("x-requested-with") === "XMLHttpRequest") return new Response(null, { status: 204 });
+      return redirect(back);
+    } catch (error: any) {
+      console.error(`Error saving ${source.name}/${fictionRef} for offline:`, error);
+      return redirect(`/read/${source.name}/${fictionRef}?error=${encodeURIComponent("Could not load the chapter list to save")}`);
+    }
+  }
+
   // ---- /read/:source/:fictionRef/library (POST) ----
   const libraryActionMatch = rest.match(/^\/([^/]+)\/library$/);
   if (libraryActionMatch && method === "POST") {
@@ -628,6 +647,7 @@ export async function handlePageRoute(
           error,
           sources: getEnabledSources(userId),
           from,
+          offline: source.offlineStatus?.(userId, fictionRef) ?? undefined,
         })
       );
     } catch (error: any) {
