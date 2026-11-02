@@ -67,7 +67,7 @@ export function FictionPage({
     ? chapterHref(source.name, fiction, fiction.continueChapterId)
     : fiction.continueChapterSlug
       ? chapterHref(source.name, fiction, fiction.continueChapterSlug)
-      : chapters.length > 0
+      : !fiction.cacheStale && chapters.length > 0
         ? chapterHref(source.name, fiction, chapters[0].slug ?? chapters[0].id)
         : null;
 
@@ -81,6 +81,11 @@ export function FictionPage({
 
   return (
     <Layout title={fiction.title} settings={settings} currentPath={fictionHref(source.name, fiction)} sources={sources}>
+      {fiction.cacheStale && (
+        <div class="card" role="status" style="margin-bottom: 16px;">
+          Showing a saved copy. Chapter and reading progress details may be out of date.
+        </div>
+      )}
       {/* Fiction Header */}
       <div style="display: flex; margin-bottom: 16px;">
         <CoverImage url={fiction.coverUrl} alt={fiction.title} size="large" />

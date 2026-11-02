@@ -27,6 +27,7 @@ export interface Fiction {
   continueChapterId?: number; // Next chapter to read (from RR progress)
   continueChapterSlug?: string; // Next chapter slug (for FWN progress)
   continueChapterLabel?: string; // Short label shown next to Continue (e.g. "Ch. 42")
+  cacheStale?: boolean; // saved copy shown while the source is refreshed
   // Bookmark state (from Royal Road)
   isFollowing?: boolean;
   isFavorite?: boolean;
