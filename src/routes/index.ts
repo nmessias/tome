@@ -5,7 +5,7 @@ import { html, serveStatic, parseReaderSettings, redirect, parseFormData, compre
 import { handlePageRoute } from "./pages";
 import { handleApiRoute } from "./api";
 import { ErrorPage, LoginPage, InvitePage, InviteExpiredPage } from "../templates";
-import { auth, getSession, AUTH_ENABLED } from "../lib/auth";
+import { getAuth, getSession, AUTH_ENABLED } from "../lib/auth";
 import type { ThemeName } from "../config";
 import { getEnabledSources, getSourceByName } from "../services/source-registry";
 import { getFeatures } from "../services/feature-registry";
@@ -69,7 +69,7 @@ async function routeRequest(req: Request): Promise<Response> {
 
   // Handle Better Auth routes
   if (path.startsWith("/api/auth")) {
-    return auth.handler(req);
+    return (await getAuth()).handler(req);
   }
 
   // Handle login page
@@ -240,7 +240,7 @@ async function handleLoginPost(req: Request): Promise<Response> {
 
   try {
     // Use Better Auth's sign-in endpoint with returnHeaders to get cookies
-    const { headers: authHeaders, response: authResponse } = await auth.api.signInUsername({
+    const { headers: authHeaders, response: authResponse } = await (await getAuth()).api.signInUsername({
       body: {
         username,
         password,
@@ -277,7 +277,7 @@ async function handleLoginPost(req: Request): Promise<Response> {
 async function handleLogout(req: Request): Promise<Response> {
   try {
     // Call Better Auth's sign-out endpoint
-    await auth.api.signOut({
+    await (await getAuth()).api.signOut({
       headers: req.headers,
     });
   } catch (error) {
@@ -336,7 +336,7 @@ async function handleInviteRegister(req: Request, token: string, email: string):
   }
   
   try {
-    const response = await auth.api.signUpEmail({
+    const response = await (await getAuth()).api.signUpEmail({
       body: {
         email,
         password,

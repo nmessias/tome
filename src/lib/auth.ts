@@ -5,10 +5,9 @@
  * Note: This file uses bun:sqlite for runtime. For CLI migrations,
  * use the root auth.ts which uses better-sqlite3.
  */
-import { betterAuth } from "better-auth";
-import { username } from "better-auth/plugins";
 import { Database } from "bun:sqlite";
 import { DB_PATH, AUTH_USERNAME, AUTH_PASSWORD, AUTH_ENABLED, BETTER_AUTH_SECRET, BETTER_AUTH_URL } from "../config";
+import { readSession, sessionSecret, type SessionRow, type SessionUser } from "./session";
 
 // Initialize database (bun:sqlite for runtime performance)
 const db = new Database(DB_PATH);
@@ -18,32 +17,51 @@ if (process.env.NODE_ENV === "production" && !BETTER_AUTH_SECRET) {
   console.warn("WARNING: BETTER_AUTH_SECRET not set. Sessions will not persist across restarts.");
 }
 
-export const auth = betterAuth({
-  database: db,
-  secret: BETTER_AUTH_SECRET || undefined,
-  baseURL: BETTER_AUTH_URL || undefined,
-  emailAndPassword: {
-    enabled: true,
-  },
-  plugins: [username()],
-  user: {
-    additionalFields: {
-      role: {
-        type: "string",
-        required: false,
-        defaultValue: "user",
-        input: false,
+function createAuth(
+  betterAuth: typeof import("better-auth").betterAuth,
+  username: typeof import("better-auth/plugins/username").username,
+) {
+  return betterAuth({
+    database: db,
+    secret: BETTER_AUTH_SECRET || undefined,
+    baseURL: BETTER_AUTH_URL || undefined,
+    emailAndPassword: {
+      enabled: true,
+    },
+    plugins: [username()],
+    user: {
+      additionalFields: {
+        role: {
+          type: "string",
+          required: false,
+          defaultValue: "user",
+          input: false,
+        },
       },
     },
-  },
-  session: {
-    expiresIn: 60 * 60 * 24 * 365,
-    updateAge: 60 * 60 * 24,
-  },
-  emailVerification: {
-    sendVerificationEmail: async () => {},
-  },
-});
+    session: {
+      expiresIn: 60 * 60 * 24 * 365,
+      updateAge: 60 * 60 * 24,
+    },
+    emailVerification: {
+      sendVerificationEmail: async () => {},
+    },
+  });
+}
+
+let authInstance: Promise<ReturnType<typeof createAuth>> | null = null;
+
+/**
+ * better-auth, loaded on first use: sign-in, sign-out, invites and its own
+ * /api/auth routes. Request authentication goes through getSession, which does
+ * not need it, so a restarted server whose readers keep their cookies never
+ * loads it (~45MB of modules, measured).
+ */
+export function getAuth(): Promise<ReturnType<typeof createAuth>> {
+  authInstance ??= Promise.all([import("better-auth"), import("better-auth/plugins/username")])
+    .then(([{ betterAuth }, { username }]) => createAuth(betterAuth, username));
+  return authInstance;
+}
 
 export async function seedAdminUser(): Promise<void> {
   if (!AUTH_ENABLED) {
@@ -68,7 +86,7 @@ export async function seedAdminUser(): Promise<void> {
 
     const email = `${AUTH_USERNAME}@tome.local`;
     
-    const response = await auth.api.signUpEmail({
+    const response = await (await getAuth()).api.signUpEmail({
       body: {
         email,
         password: AUTH_PASSWORD,
@@ -132,14 +150,19 @@ async function createAdminUserDirectly(): Promise<void> {
   }
 }
 
-/**
- * Validate session from request headers
- * Returns session data or null if not authenticated
- */
-export async function getSession(req: Request) {
-  return auth.api.getSession({
-    headers: req.headers,
-  });
+// db.query caches the statement; prepared on use so a fresh DB can migrate first.
+const findSession = (token: string) =>
+  db.query(
+    "SELECT s.userId AS userId, u.role AS role, s.expiresAt AS expiresAt FROM session s JOIN user u ON u.id = s.userId WHERE s.token = ?",
+  ).get(token) as SessionRow | null;
+
+/** The signed-in user for a request, or null (see ./session). */
+export async function getSession(req: Request): Promise<SessionUser | null> {
+  // Secret rotation (BETTER_AUTH_SECRETS) has its own rules: leave it to better-auth.
+  if (process.env.BETTER_AUTH_SECRETS) {
+    return (await (await getAuth()).api.getSession({ headers: req.headers })) as SessionUser | null;
+  }
+  return readSession(req.headers.get("cookie"), sessionSecret(), findSession);
 }
 
 export async function createUser(
