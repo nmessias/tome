@@ -115,19 +115,36 @@ body.kindle .nav-link.active {
   }
 }
 
-/* Phones and the Kindle: the title gets its own row and the nav links share the width
-   evenly, instead of nine ragged buttons wrapping beside "Tome". */
+/* Kindle: the title gets its own row and the nav links share the width
+   evenly, instead of ragged buttons wrapping beside "Tome". */
+body.kindle .header {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+
+body.kindle .nav-link {
+  flex: 1 0 auto;
+  text-align: center;
+  padding: 8px;
+}
+
+/* Phones: one row, title then a sideways-scrolling nav. Wrapped, the nav
+   took a sixth of the screen on every page. */
 @media (max-width: 800px) {
-  .header {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 8px;
+  body:not(.kindle) .header {
+    gap: 12px;
   }
 
-  .nav-link {
-    flex: 1 0 auto;
-    text-align: center;
-    padding: 8px;
+  body:not(.kindle) .nav {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    min-width: 0;
+  }
+
+  body:not(.kindle) .nav-link {
+    flex: 0 0 auto;
+    white-space: nowrap;
   }
 }
 
@@ -362,6 +379,30 @@ body.kindle .fiction-description {
 .cover-img {
   border: 1px solid #212427;
   flex-shrink: 0;
+  object-fit: cover;
+}
+
+.cover-small { width: 50px; height: 70px; }
+.cover-medium { width: 80px; height: 110px; }
+.cover-large { width: 120px; height: 160px; }
+
+/* Phones: a narrower cover leaves the title room to stay on one line. */
+@media (max-width: 480px) {
+  .cover-medium { width: 60px; height: 84px; }
+  .cover-large { width: 96px; height: 128px; }
+}
+
+/* Fiction page chapter list */
+.chapter-list li {
+  padding: 10px 0;
+}
+
+.chapter-read {
+  opacity: 0.6;
+}
+
+.chapter-next {
+  font-weight: bold;
 }
 
 body.kindle .cover-img {
@@ -493,11 +534,12 @@ body.kindle .pagination {
   text-align: center;
 }
 
-/* Description toggle button */
+/* Description toggle button: a real tap target, it is the only way to read
+   past the preview. */
 .desc-toggle {
-  margin-left: 8px;
-  padding: 2px 6px;
-  font-size: 12px;
+  margin-top: 6px;
+  padding: 8px 12px;
+  font-size: 14px;
   background: #fff;
   border: 1px solid #212427;
   cursor: pointer;

@@ -39,8 +39,9 @@ export function Header({
   currentPath?: string;
   sources?: Source[];
 }): JSX.Element {
+  // No "Home" link: the "Tome" title is the home link, and every button cut
+  // here is a row saved on a phone.
   const links: { href: string; label: string }[] = [
-    { href: "/", label: "Home" },
     ...sources.flatMap((s) => s.navLinks),
     { href: "/settings", label: "Settings" },
   ];
@@ -167,29 +168,11 @@ export function CoverImage({
   alt?: string;
   size?: "small" | "medium" | "large";
 }): JSX.Element {
-  const sizes = {
-    small: { width: 50, height: 70 },
-    medium: { width: 80, height: 110 },
-    large: { width: 120, height: 160 },
-  };
-  const { width, height } = sizes[size];
-
+  // Sized by class, not inline style, so phones can shrink them in CSS.
   if (url) {
-    return (
-      <img
-        src={url}
-        alt={alt}
-        class="cover-img"
-        style={`width: ${width}px; height: ${height}px; object-fit: cover;`}
-      />
-    );
+    return <img src={url} alt={alt} class={`cover-img cover-${size}`} />;
   }
-  return (
-    <div
-      class="cover-placeholder"
-      style={`width: ${width}px; height: ${height}px;`}
-    ></div>
-  );
+  return <div class={`cover-placeholder cover-${size}`}></div>;
 }
 
 /**

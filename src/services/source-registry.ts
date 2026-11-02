@@ -106,6 +106,8 @@ export interface Source {
 
   // Capability operations (only meaningful when the matching flag is set)
   getFollows?(userId: string): Promise<FollowedFiction[]>;
+  /** Cache-only follows for the home page; never blocks on a scrape. */
+  getFollowsCached?(userId: string): FollowedFiction[] | null;
   getHistory?(userId: string): Promise<HistoryEntry[]>;
   getReadLater?(userId: string): Promise<Fiction[]>;
   getToplist?(toplist: ToplistType, userId?: string, ttl?: number): Promise<Fiction[]>;

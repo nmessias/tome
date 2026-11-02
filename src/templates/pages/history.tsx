@@ -37,23 +37,25 @@ export function HistoryPage({
   return (
     <Layout title="History" settings={settings} currentPath={historyHref} sources={sources}>
       <h1>History ({history.length})</h1>
-      {paginatedHistory.map((h) => (
-        <div class="card">
-          <div class="card-title">
-            <a href={`/read/${source.name}/${h.fictionId}/${h.chapterId}`} safe>
-              {h.chapterTitle}
-            </a>
-          </div>
-          <div class="card-meta">
-            <a href={`/read/${source.name}/${h.fictionId}`} safe>
-              {h.fictionTitle}
-            </a>
-          </div>
-          <div class="card-meta" safe>
-            {h.readAt}
-          </div>
-        </div>
-      ))}
+      {/* The fiction leads: it is what you recognise when scanning, the
+          chapter title rarely is. */}
+      <ul>
+        {paginatedHistory.map((h) => (
+          <li>
+            <div class="card-title">
+              <a href={`/read/${source.name}/${h.fictionId}`} safe>
+                {h.fictionTitle}
+              </a>
+            </div>
+            <div class="card-meta">
+              <a href={`/read/${source.name}/${h.fictionId}/${h.chapterId}`} safe>
+                {h.chapterTitle}
+              </a>
+              <span class="card-ago" safe>{`  ·  ${h.readAt}`}</span>
+            </div>
+          </li>
+        ))}
+      </ul>
       <Pagination currentPage={page} totalItems={history.length} basePath={historyHref} />
     </Layout>
   );

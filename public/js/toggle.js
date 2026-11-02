@@ -56,4 +56,11 @@
       setTheme(current === 'dark' ? 'light' : 'dark');
     };
   }
+
+  // Phones scroll the nav sideways; keep the current page's link in view.
+  var nav = document.querySelector('.nav');
+  var active = document.querySelector('.nav .nav-link.active');
+  if (nav && active && nav.scrollWidth > nav.clientWidth) {
+    nav.scrollLeft = active.offsetLeft - nav.offsetLeft - 16;
+  }
 })();

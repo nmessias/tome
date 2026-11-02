@@ -2,9 +2,9 @@
  * Home page template
  */
 import { Layout } from "../layout";
-import { SectionTitle, FictionCardCompact } from "../components";
+import { SectionTitle, FictionCard, FictionCardCompact, hasNewChapters } from "../components";
 import type { ReaderSettings } from "../../config";
-import type { Fiction } from "../../types";
+import type { Fiction, FollowedFiction } from "../../types";
 import type { Source } from "../../services/source-registry";
 import { DEFAULT_READER_SETTINGS } from "../../config";
 
@@ -12,6 +12,8 @@ export function HomePage({
   settings = DEFAULT_READER_SETTINGS,
   risingStars = [],
   weeklyPopular = [],
+  follows = [],
+  followsSource,
   toplistSource,
   needsSetupSource,
   sources = [],
@@ -19,34 +21,47 @@ export function HomePage({
   settings?: ReaderSettings;
   risingStars?: Fiction[];
   weeklyPopular?: Fiction[];
+  follows?: FollowedFiction[];
+  followsSource?: Source | null;
   toplistSource?: Source | null;
   needsSetupSource?: Source | null;
   sources?: Source[];
 }): JSX.Element {
   const hasNoSources = sources.length === 0;
-  const librarySource = sources.find((s) => s.capabilities.library);
+  // The home page opens on what there is to read: on the Kindle every extra
+  // page is a full e-ink refresh, so Follows should not be a required stop.
+  const withNew = follows.filter(hasNewChapters);
 
   return (
     <Layout title="Home" settings={settings} currentPath="/" sources={sources}>
-      <h1>Welcome to Tome</h1>
-      <p>Read web fiction on your e-ink device.</p>
-
       {hasNoSources && (
-        <div class="mt-24">
-          <p><strong>Get started:</strong></p>
-          <p class="mt-8">
+        <>
+          <h1>Welcome to Tome</h1>
+          <p>
             <a href="/settings">Enable a reading source</a> to get started.
           </p>
-        </div>
+        </>
       )}
 
-      {librarySource && (
-        <div class="mt-24">
-          <SectionTitle>Your Library</SectionTitle>
-          <p>
-            <a href={`/read/${librarySource.name}/library`} class="btn">Open {librarySource.displayName} Library</a>
-          </p>
-        </div>
+      {followsSource && withNew.length > 0 && (
+        <>
+          <SectionTitle>{`New chapters (${withNew.length})`}</SectionTitle>
+          {withNew.slice(0, 5).map((f) => (
+            <FictionCard
+              fiction={f}
+              sourceName={followsSource.name}
+              showContinue={true}
+              showUnread={true}
+              showLatestChapter={true}
+              showLastRead={true}
+            />
+          ))}
+          {withNew.length > 5 && (
+            <a href={`/read/${followsSource.name}/follows?new=1`} class="btn btn-outline btn-small">
+              {`All ${withNew.length} with new chapters`}
+            </a>
+          )}
+        </>
       )}
 
       {needsSetupSource && (

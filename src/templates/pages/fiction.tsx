@@ -9,20 +9,10 @@ import { DEFAULT_READER_SETTINGS, CHAPTERS_PER_PAGE } from "../../config";
 import type { Fiction } from "../../types";
 import type { Source } from "../../services/source-registry";
 
-function formatNumber(num: number | undefined): string {
-  if (num === undefined) return "—";
-  return num.toLocaleString();
-}
-
-function formatRating(rating: number | undefined): string {
-  if (rating === undefined) return "—";
-  return `${rating.toFixed(1)}★`;
-}
-
 export function FictionPage({
   fiction,
   source,
-  chapterPage = 1,
+  chapterPage,
   settings = DEFAULT_READER_SETTINGS,
   error,
   sources = [],
@@ -38,18 +28,29 @@ export function FictionPage({
 }): JSX.Element {
   const chapters = fiction.chapters || [];
   const fictionRef = fiction.slug ?? String(fiction.id);
+  // Without an explicit ?page, open on the page holding the next chapter: on a
+  // 400-chapter fiction page 1 is twenty finished chapters and a long paging
+  // walk on e-ink.
+  if (chapterPage === undefined) {
+    const nextIdx = chapters.findIndex((c) => {
+      const ref = c.slug ?? c.id;
+      return ref === fiction.continueChapterId || ref === fiction.continueChapterSlug;
+    });
+    chapterPage = nextIdx >= 0 ? Math.floor(nextIdx / CHAPTERS_PER_PAGE) + 1 : 1;
+  }
   const totalChapterPages = Math.ceil(chapters.length / CHAPTERS_PER_PAGE);
   const startIdx = (chapterPage - 1) * CHAPTERS_PER_PAGE;
   const paginatedChapters = chapters.slice(startIdx, startIdx + CHAPTERS_PER_PAGE);
 
+  // One line under the title instead of a Statistics box between the
+  // Continue button and the chapter list.
   const stats = fiction.stats;
-  const hasRatings = stats?.rating !== undefined;
-  const hasDetailedStats = stats && (
-    stats.views !== undefined || 
-    stats.followers !== undefined || 
-    stats.favorites !== undefined ||
-    stats.pages !== undefined
-  );
+  const statsLine = [
+    stats?.rating !== undefined ? `${stats.rating.toFixed(1)}★` : "",
+    stats?.pages !== undefined ? `${stats.pages.toLocaleString("en-US")} pages` : "",
+    stats?.followers !== undefined ? `${stats.followers.toLocaleString("en-US")} followers` : "",
+    chapters.length > 0 ? `${chapters.length} chapters` : "",
+  ].filter(Boolean).join(" · ");
 
   const hasLongDesc = fiction.description && fiction.description.length > 300;
 
@@ -82,9 +83,9 @@ export function FictionPage({
           <div style="font-size: 14px;">
             by <span safe>{fiction.author || "Unknown"}</span>
           </div>
-          {hasRatings && (
-            <div style="margin-top: 8px; font-weight: bold;">
-              {formatRating(stats?.rating)}
+          {statsLine && (
+            <div style="margin-top: 8px; font-size: 14px;" safe>
+              {statsLine}
             </div>
           )}
           {fiction.tags && fiction.tags.length > 0 && (
@@ -154,36 +155,6 @@ export function FictionPage({
         </div>
       )}
 
-      {/* Stats Section */}
-      {(hasRatings || hasDetailedStats) && (
-        <>
-          <SectionTitle>Statistics</SectionTitle>
-          <div class="card">
-            <div style="display: flex; flex-wrap: wrap; gap: 16px;">
-              {hasRatings && (
-                <div style="flex: 1; min-width: 120px;">
-                  <div style="margin-bottom: 4px;"><strong>Overall:</strong> {formatRating(stats?.rating)}</div>
-                  {stats?.styleScore !== undefined && <div style="font-size: 14px;">Style: {formatRating(stats.styleScore)}</div>}
-                  {stats?.storyScore !== undefined && <div style="font-size: 14px;">Story: {formatRating(stats.storyScore)}</div>}
-                  {stats?.grammarScore !== undefined && <div style="font-size: 14px;">Grammar: {formatRating(stats.grammarScore)}</div>}
-                  {stats?.characterScore !== undefined && <div style="font-size: 14px;">Character: {formatRating(stats.characterScore)}</div>}
-                  {chapters.length > 0 && <div style="font-size: 14px;"><strong>{chapters.length}</strong> chapters</div>}
-                </div>
-              )}
-              {hasDetailedStats && (
-                <div style="flex: 1; min-width: 120px; font-size: 14px;">
-                  {stats?.pages !== undefined && <div><strong>{formatNumber(stats.pages)}</strong> pages</div>}
-                  {stats?.views !== undefined && <div><strong>{formatNumber(stats.views)}</strong> views</div>}
-                  {stats?.followers !== undefined && <div><strong>{formatNumber(stats.followers)}</strong> followers</div>}
-                  {stats?.favorites !== undefined && <div><strong>{formatNumber(stats.favorites)}</strong> favorites</div>}
-                  {stats?.ratings !== undefined && <div><strong>{formatNumber(stats.ratings)}</strong> ratings</div>}
-                </div>
-              )}
-            </div>
-          </div>
-        </>
-      )}
-
       {/* Description */}
       {fiction.description && (
         <>
@@ -214,23 +185,27 @@ export function FictionPage({
       {/* Chapters */}
       <SectionTitle>{`Chapters (${chapters.length})`}</SectionTitle>
       {paginatedChapters.length > 0 ? (
-        paginatedChapters.map((c, i) => {
-          const isRead = c.isRead === true;
-          const chapterRef = c.slug ?? c.id;
-          const isNextToRead = !isRead && (chapterRef === fiction.continueChapterId || chapterRef === fiction.continueChapterSlug);
-          const prefix = isNextToRead ? "→ " : isRead ? "✓ " : "";
-          const style = isNextToRead ? "font-weight: bold;" : isRead ? "opacity: 0.6;" : "";
+        // A plain divided list, not a bordered card per chapter: twice the
+        // chapters per screen.
+        <ul class="chapter-list">
+          {paginatedChapters.map((c, i) => {
+            const isRead = c.isRead === true;
+            const chapterRef = c.slug ?? c.id;
+            const isNextToRead = !isRead && (chapterRef === fiction.continueChapterId || chapterRef === fiction.continueChapterSlug);
+            const prefix = isNextToRead ? "→ " : isRead ? "✓ " : "";
+            const cls = isNextToRead ? "chapter-next" : isRead ? "chapter-read" : undefined;
 
-          return (
-            <div class="card" style={`padding: 8px 12px; ${style}`}>
-              <span safe>{prefix}</span>
-              <a href={chapterHref(source.name, fiction, chapterRef)} safe>
-                {c.title || `Chapter ${startIdx + i + 1}`}
-              </a>
-              {c.date && <span style="font-size: 12px;"> · <span safe>{c.date}</span></span>}
-            </div>
-          );
-        })
+            return (
+              <li class={cls}>
+                <span safe>{prefix}</span>
+                <a href={chapterHref(source.name, fiction, chapterRef)} safe>
+                  {c.title || `Chapter ${startIdx + i + 1}`}
+                </a>
+                {c.date && <span class="card-ago" safe>{` · ${c.date}`}</span>}
+              </li>
+            );
+          })}
+        </ul>
       ) : (
         <p>No chapters found</p>
       )}

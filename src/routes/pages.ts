@@ -152,6 +152,10 @@ export async function handlePageRoute(
       weeklyPopular = (weeklyPopularToplist ? toplistSource.getToplistCached(weeklyPopularToplist) : null)?.slice(0, 10) || [];
     }
 
+    // Cache-only for the same reason; the follows job keeps it warm.
+    const followsSource = getSourceWithCapability(userId, "follows");
+    const follows = followsSource?.getFollowsCached?.(userId) ?? [];
+
     const needsSetupSource =
       getSourcesWithCapability(userId, "credentials").find((s) => s.hasSession && !s.hasSession(userId)) || null;
 
@@ -160,6 +164,8 @@ export async function handlePageRoute(
         settings,
         risingStars,
         weeklyPopular,
+        follows,
+        followsSource,
         toplistSource: hasSession ? toplistSource : null,
         needsSetupSource,
         sources: getEnabledSources(userId),
@@ -565,7 +571,8 @@ export async function handlePageRoute(
     if (!source.getFiction) return notFound(settings, `${source.displayName} has no fiction pages.`);
     if (needsSession(source, userId)) return notConfigured(settings, source.displayName);
 
-    const page = parseInt(url.searchParams.get("page") || "1", 10);
+    const pageParam = url.searchParams.get("page");
+    const page = pageParam ? parseInt(pageParam, 10) : undefined;
     const error = url.searchParams.get("error") || undefined;
     const from = url.searchParams.get("from") || undefined;
 
