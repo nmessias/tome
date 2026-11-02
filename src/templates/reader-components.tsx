@@ -8,16 +8,17 @@ import type { PropsWithChildren } from "@kitajs/html";
 import type { ReaderMode } from "../config";
 
 /**
- * Tap and click zones for page navigation
- * Identical across all reader types.
+ * Tap zones for page navigation, identical across all reader types: the left
+ * quarter turns back, everything else turns forward (the Kindle's own layout).
+ * The menu opens from a visible button rather than invisible top/bottom bands,
+ * which were easy to hit by accident and hard to find on purpose.
  */
 export function TapZones(): JSX.Element {
   return (
     <>
-      <div class="tap-zone-top"></div>
-      <div class="tap-zone-bottom"></div>
       <div class="click-zone click-zone-left"></div>
       <div class="click-zone click-zone-right"></div>
+      <button class="menu-btn">Menu</button>
     </>
   );
 }

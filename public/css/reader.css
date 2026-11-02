@@ -177,7 +177,8 @@ body.kindle .reader-header .settings-btn {
   width: 95%;
   max-width: 900px;
   padding-top: 15px;
-  padding-bottom: 15px;
+  /* Clears the Menu label and page indicator on the last line. */
+  padding-bottom: 32px;
   overflow-x: scroll;
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -302,39 +303,44 @@ body.kindle .reader-content {
   font-weight: 700;
 }
 
-/* Click/tap zones for pagination */
+/* Left quarter turns back, the rest turns forward, full height. */
 .click-zone {
   position: absolute;
-  top: 15%;
-  bottom: 15%;
-  width: 40%;
+  top: 0;
+  bottom: 0;
   z-index: 5;
 }
 
 .click-zone-left {
   left: 0;
+  width: 25%;
 }
 
 .click-zone-right {
   right: 0;
+  width: 75%;
 }
 
-.tap-zone-top {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 15%;
-  z-index: 6;
-}
-
-.tap-zone-bottom {
-  position: absolute;
+/* Opens the header and footer; sits opposite the page indicator. Inherits the
+   theme's text colour so it works in light, dark and sepia alike. */
+.menu-btn {
+  position: fixed;
   bottom: 0;
   left: 0;
-  right: 0;
-  height: 15%;
+  /* Padding up and right makes a ~40px target without moving the label. */
+  padding: 16px 20px 6px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  color: inherit;
+  opacity: 0.65;
+  background: none;
+  border: none;
+  cursor: pointer;
   z-index: 6;
+}
+
+body.kindle .menu-btn {
+  opacity: 0.8;
 }
 
 /* Page indicator - Kindle-style, always visible. Light gray 11px was barely
@@ -717,8 +723,7 @@ body.kindle .theme-btn.active {
   }
 
   .click-zone,
-  .tap-zone-top,
-  .tap-zone-bottom {
+  .menu-btn {
     display: none !important;
   }
 
@@ -799,8 +804,7 @@ body.scrolled-mode .reader-content {
   visibility: visible;
 }
 
-body.scrolled-mode .tap-zone-top,
-body.scrolled-mode .tap-zone-bottom,
+body.scrolled-mode .menu-btn,
 body.scrolled-mode .click-zone-left,
 body.scrolled-mode .click-zone-right {
   display: none;

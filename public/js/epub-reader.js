@@ -598,15 +598,21 @@
   }
 
   function attachHandlers() {
-    var tapTop = $('.tap-zone-top');
-    var tapBottom = $('.tap-zone-bottom');
-    if (tapTop) tapTop.onclick = toggleUI;
-    if (tapBottom) tapBottom.onclick = toggleUI;
+    var menuBtn = $('.menu-btn');
+    if (menuBtn) menuBtn.onclick = toggleUI;
 
+    // With the menu open, a tap on the page closes it instead of turning, so
+    // dismissing the menu never skips a page.
+    function pageTap(turn) {
+      return function() {
+        if (S.uiVisible) setUI(false);
+        else turn();
+      };
+    }
     var clickLeft = $('.click-zone-left');
     var clickRight = $('.click-zone-right');
-    if (clickLeft) clickLeft.onclick = prevPage;
-    if (clickRight) clickRight.onclick = nextPage;
+    if (clickLeft) clickLeft.onclick = pageTap(prevPage);
+    if (clickRight) clickRight.onclick = pageTap(nextPage);
 
     var prevBtn = $('.nav-prev');
     var nextBtn = $('.nav-next');

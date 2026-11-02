@@ -927,15 +927,21 @@
   }
 
   function attachHandlers() {
-    var tapTop = document.querySelector('.tap-zone-top');
-    var tapBottom = document.querySelector('.tap-zone-bottom');
-    if (tapTop) tapTop.onclick = toggleUI;
-    if (tapBottom) tapBottom.onclick = toggleUI;
-    
+    var menuBtn = document.querySelector('.menu-btn');
+    if (menuBtn) menuBtn.onclick = toggleUI;
+
+    // With the menu open, a tap on the page closes it instead of turning, so
+    // dismissing the menu never skips a page.
+    function pageTap(turn) {
+      return function() {
+        if (S.uiVisible) setUI(false);
+        else turn();
+      };
+    }
     var clickLeft = document.querySelector('.click-zone-left');
     var clickRight = document.querySelector('.click-zone-right');
-    if (clickLeft) clickLeft.onclick = prevPage;
-    if (clickRight) clickRight.onclick = nextPage;
+    if (clickLeft) clickLeft.onclick = pageTap(prevPage);
+    if (clickRight) clickRight.onclick = pageTap(nextPage);
     
     var settingsBtn = document.querySelector('.settings-btn');
     var settingsClose = document.querySelector('.settings-close');
