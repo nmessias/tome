@@ -29,14 +29,12 @@ if [ "$ROYAL_ROAD_HEADLESS" != "true" ] && [ -z "$DISPLAY" ] && command -v Xvfb 
   sleep 1
 fi
 
-# Optional legacy escape hatch. The normal Royal Road path impersonates Chrome
-# and goes out direct, so Tailscale is NOT needed. Set ROYAL_ROAD_USE_TAILSCALE=true
-# only if you deliberately want to route the scraper through a tailnet exit node;
-# both TS_AUTHKEY and TS_EXIT_NODE must then be set. The exit node must stay
-# online: if it disappears, every proxied request fails until the app restarts.
+# Optional Tailscale egress routing for Royal Road. It needs a configured exit
+# node. The exit node must remain online for proxied requests to work.
 if [ "$ROYAL_ROAD_USE_TAILSCALE" = "true" ]; then
   if [ -z "$TS_AUTHKEY" ] || [ -z "$TS_EXIT_NODE" ]; then
     echo "ROYAL_ROAD_USE_TAILSCALE=true but TS_AUTHKEY/TS_EXIT_NODE are missing - going out direct"
+    unset ROYAL_ROAD_PROXY
   else
     echo "Joining tailnet, exit node $TS_EXIT_NODE..."
     # In-memory state: the key must be reusable + ephemeral, so every boot is a
@@ -46,10 +44,31 @@ if [ "$ROYAL_ROAD_USE_TAILSCALE" = "true" ]; then
     for _ in $(seq 20); do [ -S /var/run/tailscale/tailscaled.sock ] && break; sleep 0.5; done
     if /app/tailscale up --auth-key="$TS_AUTHKEY" --hostname=tome-in \
         --exit-node="$TS_EXIT_NODE" --accept-dns=false --timeout=30s; then
-      export ROYAL_ROAD_PROXY=socks5://127.0.0.1:1055
-      echo "Royal Road proxy enabled via tailnet exit node"
+      echo "Starting Royal Road DNS-aware SOCKS bridge..."
+      bun run scripts/tailscale-socks5-bridge.ts >/tmp/tailscale-socks5-bridge.log 2>&1 &
+      SOCKS_BRIDGE_PID=$!
+      SOCKS_BRIDGE_READY=false
+      for _ in $(seq 20); do
+        if grep -q "listening on 127.0.0.1:1056" /tmp/tailscale-socks5-bridge.log; then
+          SOCKS_BRIDGE_READY=true
+          break
+        fi
+        if ! kill -0 "$SOCKS_BRIDGE_PID" 2>/dev/null; then
+          break
+        fi
+        sleep 0.25
+      done
+      if [ "$SOCKS_BRIDGE_READY" = "true" ]; then
+        export ROYAL_ROAD_PROXY=socks5://127.0.0.1:1056
+        echo "Royal Road proxy enabled via Tailscale and DNS bridge"
+      else
+        echo "Royal Road DNS bridge failed to start; using direct egress"
+        cat /tmp/tailscale-socks5-bridge.log || true
+        unset ROYAL_ROAD_PROXY
+      fi
     else
       echo "tailscale up failed - Royal Road will use the direct Chrome-impersonating HTTP path"
+      unset ROYAL_ROAD_PROXY
       tail -5 /tmp/tailscaled.log
     fi
   fi
