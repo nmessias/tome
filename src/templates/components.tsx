@@ -208,6 +208,19 @@ function formatNumber(num: number): string {
 }
 
 /**
+ * Whether a followed fiction has chapters past the last one read. The source's
+ * own flag misses some (Royal Road's unread markup drifts, and every row then
+ * read "Up to date" with 70 chapters waiting), so a latest chapter that is not
+ * the last-read one counts too.
+ */
+export function hasNewChapters(f: FollowedFiction): boolean {
+  return (
+    !!f.hasUnread ||
+    (!!f.latestChapterId && !!f.lastReadChapterId && f.latestChapterId !== f.lastReadChapterId)
+  );
+}
+
+/**
  * Fiction card props
  */
 export interface FictionCardProps {
@@ -259,22 +272,26 @@ export function FictionCard({
   const truncatedDesc = fiction.description ? truncateText(fiction.description, 150) : "";
   const hasMoreDesc = fiction.description && fiction.description.length > 150;
 
-  // Nothing new when the source says so, or when the latest chapter is the one
-  // already read. Either signal alone is enough; treating them as OR keeps a
-  // stale badge from ever pointing at an up-to-date row.
-  const isUnread = !!f.hasUnread;
-  const isCaughtUp = showUnread && !isUnread;
+  // Caught up needs a last read: a never-opened follow is not "up to date".
+  const isUnread = showUnread && hasNewChapters(f);
+  const isCaughtUp = showUnread && !isUnread && !!f.lastReadChapterId;
+  // Caught up means latest and last read are the same chapter; one line says it.
+  const hideLatest = isCaughtUp && f.latestChapterId === f.lastReadChapterId;
 
   return (
     <div class={`card${isUnread ? " card-unread" : ""}`} style="display: flex; gap: 12px;">
-      <CoverImage url={fiction.coverUrl} alt={fiction.title} />
+      {/* The cover is the biggest tap target on the card; on e-ink it beats
+          aiming for a wrapped, underlined title. */}
+      <a href={fictionHref(sourceName, fiction)} class="card-cover">
+        <CoverImage url={fiction.coverUrl} alt={fiction.title} />
+      </a>
       <div style="flex: 1; min-width: 0;">
         <div class="card-title">
           <span safe>{titlePrefix}</span>
           {/* Leads the title rather than trailing it: long fiction titles wrap,
               and a marker parked at the end lands on line 2 where a scanning
               eye never lands. */}
-          {showUnread && isUnread && <strong class="badge-new" safe> NEW </strong>}
+          {isUnread && <strong class="badge-new" safe> NEW </strong>}
           <a href={fictionHref(sourceName, fiction)} safe>
             {fiction.title}
           </a>
@@ -292,7 +309,7 @@ export function FictionCard({
           </div>
         )}
 
-        {showLatestChapter && f.latestChapter && (
+        {showLatestChapter && f.latestChapter && !hideLatest && (
           <div class="card-meta">
             <span safe>Latest: </span>
             {f.latestChapterId ? (
@@ -317,29 +334,29 @@ export function FictionCard({
               <span safe>{f.lastRead}</span>
             )}
             {f.lastReadAgo && <span class="card-ago" safe>{`  ·  ${f.lastReadAgo}`}</span>}
+            {isCaughtUp && <span class="card-ago">{"  ·  up to date"}</span>}
           </div>
         )}
 
-        {showContinue && (
+        {/* Buttons only where there is something to read: a row of identical
+            "Up to date" buttons doubled every card's height on a 50-row list,
+            and the cover already opens the chapter list. */}
+        {showContinue && !isCaughtUp && (
           <div class="card-actions">
-            {/* The action states whether there is anything to read, because on a
-                list of 50 the button is the only thing that differs between a
-                row with 30 new chapters and one you already finished. */}
-            {f.nextChapterId && !isCaughtUp ? (
-              <a href={chapterHref(sourceName, fiction, f.nextChapterId)} class="btn btn-small">
-                Continue
-              </a>
+            {f.nextChapterId ? (
+              <>
+                <a href={chapterHref(sourceName, fiction, f.nextChapterId)} class="btn btn-small">
+                  Continue
+                </a>
+                <a href={fictionHref(sourceName, fiction)} class="btn btn-outline btn-small">
+                  Chapters
+                </a>
+              </>
             ) : (
-              <a href={fictionHref(sourceName, fiction)} class="btn btn-outline btn-small">
-                {isCaughtUp ? "Up to date" : f.lastReadChapterId ? "Chapters" : "Start Reading"}
-              </a>
-            )}
-            {/* Always a second target: reaching the chapter list otherwise means
-                guessing that the title is a link, and there is no hover on an
-                e-ink screen to reveal it. */}
-            {f.nextChapterId && !isCaughtUp && (
-              <a href={fictionHref(sourceName, fiction)} class="btn btn-outline btn-small">
-                Chapters
+              // No resolved next chapter: the fiction page leads with its own
+              // "Continue Reading" button, one tap on.
+              <a href={fictionHref(sourceName, fiction)} class="btn btn-small">
+                {f.lastReadChapterId ? "Continue" : "Start Reading"}
               </a>
             )}
           </div>

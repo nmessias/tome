@@ -1,5 +1,5 @@
 import { Layout } from "../layout";
-import { FictionCard, Pagination, paginate } from "../components";
+import { FictionCard, Pagination, paginate, hasNewChapters } from "../components";
 import type { ReaderSettings } from "../../config";
 import { DEFAULT_READER_SETTINGS } from "../../config";
 import type { FollowedFiction } from "../../types";
@@ -37,8 +37,12 @@ export function FollowsPage({
   // Filter before paginating, so page 1 of "new only" is not just page 1 of
   // everything. Scanning 50 rows to find the 8 with new chapters is the whole
   // cost of this page.
-  const unreadCount = fictions.filter((f) => f.hasUnread).length;
-  const visible = unreadOnly ? fictions.filter((f) => f.hasUnread) : fictions;
+  // New chapters first, so the Kindle opens on what there is to read instead of
+  // a scroll through finished rows. sort is stable: each group keeps the
+  // source's own recency order.
+  const sorted = [...fictions].sort((a, b) => Number(hasNewChapters(b)) - Number(hasNewChapters(a)));
+  const unreadCount = sorted.filter(hasNewChapters).length;
+  const visible = unreadOnly ? sorted.filter(hasNewChapters) : sorted;
 
   // Carry the filter through pagination; Pagination already appends with "&"
   // when the base path has a query string.
