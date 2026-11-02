@@ -44,7 +44,7 @@ export function HomePage({
         <div class="mt-24">
           <SectionTitle>Your Library</SectionTitle>
           <p>
-            <a href={`/read/${librarySource.name}/library`} class="btn">Open ${librarySource.displayName} Library</a>
+            <a href={`/read/${librarySource.name}/library`} class="btn">Open {librarySource.displayName} Library</a>
           </p>
         </div>
       )}
@@ -53,7 +53,7 @@ export function HomePage({
         <div class="mt-24">
           <p><strong>{`${needsSetupSource.displayName} Setup:`}</strong></p>
           <p class="mt-8">
-            <a href="/settings">Configure your ${needsSetupSource.displayName} credentials</a> to enable browsing.
+            <a href="/settings">Configure your {needsSetupSource.displayName} credentials</a> to enable browsing.
           </p>
         </div>
       )}
