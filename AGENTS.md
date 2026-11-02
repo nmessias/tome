@@ -10,7 +10,8 @@ Every page renders on three devices; the Kindle Paperwhite is the main one.
   arrow functions, `const`, optional chaining). No hover, so links must look
   tappable. Every navigation is a full e-ink refresh, so fewer page hops beat
   prettier pages. Avoid animation, gray fills and dimmed overlays (they dither).
-  Tap targets need about 40px.
+  Tap targets need about 40px. Its WebKit lays out flexbox but ignores flex
+  `gap`: space flex children with margins (`.btn-row`, cover `margin-right`).
 - Android phone: under 480px wide. Desktop: content capped at 900px.
 - Check UI changes at all three widths before shipping (Playwright screenshots
   of the rendered templates at 758, 390 and 1280px are enough; the reader needs
@@ -42,6 +43,11 @@ Every page renders on three devices; the Kindle Paperwhite is the main one.
   session) use expanded cards `[data-rr-expanded-fic-card]`. Stats are
   value-then-label siblings, the description is `.prose`, tags are `tagsAdd`
   links. Anonymous toplists still use legacy `.fiction-list-item`.
+- The logged-in fiction page is redesigned too: a single `h1`, description in
+  the first `[data-rr-show-more-content]`, labelled stats, `#bookmark-*`
+  reactive buttons. Its "Continue Reading" points at the last-read chapter
+  (resume); follows rows reach the next chapter via the fiction route's
+  `?next=<last read>` redirect.
 - The follows unread marker is a "New Chapters!" badge. Core also treats
   latest-chapter != last-read as new (`hasNewChapters`), since the badge markup
   has drifted before.
