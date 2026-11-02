@@ -41,9 +41,12 @@ export function ReaderPage({
   const readingWidth = settings.readingWidth || 650;
   const fontSizeStyle = `font-size: ${settings.font}px; line-height: ${settings.lineHeight || 1.6}; max-width: ${readingWidth}px;`;
   const indexHref = `/read/${source.name}/${fictionRef}`;
+  // Only where a reader goes next: Royal Road's seven list links made a
+  // cramped row of 11px buttons too small to hit on the Kindle. The chapter
+  // list is the footer's "Chapters" button.
   const navLinks = [
     { href: "/", label: "Home" },
-    ...source.navLinks,
+    ...(source.capabilities.follows ? [{ href: `/read/${source.name}/follows`, label: "Follows" }] : []),
   ];
 
   return (
@@ -77,7 +80,7 @@ export function ReaderPage({
       <PageIndicator />
 
       <ReaderNav
-        indexLabel="Index"
+        indexLabel="Chapters"
         indexHref={indexHref}
         prevAttrs={{
           "data-ref": prevRef || "",

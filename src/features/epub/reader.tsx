@@ -1,6 +1,6 @@
 import type { ReaderSettings } from "../../config";
 import type { EpubBook } from "./service";
-import { DEFAULT_READER_SETTINGS, APP_VERSION } from "../../config";
+import { DEFAULT_READER_SETTINGS, ASSET_VERSION } from "../../config";
 import {
   TapZones,
   PageIndicator,
@@ -30,7 +30,7 @@ export function EpubReaderPage({
           <meta charset="UTF-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1.0" />
           <title safe>{book.title} - Tome</title>
-          <link rel="stylesheet" href={`/public/css/epub-reader.css?v=${APP_VERSION}`} />
+          <link rel="stylesheet" href={`/public/css/epub-reader.css?v=${ASSET_VERSION}`} />
           <link rel="icon" type="image/x-icon" href="/public/favicon.ico" />
           <link rel="icon" type="image/png" sizes="16x16" href="/public/favicon-16x16.png" />
           <link rel="icon" type="image/png" sizes="32x32" href="/public/favicon-32x32.png" />
@@ -109,8 +109,8 @@ export function EpubReaderPage({
 
           <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
           <script src="https://cdn.jsdelivr.net/npm/epubjs@0.3.93/dist/epub.min.js"></script>
-          <script src={`/public/js/remote-client.js?v=${APP_VERSION}`}></script>
-          <script src={`/public/js/epub-reader.js?v=${APP_VERSION}`}></script>
+          <script src={`/public/js/remote-client.js?v=${ASSET_VERSION}`}></script>
+          <script src={`/public/js/epub-reader.js?v=${ASSET_VERSION}`}></script>
         </body>
       </html>
     </>

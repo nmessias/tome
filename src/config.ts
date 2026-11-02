@@ -53,6 +53,8 @@ export interface ReaderSettings {
   readingWidth?: number;
   isKindle?: boolean;
   mode?: ReaderMode;
+  /** Per-device override for the number of chapters to warm ahead. */
+  readAheadDepth?: number;
 }
 
 export const DEFAULT_READER_SETTINGS: ReaderSettings = {
@@ -68,3 +70,8 @@ export const DEFAULT_READER_SETTINGS: ReaderSettings = {
 
 // App version for cache busting
 export const APP_VERSION = "1.5.10-dev";
+
+// Cache-busting key for /public assets (?v=). Set per process start so every
+// deploy reaches devices holding a cached copy: a hand-bumped version was
+// forgotten and the Kindle kept rendering new HTML with an old stylesheet.
+export const ASSET_VERSION = Date.now().toString(36);

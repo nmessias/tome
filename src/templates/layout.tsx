@@ -4,7 +4,7 @@
 import type { PropsWithChildren } from "@kitajs/html";
 import type { ReaderSettings } from "../config";
 import type { Source } from "../services/source-registry";
-import { DEFAULT_READER_SETTINGS, APP_VERSION } from "../config";
+import { DEFAULT_READER_SETTINGS, ASSET_VERSION } from "../config";
 import { Header } from "./components";
 
 export interface LayoutProps {
@@ -34,10 +34,10 @@ export function Layout({
   const kindleClass = settings.isKindle ? "kindle" : "";
   const fullBodyClass = [bodyClass, themeClass, kindleClass].filter(Boolean).join(" ");
   const cssFile = css === "reader" 
-    ? `/public/css/reader.css?v=${APP_VERSION}` 
-    : `/public/css/base.css?v=${APP_VERSION}`;
+    ? `/public/css/reader.css?v=${ASSET_VERSION}` 
+    : `/public/css/base.css?v=${ASSET_VERSION}`;
   
-  const defaultScripts = css === "base" ? [`/public/js/toggle.js?v=${APP_VERSION}`] : [];
+  const defaultScripts = css === "base" ? [`/public/js/toggle.js?v=${ASSET_VERSION}`] : [];
   const allScripts = [...defaultScripts, ...scripts];
 
   return (
@@ -101,7 +101,7 @@ export function ReaderLayout({
           <meta name="viewport" content="width=device-width, initial-scale=1.0" />
           <title safe>{title} - Tome</title>
           <script>{initScript as "safe"}</script>
-          <link rel="stylesheet" href={`/public/css/reader.css?v=${APP_VERSION}`} />
+          <link rel="stylesheet" href={`/public/css/reader.css?v=${ASSET_VERSION}`} />
           <link rel="icon" type="image/x-icon" href="/public/favicon.ico" />
           <link rel="icon" type="image/png" sizes="16x16" href="/public/favicon-16x16.png" />
           <link rel="icon" type="image/png" sizes="32x32" href="/public/favicon-32x32.png" />
@@ -109,8 +109,8 @@ export function ReaderLayout({
         </head>
         <body class={bodyClass || undefined}>
           {children}
-          <script src={`/public/js/remote-client.js?v=${APP_VERSION}`}></script>
-          <script src={`/public/js/reader.js?v=${APP_VERSION}`}></script>
+          <script src={`/public/js/remote-client.js?v=${ASSET_VERSION}`}></script>
+          <script src={`/public/js/reader.js?v=${ASSET_VERSION}`}></script>
         </body>
       </html>
     </>
