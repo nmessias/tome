@@ -162,12 +162,22 @@ async function pushCredentials(cookie: string, values: { identity: string; clear
   const form = new URLSearchParams({ identity: values.identity });
   if (values.clearance) form.set("cfclearance", values.clearance);
 
-  const res = await fetch(`${TOME_URL}/settings/sources/${SOURCE}/credentials`, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded", Cookie: cookie },
-    body: form.toString(),
-    redirect: "manual",
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${TOME_URL}/settings/sources/${SOURCE}/credentials`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded", Cookie: cookie },
+      body: form.toString(),
+      redirect: "manual",
+      signal: AbortSignal.timeout(120_000),
+    });
+  } catch (e) {
+    if ((e as Error).name !== "TimeoutError") throw e;
+    // The server stores the cookie before validating it against Royal Road;
+    // only that validation is slow (it waited out Cloudflare on 2026-11-02).
+    console.warn("⚠ Server still validating after 120s - the cookie is stored, checking follows anyway");
+    return;
+  }
 
   const body = await res.text();
   if (/Invalid credentials|error/i.test(body) && !/Credentials saved/i.test(body)) {
