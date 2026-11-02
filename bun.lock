@@ -17,7 +17,7 @@
         "@types/bun": "latest",
         "@types/qrcode": "^1.5.6",
         "tome-source-freewebnovel": "github:nmessias/tome-source-freewebnovel",
-        "tome-source-royalroad": "github:nmessias/tome-source-royalroad#78f6c4e7062e242b24cce8814b7d533d8a84ac6d",
+        "tome-source-royalroad": "github:nmessias/tome-source-royalroad#9c9ca5142676385a2a637bc28459cc8df6815cd1",
         "typescript": "^5.0.0",
       },
       "optionalDependencies": {
@@ -158,6 +158,24 @@
 
     "immediate": ["immediate@3.0.6", "", {}, "sha512-XXOFtyqDjNDAQxVfYxuF7g9Il/IbWmmlQg2MYKOH8ExIT1qg6xc4zyS3HaEEATgs1btfzxq15ciUiY7gjSXRGQ=="],
 
+    "impit": ["impit@0.14.8", "", { "optionalDependencies": { "impit-darwin-arm64": "0.14.8", "impit-darwin-x64": "0.14.8", "impit-linux-arm64-gnu": "0.14.8", "impit-linux-arm64-musl": "0.14.8", "impit-linux-x64-gnu": "0.14.8", "impit-linux-x64-musl": "0.14.8", "impit-win32-arm64-msvc": "0.14.8", "impit-win32-x64-msvc": "0.14.8" } }, "sha512-1lPwtKsMWVbsIRUXxnqX2zTTzEE5eon0UJJQKPQubnUJM5V6g+Flzdj9GwCi6HAqCKFrHBCFTteJtl6eMFL9HQ=="],
+
+    "impit-darwin-arm64": ["impit-darwin-arm64@0.14.8", "", { "os": "darwin", "cpu": "arm64" }, "sha512-Km2e4ucyKOMHG4H7z289d8NzR+IRoWIUqdnFtQzsH2x3E5ee66kLaBc7FcMVKhCRPl8cj86Ft1V4Mt9RXBOAcQ=="],
+
+    "impit-darwin-x64": ["impit-darwin-x64@0.14.8", "", { "os": "darwin", "cpu": "x64" }, "sha512-sXpebv16khhwcEsOVCsYhktxQpmuob6WiF9LMhsxPirFEhAu4uxcgpykiXLTMCwNlWwswxWmlJMgBbsoLPEAkA=="],
+
+    "impit-linux-arm64-gnu": ["impit-linux-arm64-gnu@0.14.8", "", { "os": "linux", "cpu": "arm64" }, "sha512-MeXu/hRQkhG+Y9ZN8c7gX4a3H/wG8mmyX78ubDx+8xUQkTZucAbUg7XGIs1WtbSAFMiuOSw7+u7yIACiWbvHXA=="],
+
+    "impit-linux-arm64-musl": ["impit-linux-arm64-musl@0.14.8", "", { "os": "linux", "cpu": "arm64" }, "sha512-ySyLAX9CL9sAy/bigiWLeZb+YiIAe3PBohvUXLy17FiK1UUaWT3SjQSuIc+Qh8B/qOzcKzxHZsY7D3llKT7D8w=="],
+
+    "impit-linux-x64-gnu": ["impit-linux-x64-gnu@0.14.8", "", { "os": "linux", "cpu": "x64" }, "sha512-h1Rti8XwivsHRIsdd2vHTjiEJ1w46aYQhUQzInd4Ps/7c6XoTvGhoi/8W3ltD90q87zmtueQS7+TUCnQnb1O8A=="],
+
+    "impit-linux-x64-musl": ["impit-linux-x64-musl@0.14.8", "", { "os": "linux", "cpu": "x64" }, "sha512-Ckku1TBssmvSOQeYilNewqz3ihWqESc/i8nnt1hMySUanJVXK3aKBd82XKi+Rh488Ob8NStx2ntsxn3ASmmlTw=="],
+
+    "impit-win32-arm64-msvc": ["impit-win32-arm64-msvc@0.14.8", "", { "os": "win32", "cpu": "arm64" }, "sha512-C0+uSAs1g2bpLyWXx17aZiaNxV0zFDlXqvtGHATs+vrGlohDcMd/Dn+sCCoZ+whkmk1qOSM4vWHItAqSpuOFVQ=="],
+
+    "impit-win32-x64-msvc": ["impit-win32-x64-msvc@0.14.8", "", { "os": "win32", "cpu": "x64" }, "sha512-fkfx6jghOVToPr6YBsTRg5galS7BexRQWW9iTlq+bYG1qFJ1bn+xQdTV4pg0kOAXDpQOLdxsRvw2d8jU2miRDg=="],
+
     "inherits": ["inherits@2.0.4", "", {}, "sha512-k/vGaX4/Yla3WzyMCvTQOXYeIHvqOKtnqBduzTHpzpQZzAskKMhZ2K+EnBiSM9zGSoIFeMpXKxa4dYeZIQqewQ=="],
 
     "ini": ["ini@1.3.8", "", {}, "sha512-JV/yugV2uzW5iMRSiZAyDtQd+nxtUnjeLt0acNdw98kKLrvuRVyB80tsREOE7yvGVgalhZ6RNXCmEHkUKBKxew=="],
@@ -262,7 +280,7 @@
 
     "tome-source-freewebnovel": ["tome-source-freewebnovel@github:nmessias/tome-source-freewebnovel#30151d3", { "dependencies": { "linkedom": "^0.16.0", "tome": "github:nmessias/tome" } }, "nmessias-tome-source-freewebnovel-30151d3", "sha512-NXA9SPJ3iF44HjN9avBQeUs/ay8Qa5DJioOu7pBQZqcxsTOWxjrgHXKsJT+9TuE36pgXzR9BFrRXtSV69iXVBg=="],
 
-    "tome-source-royalroad": ["tome-source-royalroad@github:nmessias/tome-source-royalroad#78f6c4e", { "dependencies": { "linkedom": "^0.16.0", "tome": "github:nmessias/tome#810ca18a985e57bdf4ca35cab3314dde9706c303" }, "optionalDependencies": { "playwright": "^1.40.0" } }, "nmessias-tome-source-royalroad-78f6c4e", "sha512-lPlEKDBHeSmdcWorvUzvZuW7oqOnVX48aSuNbkFthof7Ixzs5V9OlWRqMX5GvqmbA50RybcHd5l7h2WvS0bPWw=="],
+    "tome-source-royalroad": ["tome-source-royalroad@github:nmessias/tome-source-royalroad#9c9ca51", { "dependencies": { "impit": "^0.14.7", "linkedom": "^0.16.0", "tome": "github:nmessias/tome#810ca18a985e57bdf4ca35cab3314dde9706c303" }, "optionalDependencies": { "playwright": "^1.40.0" } }, "nmessias-tome-source-royalroad-9c9ca51", "sha512-yVgyUNVYPW+pzr6HRVJxiUaRK8m82vvTShe087YelvQvDdubJUE4CHYLK6QXQG61p7DZ2dznvxs/zaU4RO1Y/g=="],
 
     "tslib": ["tslib@2.8.1", "", {}, "sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w=="],
 

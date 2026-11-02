@@ -19,10 +19,9 @@ if [ -w /proc/sys/vm/overcommit_memory ]; then
     || echo "could not set vm.overcommit_memory - Chrome may fail to start on small machines"
 fi
 
-# Cloudflare rejects the scraper's browser when it runs headless, so the Royal
-# Road plugin drives a real Chromium window (ROYAL_ROAD_HEADLESS defaults to
-# false). In a container that requires a virtual display.
-if [ "$ROYAL_ROAD_HEADLESS" != "true" ] && [ -z "$DISPLAY" ] && command -v Xvfb >/dev/null 2>&1; then
+# Only a headful browser (ENABLE_BROWSER=true with ROYAL_ROAD_HEADLESS=false,
+# for local debugging) needs a virtual display; the plugin defaults to headless.
+if [ "$ENABLE_BROWSER" = "true" ] && [ "$ROYAL_ROAD_HEADLESS" = "false" ] && [ -z "$DISPLAY" ] && command -v Xvfb >/dev/null 2>&1; then
   echo "Starting Xvfb on :99 for the headful browser..."
   Xvfb :99 -screen 0 1280x800x24 >/tmp/xvfb.log 2>&1 &
   export DISPLAY=:99
@@ -44,6 +43,13 @@ if [ "$ROYAL_ROAD_USE_TAILSCALE" = "true" ]; then
     for _ in $(seq 20); do [ -S /var/run/tailscale/tailscaled.sock ] && break; sleep 0.5; done
     if /app/tailscale up --auth-key="$TS_AUTHKEY" --hostname=tome-in \
         --exit-node="$TS_EXIT_NODE" --accept-dns=false --timeout=30s; then
+      if [ "$ENABLE_BROWSER" != "true" ]; then
+        # The HTTP client resolves hostnames itself and connects by address,
+        # which tailscaled's SOCKS server accepts; only Chromium (which hands
+        # it hostnames) needs the bridge - and a second Bun runtime (~30MB).
+        export ROYAL_ROAD_PROXY=socks5://127.0.0.1:1055
+        echo "Royal Road proxy enabled via Tailscale"
+      else
       echo "Starting Royal Road DNS-aware SOCKS bridge..."
       bun --smol run scripts/tailscale-socks5-bridge.ts >/tmp/tailscale-socks5-bridge.log 2>&1 &
       SOCKS_BRIDGE_PID=$!
@@ -66,8 +72,9 @@ if [ "$ROYAL_ROAD_USE_TAILSCALE" = "true" ]; then
         cat /tmp/tailscale-socks5-bridge.log || true
         unset ROYAL_ROAD_PROXY
       fi
+      fi
     else
-      echo "tailscale up failed - Royal Road will use the direct Chrome-impersonating HTTP path"
+      echo "tailscale up failed - Royal Road will go out direct (and be challenged)"
       unset ROYAL_ROAD_PROXY
       tail -5 /tmp/tailscaled.log
     fi

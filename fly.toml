@@ -1,5 +1,10 @@
 app = "tome-in"
-primary_region = "iad"
+# gru (São Paulo), next to the exit node: Cloudflare challenged 9/10 requests
+# that reached the phone from iad (~200ms away) and none from gru (~40ms),
+# same exit IP and client (measured 2026-11-02).
+primary_region = "gru"
+# Disk-backed headroom for parse peaks on the 256MB machine.
+swap_size_mb = 512
 
 [build]
 dockerfile = "Dockerfile"
@@ -7,27 +12,24 @@ dockerfile = "Dockerfile"
 [env]
 NODE_ENV = "production"
 PORT = "3000"
-# The browser is Royal Road's only transport (Cloudflare dropped impit). It runs
-# headless: Cloudflare only objects to the "HeadlessChrome" UA token, which the
-# plugin overrides with the real Chrome version. No Xvfb, no window.
-ENABLE_BROWSER = "true"
-ROYAL_ROAD_HEADLESS = "true"
-ROYAL_ROAD_BROWSER = "chromium"
-# Keep background work from competing with interactive requests on the 512 MB VM.
+# Royal Road is fetched over HTTP (impit, Firefox profile). Chromium (~220-330MB)
+# does not fit 256MB, so there is no browser fallback: a Cloudflare challenge
+# serves the saved copy, and the login session comes from scripts/rr-login.ts.
+ENABLE_BROWSER = "false"
+# One upstream fetch at a time; interactive requests go first.
 ROYAL_ROAD_MAX_BROWSER_FETCHES = "1"
 ROYAL_ROAD_FICTION_WARMS_PER_CYCLE = "0"
 # Chapters to warm for the novel currently being read; set to 0 to disable.
 ROYAL_ROAD_READ_AHEAD = "3"
-# The browser routes through the tailnet exit node (the Moto G75), so it leaves
-# from a residential/mobile IP instead of Fly's blocked datacenter IP: the same
-# headless browser is challenged on Fly's own IP. start.sh joins the tailnet and
-# exports ROYAL_ROAD_PROXY when both variables are set; TS_AUTHKEY stays a fly
-# secret (reusable + ephemeral key).
+# Requests route through the tailnet exit node (the Moto G75), so they leave
+# from a residential IP instead of Fly's challenged datacenter IP. start.sh
+# joins the tailnet and exports ROYAL_ROAD_PROXY when both variables are set;
+# TS_AUTHKEY stays a fly secret (reusable + ephemeral key).
 ROYAL_ROAD_USE_TAILSCALE = "true"
 TS_EXIT_NODE = "100.115.240.61"
-# tailscaled serves SOCKS at 127.0.0.1:1055. start.sh resolves hostnames with
-# the app resolver and exports its bridge at 127.0.0.1:1056 after tailnet join.
-TOME_PLUGINS = "tome-source-royalroad,tome-source-freewebnovel,tome-feature-watch,tome-source-asura"
+# tailscaled serves SOCKS at 127.0.0.1:1055, which impit uses directly. Only
+# Chromium needs start.sh's DNS bridge (127.0.0.1:1056).
+TOME_PLUGINS = "tome-source-royalroad,tome-feature-watch,tome-source-asura"
 
 [http_service]
 auto_start_machines = true
@@ -37,7 +39,7 @@ internal_port = 3_000
 min_machines_running = 1
 
   [[http_service.checks]]
-  # Firefox solving a Cloudflare challenge saturates this machine; a short
+  # A browser solving a Cloudflare challenge saturated this machine; a short
   # grace period was failing checks mid-fetch and interrupting responses.
   grace_period = "60s"
   interval = "30s"
@@ -55,10 +57,9 @@ destination = "/app/data"
 source = "tome_data"
 
 [[vm]]
-# 1 vCPU / 512MB: about $3.69/month, the cheapest size that has a chance of
-# fitting the app (~185MB: Bun, tailscaled, hallpass) plus one warm headless
-# Chromium. Fly only sells RAM in 256MB steps, so the next option is 768MB at
-# about $5.19. Chrome needs vm.overcommit_memory=1 here (see scripts/start.sh).
+# 1 vCPU / 256MB in gru: $3.54/month (Fly waives bills under $5; 512MB in gru
+# is ~$5.96). Measured: Tome ~71-80MB idle (better-auth loads only on sign-in),
+# tailscaled ~41MB, hallpass ~26MB, of ~215MB usable; swap covers parse peaks.
 cpus = 1
-memory = "512mb"
-memory_mb = 512
+memory = "256mb"
+memory_mb = 256
